@@ -6,6 +6,8 @@ import Chord from "./Chord";
 import Toolbar from "./Toolbar";
 import PlayIcon from "./icons/PlayIcon";
 import React, {useEffect, useRef, useState} from "react";
+import chord from "./Chord";
+
 const SheetWrapper = styled.div`
     overflow-y: auto;
     padding: 16px;
@@ -15,13 +17,13 @@ const ChordWrapper = styled.div<{ fontSize: number }>`
     ${props => `font-size: ${props.fontSize}px`};
 `
 const Header = styled.div`
-  margin: 16px 0;
+    margin: 32px 0;
 `
-const ToolbarWrapper = styled.div`
-
+const ChordLine = styled.div`
+    margin-bottom: 8px;
 `
 const Lyric = styled.div`
-    margin: 4px 0 16px 0;
+  margin-bottom: 8px;
 `
 
 const notes = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#']
@@ -30,7 +32,8 @@ const spaceMatcher = /(?<whitespace>\s+)/
 
 const chordMatcher = "((?<note>[A-G])(?<accidentals>(?:bb|b|♭♭|♭)|(?:##|#))?)(?<chords>([Mm]|maj|min|sus|dim|add)?(b|bb|♭|♭♭)?(#|##)?([1-9]|1[0-9]|2[0-3])?([Mm]|maj|min|sus|dim|add)?([1-9]|1[0-9]|2[0-3])?)?(?:\\/(?<bass>(?<bassNote>[A-G])(?<bassAccidentals>(?:b|bb|♭|♭♭)|(?:#|##))?))?"
 
-const testHeader = (string: string) => /\[[a-zA-Z0-9]+\]/.test(string)
+const testHeader = (string: string) => /\[[a-zA-Z0-9\s]+/.test(string)
+const testHelpers = (string: string) => /^(\||N\.C\.|\(x[0-9]+\))$/.test(string)
 const testChords = (string: string) => (new RegExp("\\b" + chordMatcher + "\\b")).test(string)
 const testSpaces = (string: string) => /^\s*$/.test(string)
 
@@ -74,18 +77,35 @@ const transposeChord = (chord: string, transpose: number): string => {
 }
 
 const lineMatcher = (line: string, index: number, transpose: number): React.ReactNode => {
-  if (testChords(line)) {
-    const trimmedLine = line.replace(/^\s*\S+\s*/, '')
-    const isValidChord = trimmedLine.length > 0 ? testChords(trimmedLine) : true
+  const trimmedLine = line.replace(/^\s*\S+\s*/, '')
+  const isValidChord = trimmedLine.length > 0 ? testChords(trimmedLine) : true
 
+  const filteredChordLine = line.split(' ')
+    .filter(value => value !== '')
+    .filter((value, index, originalArray) => {
+
+      if (originalArray.length === 1 && testChords(value))
+        return true
+
+      if (testChords(value) && index !== 0)
+        return true
+
+
+      return testChords(originalArray[index + 1] ?? '');
+    })
+
+  if (filteredChordLine.length !== 0) {
     const processedChords = line.split(spaceMatcher).map((currentValue, i) => {
-      if (!testSpaces(currentValue) && isValidChord && currentValue !== '|') {
+
+      if (!testSpaces(currentValue) && isValidChord && !testHelpers(currentValue)) {
         return <Chord key={currentValue + index + i}>{transposeChord(currentValue, transpose)}</Chord>
       }
       return <React.Fragment key={currentValue + index + i}>{currentValue}</React.Fragment>
     })
-    return <div key={line + index}>{processedChords}</div>
-  } else if (testHeader(line)) {
+    return <ChordLine key={line + index}>{processedChords}</ChordLine>
+  }
+
+  if (testHeader(line)) {
     return <Header key={line + index}>{line}</Header>
   }
   return <Lyric key={line + index}>{line}</Lyric>
