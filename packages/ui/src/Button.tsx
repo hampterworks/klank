@@ -14,14 +14,16 @@ const StyledButton = styled.button<{
     align-items: center;
     justify-content: center;
     align-self: flex-end;
-
-    ${props => props.disabled && css`background: #c3c3c3;`}
     
     height: 37px;
     gap: 8px;
     padding: 16px;
     border-radius: 4px;
     color: ${props => props.theme.textColor};
+    cursor: pointer;
+
+    ${props => props.disabled && css`background: #c3c3c3; cursor: progress;`}
+    
 
     ${props => !props.$iconButton && 'border: 1px solid gray;'};
     
