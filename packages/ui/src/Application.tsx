@@ -10,7 +10,6 @@ import styled from "styled-components";
 import Button from "./Button";
 import FolderIcon from "./icons/FolderIcon";
 import FileIcon from "./icons/FileIcon";
-import {log} from "node:util";
 import ToolTip from "./ToolTip";
 
 const ApplicationWrapper = styled.main`
@@ -56,7 +55,6 @@ const ApplicationWrapper = styled.main`
         }
     }
 `
-
 
 type RecursiveDirEntry = {
   name: string
@@ -110,15 +108,25 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   useEffect(() => {
     const initStore = async () => {
       const store = await load('store.json', {autoSave: false})
+
       store.get<{ lastPath: string }>('last-path')
         .then(data => {
           if (data !== undefined)
-            setSelectedFilePath(data.lastPath)
+            setSelectedFilePath(data?.lastPath)
+        })
+
+      store.get<{ lastFolder: string }>('last-folder')
+        .then(data => {
+          if (data !== undefined) {
+            setBaseDirectory(data?.lastFolder)
+          } else {
+            appLocalDataDir().then(setBaseDirectory)
+          }
         })
       setUserConfig(store)
     }
     initStore()
-    appLocalDataDir().then(setBaseDirectory)
+
   }, [])
 
   useEffect(() => {
@@ -127,9 +135,21 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
     }
   }, [selectedFilePath])
 
-  const handleFilePathUpdate = (path: string, name: string) => {
+  const handleFilePathUpdate = (path: string) => {
     userConfig?.set('last-path', {lastPath: path})
     readTextFile(path).then(setSheetData)
+  }
+
+  const handleFolderPathUpdate = async () => {
+    const path = await open({
+      multiple: false,
+      directory: true,
+    })
+
+    if (path) {
+      setBaseDirectory(path)
+      userConfig?.set('last-folder', {lastFolder: path})
+    }
   }
 
   useEffect(() => {
@@ -151,7 +171,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
         return <li key={file.path}>
           <button>
             <FileIcon/>
-            <span onClick={() => handleFilePathUpdate(file.path, file.name)}>
+            <span onClick={() => handleFilePathUpdate(file.path)}>
               <ToolTip message={file.name}>
                 {file.name}
               </ToolTip>
@@ -165,10 +185,8 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   return <ApplicationWrapper {...props}>
     <ul>
       <li>
-        <Button label='Change' onClick={async () => setBaseDirectory(await open({
-          multiple: false,
-          directory: true,
-        }) ?? "")}/></li>
+        <Button label='Change Folder' onClick={() => handleFolderPathUpdate()}/>
+      </li>
       {tree?.map(createTreeStructure)}
     </ul>
     <Sheet data={sheetData ?? ""}/>
