@@ -23,7 +23,7 @@ const ChordLine = styled.div`
     margin-bottom: 8px;
 `
 const Lyric = styled.div`
-    margin-bottom: 8px;
+    margin-bottom: 16px;
 `
 
 const notes = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#']
@@ -136,7 +136,7 @@ type SheetProps = {
 }
 
 const Sheet: React.FC<SheetProps> = ({data, ...props}) => {
-  const [fontSize, setFontSize] = useState(16)
+  const [fontSize, setFontSize] = useState(14)
   const [transpose, setTranspose] = useState(0)
   const [scrollSpeed, setScrollSpeed] = useState(1)
   const [isScrolling, setIsScrolling] = useState(false)
@@ -144,7 +144,7 @@ const Sheet: React.FC<SheetProps> = ({data, ...props}) => {
   const lastElementRef = useRef<HTMLDivElement>(null)
 
   const handleFontChange = (value: number) => {
-    if (value < 0 && fontSize > 14) {
+    if (value < 0 && fontSize > 10) {
       setFontSize(fontSize + value)
     } else if (value > 0 && fontSize < 22) {
       setFontSize(fontSize + value)
@@ -158,17 +158,32 @@ const Sheet: React.FC<SheetProps> = ({data, ...props}) => {
         if (scrollContainerRef.current) {
           scrollContainerRef.current.scrollTop += scrollSpeed;
         }
-      }, 100)
+      }, 80 / scrollSpeed)
     }
 
     return () => {
       clearInterval(interval)
     }
-  }, [scrollSpeed, isScrolling])
+  }, [isScrolling, scrollSpeed, scrollContainerRef])
+
+  const handleKeyInput = (event: KeyboardEvent): void => {
+    event.preventDefault()
+    if (event.code === 'Space') {
+      setIsScrolling(prevState => !prevState)
+    } else if (event.code === 'ArrowUp') {
+      setScrollSpeed(prevState => prevState + 1)
+    } else if (event.code === 'ArrowDown' && scrollSpeed) {
+      setScrollSpeed(prevState => Math.max(prevState - 1, 0))
+    }
+  }
 
   useEffect(() => {
+    let observer: IntersectionObserver
+
+    document.addEventListener('keydown', handleKeyInput)
+
     if (lastElementRef.current !== null) {
-      const observer = new IntersectionObserver(entries => {
+      observer = new IntersectionObserver(entries => {
           const [entry] = entries
           if (entry?.isIntersecting)
             setIsScrolling(false)
@@ -181,6 +196,10 @@ const Sheet: React.FC<SheetProps> = ({data, ...props}) => {
       observer.observe(lastElementRef.current)
 
       return () => observer.disconnect();
+    }
+    return () => {
+      document.removeEventListener('keydown', handleKeyInput)
+      if (observer) observer.disconnect()
     }
   }, [])
 
