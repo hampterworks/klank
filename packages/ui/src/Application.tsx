@@ -11,6 +11,7 @@ import Button from "./Button";
 import FolderIcon from "./icons/FolderIcon";
 import FileIcon from "./icons/FileIcon";
 import ToolTip from "./ToolTip";
+import LoadingIcon from "./icons/LoadingIcon";
 
 const ApplicationWrapper = styled.main`
     display: grid;
@@ -18,41 +19,52 @@ const ApplicationWrapper = styled.main`
     overflow: hidden;
     width: 100%;
 
-    > ul {
-        height: 100vh;
-        border-right: 1px solid black;
-        padding: 8px;
-        overflow-y: auto;
-        font-size: 14px;
+    .loading {
+        display: block;
+        align-self: center;
+        margin-top: 16px;
+    }
+`
+const MenuWrapper = styled.ul`
+    height: 100vh;
+    border-right: 1px solid black;
+    padding: 8px;
+    overflow-y: auto;
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
 
-        li {
-            gap: 4px;
-            margin-bottom: 6px;
-            overflow: hidden;
+`
+const MenuItem = styled.li<{ $isSelected?: boolean}>`
+    gap: 4px;
+    margin-bottom: 6px;
+    overflow: hidden;
+    background: ${props => props.$isSelected ? '#e3e3e3' : 'none'};
+    border-radius: 4px;
+    padding: 2px;
 
-            ul {
-                margin-left: 16px;
-            }
 
-            button {
-                display: flex;
-                width: 100%;
-                cursor: pointer;
-                align-items: center;
-                gap: 4px;
+    ul {
+        margin-left: 16px;
+    }
+`
 
-                span {
-                    text-overflow: ellipsis;
-                    overflow: hidden;
-                    white-space: nowrap;
-                    max-width: 100%;
-                }
+const MenuButton = styled.button`
+    display: flex;
+    width: 100%;
+    cursor: pointer;
+    align-items: center;
+    gap: 4px;
 
-                svg {
-                    width: 24px;
-                }
-            }
-        }
+    span {
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+        max-width: 100%;
+    }
+
+    svg {
+        width: 24px;
     }
 `
 
@@ -103,6 +115,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   const [tree, setTree] = useState<FileTree>()
   const [selectedFilePath, setSelectedFilePath] = useState<string>()
   const [sheetData, setSheetData] = useState<string>()
+  const [isLoading, setIsLoading] = useState<boolean>(false)
   const [userConfig, setUserConfig] = useState<Store>()
 
   useEffect(() => {
@@ -137,7 +150,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
 
   const handleFilePathUpdate = (path: string) => {
     userConfig?.set('last-path', {lastPath: path})
-    readTextFile(path).then(setSheetData)
+    setSelectedFilePath(path)
   }
 
   const handleFolderPathUpdate = async () => {
@@ -153,42 +166,61 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   }
 
   useEffect(() => {
-    if (baseDirectory !== undefined)
-      readDirectoryRecursively(baseDirectory, file => file.isDirectory || file.name.endsWith(".tab.txt")).then(setTree)
+    if (selectedFilePath !== undefined) {
+      readTextFile(selectedFilePath).then(setSheetData)
+    }
+  }, [selectedFilePath, readTextFile])
+
+  useEffect(() => {
+    if (baseDirectory !== undefined) {
+      setIsLoading(true)
+      readDirectoryRecursively(baseDirectory, file => file.isDirectory || file.name.endsWith(".tab.txt"))
+        .then(tree => {
+          setTree(tree)
+          setIsLoading(false)
+        })
+    }
   }, [baseDirectory])
 
   const createTreeStructure = (file: DirEntry | RecursiveDirEntry) => {
     if ("path" in file) {
       if (file.isDirectory && file.children.length !== 0 && file.children.find(item => item.isFile)) {
-        return <li key={file.path}>
-          <button>
+        return <MenuItem key={file.path}>
+          <MenuButton>
             <FolderIcon/>
             <span>{file.name}</span>
-          </button>
+          </MenuButton>
           <ul>{file.children && file.children.map(child => createTreeStructure(child))}</ul>
-        </li>
+        </MenuItem>
       } else if (file.isFile) {
-        return <li key={file.path}>
-          <button>
+        return <MenuItem key={file.path} $isSelected={file.path === selectedFilePath}>
+          <MenuButton>
             <FileIcon/>
             <span onClick={() => handleFilePathUpdate(file.path)}>
               <ToolTip message={file.name}>
                 {file.name}
               </ToolTip>
             </span>
-          </button>
-        </li>
+          </MenuButton>
+        </MenuItem>
       }
     }
   }
 
   return <ApplicationWrapper {...props}>
-    <ul>
-      <li>
-        <Button label='Change Folder' onClick={() => handleFolderPathUpdate()}/>
-      </li>
-      {tree?.map(createTreeStructure)}
-    </ul>
+    <MenuWrapper>
+      <MenuItem>
+        <ToolTip message={baseDirectory ?? ''}>
+          {baseDirectory}
+        </ToolTip>
+      </MenuItem>
+      <MenuItem>
+        <Button label='Change Folder' disabled={isLoading} onClick={() => handleFolderPathUpdate()}/>
+      </MenuItem>
+      {
+        isLoading ? <li className='loading'><LoadingIcon/></li> : tree?.map(createTreeStructure)
+      }
+    </MenuWrapper>
     <Sheet data={sheetData ?? ""}/>
   </ApplicationWrapper>
 }
