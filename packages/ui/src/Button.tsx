@@ -1,32 +1,34 @@
 "use client"
 
 import * as React from "react";
-import type {css} from "styled-components";
+import {css} from "styled-components";
 import styled from "styled-components";
 
 const StyledButton = styled.button<{
   $sx?: ReturnType<typeof css>,
   size?: 'small' | 'medium' | 'large',
-  $iconButton: boolean
+  $iconButton: boolean,
+  disabled?: boolean,
 }>`
     display: flex;
     align-items: center;
     justify-content: center;
     align-self: flex-end;
 
+    ${props => props.disabled && css`background: #c3c3c3;`}
+    
     height: 37px;
     gap: 8px;
     padding: 16px;
     border-radius: 4px;
     color: ${props => props.theme.textColor};
-    cursor: pointer;
 
-    ${props => !props.$iconButton && 'border: 1px solid gray;'}
+    ${props => !props.$iconButton && 'border: 1px solid gray;'};
     
     &:hover, &:focus {
-        background: ${props => props.theme.highlight};
+        background: ${props => !props.disabled && props.theme.highlight};
     }
-
+    
     ${props => {
         if (props.$sx === undefined) {
             switch (props.size) {
@@ -37,11 +39,12 @@ const StyledButton = styled.button<{
                 case 'large':
                     return 'width: 300px;'
                 default:
-                    return 'width: 100%'
+                    return 'width: 100%;'
             }
         }
     }}
     ${props => props.$sx}
+
 `
 /**
  * Represents the props for the Button component.
