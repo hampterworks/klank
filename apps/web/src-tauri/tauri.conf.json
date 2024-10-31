@@ -2,7 +2,7 @@
   "$schema": "../../../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "web",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "klank",
   "build": {
     "frontendDist": "../out",
     "devUrl": "http://localhost:3000",
@@ -13,9 +13,9 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "web",
-        "width": 800,
-        "height": 600,
+        "title": "klank",
+        "width": 1280,
+        "height": 1024,
         "resizable": true,
         "fullscreen": false
       }
