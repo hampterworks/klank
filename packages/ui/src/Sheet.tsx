@@ -23,7 +23,7 @@ const ChordLine = styled.div`
     margin-bottom: 8px;
 `
 const Lyric = styled.div`
-  margin-bottom: 8px;
+    margin-bottom: 8px;
 `
 
 const notes = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#']
@@ -141,6 +141,7 @@ const Sheet: React.FC<SheetProps> = ({data, ...props}) => {
   const [scrollSpeed, setScrollSpeed] = useState(1)
   const [isScrolling, setIsScrolling] = useState(false)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const lastElementRef = useRef<HTMLDivElement>(null)
 
   const handleFontChange = (value: number) => {
     if (value < 0 && fontSize > 14) {
@@ -149,24 +150,14 @@ const Sheet: React.FC<SheetProps> = ({data, ...props}) => {
       setFontSize(fontSize + value)
     }
   }
-  const isAtBottom = () => {
-    if (scrollContainerRef.current) {
-      const {scrollTop, scrollHeight} = scrollContainerRef.current;
-      const offsetHeight = scrollContainerRef.current.offsetHeight;
-      return scrollTop + offsetHeight >= scrollHeight;
-    }
-  }
 
   useEffect(() => {
-
     let interval: NodeJS.Timeout
     if (isScrolling) {
       interval = setInterval(() => {
         if (scrollContainerRef.current) {
           scrollContainerRef.current.scrollTop += scrollSpeed;
         }
-        if (isAtBottom())
-          setIsScrolling(false)
       }, 100)
     }
 
@@ -174,6 +165,24 @@ const Sheet: React.FC<SheetProps> = ({data, ...props}) => {
       clearInterval(interval)
     }
   }, [scrollSpeed, isScrolling])
+
+  useEffect(() => {
+    if (lastElementRef.current !== null) {
+      const observer = new IntersectionObserver(entries => {
+          const [entry] = entries
+          if (entry?.isIntersecting)
+            setIsScrolling(false)
+        },
+        {
+          rootMargin: '0px',
+          threshold: 1.0,
+        })
+
+      observer.observe(lastElementRef.current)
+
+      return () => observer.disconnect();
+    }
+  }, [])
 
   const handleTransposeChange = (value: number): void => {
     setTranspose(transpose + value)
@@ -212,6 +221,7 @@ const Sheet: React.FC<SheetProps> = ({data, ...props}) => {
           lineMatcher(line, index, transpose)
         )
       }
+      <div ref={lastElementRef}/>
     </ChordWrapper>
   </SheetWrapper>
 }

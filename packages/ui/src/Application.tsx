@@ -12,6 +12,7 @@ import FolderIcon from "./icons/FolderIcon";
 import FileIcon from "./icons/FileIcon";
 import ToolTip from "./ToolTip";
 import LoadingIcon from "./icons/LoadingIcon";
+import RefreshIcon from "./icons/RefreshIcon";
 
 const ApplicationWrapper = styled.main`
     display: grid;
@@ -36,17 +37,13 @@ const MenuWrapper = styled.ul`
 
 `
 const MenuItem = styled.li<{ $isSelected?: boolean}>`
+    display: flex;
     gap: 4px;
     margin-bottom: 6px;
     overflow: hidden;
     background: ${props => props.$isSelected ? '#e3e3e3' : 'none'};
     border-radius: 4px;
     padding: 2px;
-
-
-    ul {
-        margin-left: 16px;
-    }
 `
 
 const MenuButton = styled.button`
@@ -54,16 +51,15 @@ const MenuButton = styled.button`
     width: 100%;
     cursor: pointer;
     align-items: center;
-    gap: 4px;
 
     span {
-        text-overflow: ellipsis;
         overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
-        max-width: 100%;
     }
 
     svg {
+        flex-shrink: 0;
         width: 24px;
     }
 `
@@ -116,6 +112,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   const [selectedFilePath, setSelectedFilePath] = useState<string>()
   const [sheetData, setSheetData] = useState<string>()
   const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [isRefreshTriggered, setIsRefreshTriggered] = useState(false)
   const [userConfig, setUserConfig] = useState<Store>()
 
   useEffect(() => {
@@ -178,9 +175,10 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
         .then(tree => {
           setTree(tree)
           setIsLoading(false)
+          setIsRefreshTriggered(false)
         })
     }
-  }, [baseDirectory])
+  }, [baseDirectory, isRefreshTriggered])
 
   const createTreeStructure = (file: DirEntry | RecursiveDirEntry) => {
     if ("path" in file) {
@@ -216,6 +214,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
       </MenuItem>
       <MenuItem>
         <Button label='Change Folder' disabled={isLoading} onClick={() => handleFolderPathUpdate()}/>
+        <Button iconButton={true} icon={<RefreshIcon/>} disabled={isLoading} onClick={() => setIsRefreshTriggered(true)}/>
       </MenuItem>
       {
         isLoading ? <li className='loading'><LoadingIcon/></li> : tree?.map(createTreeStructure)

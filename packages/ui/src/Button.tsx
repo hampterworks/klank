@@ -32,7 +32,7 @@ const StyledButton = styled.button<{
     }
     
     ${props => {
-        if (props.$sx === undefined) {
+        if (props.$sx === undefined && !props.$iconButton) {
             switch (props.size) {
                 case 'small':
                     return 'width: 150px;'
