@@ -150,6 +150,9 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   const setFontSize = useKlankStore().setTabFontSize
   const fontSize = useKlankStore().tab.fontSize
   const mode = useKlankStore().mode
+  const tabSettingByPath = useKlankStore().tabSettingByPath
+  const setTabSettingByPath = useKlankStore().setTabSettingByPath
+  const setTabSettings = useKlankStore().setTabSettings
 
   const handleTransposeChange = (value: number): void => {
     setTranspose(transpose + value)
@@ -222,10 +225,22 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
 
   useEffect(() => {
     (async () => {
-    if (await exists(baseDirectory)) {
-      const config = await readTextFile(path.join(baseDirectory, '.klankrc.json'))
-      console.log("config", config)
-    }
+      const klankRcFilePath = path.join(baseDirectory, '.klankrc.json')
+      if (await exists(klankRcFilePath)) {
+        try {
+        const config = JSON.parse(await readTextFile(klankRcFilePath))
+        console.log("config", config)
+        setTabSettings(config)
+        }
+        catch (exception) {
+          console.log("Could not load .klankrc.json!")
+        }
+      }
+      else {
+        const file = await create(klankRcFilePath);
+        await file.write(new TextEncoder().encode('{}'));
+        await file.close();
+      }
     })()
   }, [baseDirectory])
 
@@ -233,9 +248,42 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
     (async () => {
       if (await exists(currentTabPath)) {
         readTextFile(currentTabPath).then(setSheetData)
+        if (tabSettingByPath[currentTabPath] !== undefined) {
+          console.log("it exists", tabSettingByPath[currentTabPath])
+          setTranspose(tabSettingByPath[currentTabPath].transpose)
+          setScrollSpeed(tabSettingByPath[currentTabPath].scrollSpeed)
+          setFontSize(tabSettingByPath[currentTabPath].fontSize)
+        } else {
+          setTabSettingByPath(currentTabPath, {
+            fontSize,
+            path: currentTabPath,
+            transpose,
+            isScrolling: false,
+            scrollSpeed
+          })
+          console.log("created it", tabSettingByPath[currentTabPath])
+        }
       }
     })()
   }, [currentTabPath, readTextFile])
+
+  useEffect(() => {
+    (async () => {
+      const newTabSetting = {
+        fontSize,
+        path: currentTabPath,
+        transpose,
+        isScrolling: false,
+        scrollSpeed
+      }
+      setTabSettingByPath(currentTabPath, newTabSetting)
+
+      const klankRcFilePath = path.join(baseDirectory, '.klankrc.json')
+      const file = await create(klankRcFilePath);
+      await file.write(new TextEncoder().encode(JSON.stringify(tabSettingByPath, null, 2)));
+      await file.close();
+    })()
+  }, [fontSize, scrollSpeed, transpose])
 
   useEffect(() => {
     (async () => {
