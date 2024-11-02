@@ -26,22 +26,15 @@ const ApplicationWrapper = styled.main`
     overflow: hidden;
     width: 100%;
 
+    background: ${props => props.theme.background};
+    
     .loading {
         display: block;
         align-self: center;
         margin-top: 16px;
     }
 `
-const MenuWrapper = styled.ul`
-    height: 100vh;
-    border-right: 1px solid black;
-    padding: 8px;
-    overflow-y: auto;
-    font-size: 14px;
-    display: flex;
-    flex-direction: column;
 
-`
 const MenuItem = styled.li<{ $isSelected?: boolean }>`
     display: flex;
     gap: 4px;
@@ -137,7 +130,6 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   const baseDirectory = useKlankStore().baseDirectory
   const setBaseDirectory = useKlankStore().setBaseDirectory
   const [tree, setTree] = useState<FileTree>()
-  const setCurrentTabPath = useKlankStore().setTabPath
   const [sheetData, setSheetData] = useState<string>()
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isRefreshTriggered, setIsRefreshTriggered] = useState(false)
@@ -194,10 +186,6 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
     return data
   }
 
-  const handleFilePathUpdate = (path: string) => {
-    console.log(path)
-    setCurrentTabPath(path)
-  }
 
   const handleFolderPathUpdate = async () => {
     const path = await open({
@@ -297,31 +285,6 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
     })()
   }, [baseDirectory, isRefreshTriggered])
 
-  const createTreeStructure = (file: DirEntry | RecursiveDirEntry) => {
-    if ("path" in file) {
-      if (file.isDirectory && file.children.length !== 0 && file.children.find(item => item.isFile)) {
-        return <MenuItem key={file.path}>
-          <MenuButton>
-            <FolderIcon/>
-            <span>{file.name}</span>
-          </MenuButton>
-          <ul>{file.children && file.children.map(child => createTreeStructure(child))}</ul>
-        </MenuItem>
-      } else if (file.isFile) {
-        return <MenuItem key={file.path} $isSelected={file.path === currentTabPath}>
-          <MenuButton>
-            <FileIcon/>
-            <span onClick={() => handleFilePathUpdate(file.path)}>
-              <ToolTip message={file.name}>
-                {file.name}
-              </ToolTip>
-            </span>
-          </MenuButton>
-        </MenuItem>
-      }
-    }
-  }
-
   return <ApplicationWrapper {...props}>
     <Menu
         baseDirectory={baseDirectory}
@@ -330,7 +293,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
         setSheetData={setSheetData}
         setIsRefreshTriggered={setIsRefreshTriggered}
         handleFolderPathUpdate={handleFolderPathUpdate}
-        createTreeStructure={createTreeStructure}
+        currentTabPath={currentTabPath}
         doMe={doMe}
     />
     <ScrollContainer>
@@ -338,7 +301,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
       <Toolbar>
         {mode === "Read" && <>
           <li key='fontControl'>
-            <span>Fonts {fontSize}px</span>
+            <span>Size {fontSize}px</span>
             <IncrementDecrementButtons onIncrement={handleFontChange}/>
           </li>
           <li key='transposeControl'>

@@ -5,6 +5,7 @@ import path from "node:path";
 
 const TabDetailsContainer = styled.div`
     padding: 16px;
+    color: ${props => props.theme.textColor};
     h1 {
         font-size: 1.2em;
         line-height: 1.4em;

@@ -8,6 +8,7 @@ import useKlankStore, {Mode} from "web/state/store";
 const SheetWrapper = styled.div<{$mode: string}>`
     overflow-y: ${props => props.$mode === 'Edit' ? 'none' : 'auto'};
     padding: ${props => props.$mode === 'Edit' ? '16px 0 0 16px' : '16px'};
+    color: ${props => props.theme.textColor};
 `
 const ChordWrapper = styled.div<{ fontSize: number }>`
     white-space: pre;
