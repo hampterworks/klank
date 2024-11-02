@@ -4,13 +4,11 @@ import styled from "styled-components";
 import Button from "./Button";
 import Chord from "./Chord";
 import Toolbar from "./Toolbar";
-import PlayIcon from "./icons/PlayIcon";
 import React, {useEffect, useRef, useState} from "react";
-import chord from "./Chord";
 
-const SheetWrapper = styled.div`
-    overflow-y: auto;
-    padding: 16px;
+const SheetWrapper = styled.div<{$mode: string}>`
+    overflow-y: ${props => props.$mode === 'Edit' ? 'none' : 'auto'};;
+    padding: ${props => props.$mode === 'Edit' ? '16px 0 16px 16px' : '16px'};
 `
 const ChordWrapper = styled.div<{ fontSize: number }>`
     white-space: pre;
@@ -26,15 +24,26 @@ const Lyric = styled.div`
     margin-bottom: 16px;
 `
 
+const Textarea = styled.textarea`
+    width: 100%;
+    height: calc(100vh - 164px); // menu 100px padding 16px margin 32px bottom padding 16px
+`
+
 const notes = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#']
 
-const spaceMatcher = /(?<whitespace>\s+)/
+const delimiterMatcher = /(?<whitespace>\s+|\||\(|\))/
 
 const chordMatcher = "((?<note>[A-G])(?<accidentals>(?:bb|b|♭♭|♭)|(?:##|#))?)(?<chords>([Mm]|maj|min|sus|dim|add)?(b|bb|♭|♭♭)?(#|##)?([1-9]|1[0-9]|2[0-3])?([Mm]|maj|min|sus|dim|add)?([1-9]|1[0-9]|2[0-3])?)?(?:\\/(?<bass>(?<bassNote>[A-G])(?<bassAccidentals>(?:b|bb|♭|♭♭)|(?:#|##))?))?"
 
 const testHeader = (string: string) => /\[[a-zA-Z0-9\s]+/.test(string)
-const testHelpers = (string: string) => /^(\||N\.C\.|\(x[0-9]+\))$/.test(string)
-const testChords = (string: string) => (new RegExp("\\b" + chordMatcher + "\\b")).test(string)
+const testChords = (string: string) => {
+  const match = (new RegExp("^" + chordMatcher + "$")).exec(string)
+
+  if (match === null || match.length === 0)
+    return false
+  if (match[0] === string)
+    return true
+}
 const testSpaces = (string: string) => /^\s*$/.test(string)
 
 const getNoteOffset = (string: string | undefined) => {
@@ -77,27 +86,12 @@ const transposeChord = (chord: string, transpose: number): string => {
 }
 
 const lineMatcher = (line: string, index: number, transpose: number): React.ReactNode => {
-  const trimmedLine = line.replace(/^\s*\S+\s*/, '')
-  const isValidChord = trimmedLine.length > 0 ? testChords(trimmedLine) : true
-
-  const filteredChordLine = line.split(' ')
-    .filter(value => value !== '')
-    .filter((value, index, originalArray) => {
-
-      if (originalArray.length === 1 && testChords(value))
-        return true
-
-      if (testChords(value) && index !== 0)
-        return true
-
-
-      return testChords(originalArray[index + 1] ?? '');
-    })
-
-  if (filteredChordLine.length !== 0) {
-    const processedChords = line.split(spaceMatcher).map((currentValue, i) => {
-
-      if (!testSpaces(currentValue) && isValidChord && !testHelpers(currentValue)) {
+  const tokens = line.split(delimiterMatcher).filter(token => token !== '')
+  const filteredChordLine = tokens
+    .filter((value) => testChords(value))
+  if (filteredChordLine.length > 0) {
+    const processedChords = line.split(delimiterMatcher).map((currentValue, i) => {
+      if (testChords(currentValue.replace('|', ''))) {
         return <Chord key={currentValue + index + i}>{transposeChord(currentValue, transpose)}</Chord>
       }
       return <React.Fragment key={currentValue + index + i}>{currentValue}</React.Fragment>
@@ -135,11 +129,15 @@ type SheetProps = {
   data: string;
 }
 
+type Mode = "Read" | "Edit"
+
 const Sheet: React.FC<SheetProps> = ({data, ...props}) => {
   const [fontSize, setFontSize] = useState(14)
   const [transpose, setTranspose] = useState(0)
   const [scrollSpeed, setScrollSpeed] = useState(1)
   const [isScrolling, setIsScrolling] = useState(false)
+  const [editedTab, setEditedTab] = useState(data)
+  const [mode, setMode] = useState<Mode>("Edit")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const lastElementRef = useRef<HTMLDivElement>(null)
 
@@ -167,13 +165,21 @@ const Sheet: React.FC<SheetProps> = ({data, ...props}) => {
   }, [isScrolling, scrollSpeed, scrollContainerRef])
 
   const handleKeyInput = (event: KeyboardEvent): void => {
-    event.preventDefault()
-    if (event.code === 'Space') {
-      setIsScrolling(prevState => !prevState)
-    } else if (event.code === 'ArrowUp') {
-      setScrollSpeed(prevState => prevState + 1)
-    } else if (event.code === 'ArrowDown' && scrollSpeed) {
-      setScrollSpeed(prevState => Math.max(prevState - 1, 0))
+    console.log(mode)
+    if (event.code === 'F2') {
+      console.log("xouioui")
+      setMode(mode === "Read" ? "Edit" : "Read")
+      event.preventDefault()
+      return
+    }
+    if (mode === "Read") {
+      if (event.code === 'Space') {
+        setIsScrolling(prevState => !prevState)
+      } else if (event.code === 'ArrowUp') {
+        setScrollSpeed(prevState => prevState + 1)
+      } else if (event.code === 'ArrowDown' && scrollSpeed) {
+        setScrollSpeed(prevState => Math.max(prevState - 1, 0))
+      }
     }
   }
 
@@ -195,13 +201,16 @@ const Sheet: React.FC<SheetProps> = ({data, ...props}) => {
 
       observer.observe(lastElementRef.current)
 
-      return () => observer.disconnect();
+      return () => {
+        document.removeEventListener('keydown', handleKeyInput)
+        observer.disconnect();
+      }
     }
     return () => {
       document.removeEventListener('keydown', handleKeyInput)
       if (observer) observer.disconnect()
     }
-  }, [])
+  }, [mode])
 
   const handleTransposeChange = (value: number): void => {
     setTranspose(transpose + value)
@@ -214,7 +223,10 @@ const Sheet: React.FC<SheetProps> = ({data, ...props}) => {
   const lines: string[] = data.split(/\r?\n|\r|\n/g)
     .filter((line) => !testSpaces(line))
 
-  return <SheetWrapper ref={scrollContainerRef} {...props}>
+  return <SheetWrapper
+    $mode={mode}
+    ref={scrollContainerRef}
+    {...props}>
     <Toolbar>
       <li key='fontControl'>
         <span>Fonts {fontSize}px</span>
@@ -233,15 +245,27 @@ const Sheet: React.FC<SheetProps> = ({data, ...props}) => {
           <IncrementDecrementButtons onIncrement={handleScrollSpeedChange}/>
         </div>
       </li>
+      <li>
+        <span>Save</span>
+        <Button label='Update' onClick={() => {
+
+        }}/>
+      </li>
     </Toolbar>
-    <ChordWrapper fontSize={fontSize}>
-      {
-        lines.map((line, index) =>
-          lineMatcher(line, index, transpose)
-        )
-      }
-      <div ref={lastElementRef}/>
-    </ChordWrapper>
+    {mode === "Read" &&
+      <ChordWrapper fontSize={fontSize}>
+        {
+          lines.map((line, index) =>
+            lineMatcher(line, index, transpose)
+          )
+        }
+        <div ref={lastElementRef}/>
+      </ChordWrapper>
+    }
+    {mode === "Edit" &&
+      <Textarea id="kek" defaultValue={data}
+                onChange={event => setEditedTab(event.target.value)}/>
+    }
   </SheetWrapper>
 }
 

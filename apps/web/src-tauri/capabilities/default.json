@@ -25,6 +25,10 @@
       ]
     },
     "store:default",
-    "dialog:default"
+    "dialog:default",
+    {
+      "identifier": "http:default",
+      "allow": [{ "url": "https://*" }]
+    }
   ]
 }

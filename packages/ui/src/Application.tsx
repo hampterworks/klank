@@ -1,6 +1,6 @@
 "use client"
 import React, {useEffect, useState} from "react";
-import {BaseDirectory, DirEntry, readDir, readTextFile} from "@tauri-apps/plugin-fs";
+import {BaseDirectory, DirEntry, readDir, readTextFile, create} from "@tauri-apps/plugin-fs";
 import {appLocalDataDir, join} from '@tauri-apps/api/path';
 import Sheet from "./Sheet";
 import {open} from '@tauri-apps/plugin-dialog';
@@ -13,6 +13,8 @@ import FileIcon from "./icons/FileIcon";
 import ToolTip from "./ToolTip";
 import LoadingIcon from "./icons/LoadingIcon";
 import RefreshIcon from "./icons/RefreshIcon";
+import {fetch} from "@tauri-apps/plugin-http";
+import path from "node:path";
 
 const ApplicationWrapper = styled.main`
     display: grid;
@@ -36,7 +38,7 @@ const MenuWrapper = styled.ul`
     flex-direction: column;
 
 `
-const MenuItem = styled.li<{ $isSelected?: boolean}>`
+const MenuItem = styled.li<{ $isSelected?: boolean }>`
     display: flex;
     gap: 4px;
     margin-bottom: 6px;
@@ -114,6 +116,35 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isRefreshTriggered, setIsRefreshTriggered] = useState(false)
   const [userConfig, setUserConfig] = useState<Store>()
+
+  const doMe = async () => {
+    const url = window.prompt("From what URL should we import?")
+    console.log(url)
+    if (url === undefined || url === null || url === "")
+      return
+    // 'https://tabs.ultimate-guitar.com/tab/print?flats=0&font_size=1&id=3860363&is_ukulele=0&simplified=0&transpose=0
+    const result = await fetch(url)
+    console.log(result)
+    const htmlData = await result.text()
+    const parser = new DOMParser();
+    const htmlDoc = parser.parseFromString(htmlData, 'text/html');
+    const json = JSON.parse(htmlDoc.getElementsByClassName('js-store')[0]?.getAttribute('data-content') ?? "{}")
+    console.log(json)
+    const data = json.store.page.data.tab_view.wiki_tab.content.toString().replace(/(\[(ch|tab)\]|\[(\/)?(ch|tab)\])/g, ''))
+
+    const artist = json.store.page.data.tab_view.versions.find(version => version.artist_name !== null && version.artist_name !== undefined).artist_name
+    const title = json.store.page.data.tab_view.versions.find(version => version.song_name !== null && version.song_name !== undefined).song_name
+    console.log("artist", artist)
+    console.log("title", title)
+    const filename = `${artist} - ${title}.tab.txt`
+    console.log("filename", filename)
+
+    const file = await create(path.join(baseDirectory ?? "", filename));
+    await file.write(new TextEncoder().encode(data));
+    await file.close();
+
+    return data
+  }
 
   useEffect(() => {
     const initStore = async () => {
@@ -214,7 +245,15 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
       </MenuItem>
       <MenuItem>
         <Button label='Change Folder' disabled={isLoading} onClick={() => handleFolderPathUpdate()}/>
-        <Button iconButton={true} icon={<RefreshIcon/>} disabled={isLoading} onClick={() => setIsRefreshTriggered(true)}/>
+        <Button iconButton={true} icon={<RefreshIcon/>} disabled={isLoading}
+                onClick={() => setIsRefreshTriggered(true)}/>
+      </MenuItem>
+      <MenuItem>
+        <MenuButton>
+          <span onClick={async () => setSheetData(await doMe() ?? "")}>
+            Click me
+          </span>
+        </MenuButton>
       </MenuItem>
       {
         isLoading ? <li className='loading'><LoadingIcon/></li> : tree?.map(createTreeStructure)

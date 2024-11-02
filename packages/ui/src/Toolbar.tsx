@@ -11,6 +11,7 @@ const MenuWrapper = styled.ul`
     padding: 16px 32px;
     border-radius: 4px;
     width: min-content;
+    height: 100px;
     margin-bottom: 32px;
 
     li {

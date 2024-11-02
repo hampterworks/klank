@@ -13,6 +13,7 @@
     "@repo/ui": "*",
     "@tauri-apps/plugin-dialog": "^2.0.1",
     "@tauri-apps/plugin-fs": "^2.0.1",
+    "@tauri-apps/plugin-http": "^2.0.1",
     "@tauri-apps/plugin-store": "^2.1.0",
     "next": "14.2.6",
     "react": "18.3.1",
