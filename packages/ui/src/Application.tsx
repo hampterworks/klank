@@ -7,13 +7,8 @@ import {open} from '@tauri-apps/plugin-dialog';
 
 import styled from "styled-components";
 import Button from "./Button";
-import FolderIcon from "./icons/FolderIcon";
-import FileIcon from "./icons/FileIcon";
-import ToolTip from "./ToolTip";
-import LoadingIcon from "./icons/LoadingIcon";
-import RefreshIcon from "./icons/RefreshIcon";
 import {fetch} from "@tauri-apps/plugin-http";
-import path from "node:path";
+import path from "path";
 import useKlankStore from "web/state/store";
 import TabDetails from "./TabDetails";
 import ScrollContainer from "./ScrollContainer";
@@ -181,7 +176,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
     const htmlDoc = parser.parseFromString(htmlData, 'text/html');
     const json = JSON.parse(htmlDoc.getElementsByClassName('js-store')[0]?.getAttribute('data-content') ?? "{}")
     console.log(json)
-    const data = json.store.page.data.tab_view.wiki_tab.content.toString().replace(/(\[(ch|tab)\]|\[(\/)?(ch|tab)\])/g, ''))
+    const data = json.store.page.data.tab_view.wiki_tab.content.toString().replace(/(\[(ch|tab)\]|\[(\/)?(ch|tab)\])/g, '')
 
     const artist = json.store.page.data.tab.artist_name ?? ""
     const title = json.store.page.data.tab.song_name ?? ""

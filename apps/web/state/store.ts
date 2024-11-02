@@ -26,6 +26,8 @@ type KlankState = {
   setTabFontSize: (size: number) => void
   setTabTranspose: (transpose: number) => void
   setTabScrollSpeed: (speed: number) => void
+  incrementScrollSpeed: () => void
+  decrementScrollSpeed: () => void
   setTabIsScrolling: (isScrolling: boolean) => void
   setTabSettingByPath: (path: string, tabSetting: TabSetting) => void
   setTabSettings: (tabSettingByPath: Record<string, TabSetting>) => void
@@ -73,6 +75,8 @@ const useKlankStore = create<KlankState>()(
         setTabFontSize: (fontSize) => set((state) => ({...state, tab: {...state.tab, fontSize: clampFontSize(fontSize)}})),
         setTabTranspose: (transpose) => set((state) => ({...state, tab: {...state.tab, transpose}})),
         setTabScrollSpeed: (scrollSpeed) => set((state) => ({...state, tab: {...state.tab, scrollSpeed: clampScrollSpeed(scrollSpeed)}})),
+        incrementScrollSpeed: () => set((state) => ({...state, tab: {...state.tab, scrollSpeed: clampScrollSpeed(state.tab.scrollSpeed + 1)}})),
+        decrementScrollSpeed: () => set((state) => ({...state, tab: {...state.tab, scrollSpeed: clampScrollSpeed(state.tab.scrollSpeed - 1)}})),
         setTabIsScrolling: (isScrolling) => set((state) => ({...state, tab: {...state.tab, isScrolling}})),
         setTabSettingByPath: (path, tabSetting) => set((state) => ({...state, tabSettingByPath: {...state.tabSettingByPath, [path]: tabSetting}})),
         setTabSettings: (tabSettingByPath) => set((state) => ({...state, tabSettingByPath})),

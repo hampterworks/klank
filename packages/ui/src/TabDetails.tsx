@@ -1,7 +1,6 @@
 import * as React from "react";
 import styled from "styled-components";
 import useKlankStore from "web/state/store";
-import path from "node:path";
 
 const TabDetailsContainer = styled.div`
     padding: 16px;

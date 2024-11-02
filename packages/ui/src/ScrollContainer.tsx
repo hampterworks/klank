@@ -6,17 +6,22 @@ type ScrollContainerProps = {
   children: React.ReactNode
 } & React.ComponentPropsWithoutRef<'div'>
 
+const SCROLL_SPEEDS = [0, 1, 1.2, 1.8, 2.0, 1.7, 2.0] as const
+type ScrollSpeeds = typeof SCROLL_SPEEDS[number]
+
 const ScrollContainer: React.FC<ScrollContainerProps> = ({ children, ...props }) => {
   const mode = useKlankStore().mode
   const setMode = useKlankStore().setMode
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const lastElementRef = useRef<HTMLDivElement>(null)
   const scrollSpeed = useKlankStore().tab.scrollSpeed
-  const setScrollSpeed = useKlankStore().setTabScrollSpeed
+  const incrementScrollSpeed = useKlankStore().incrementScrollSpeed
+  const decrementScrollSpeed = useKlankStore().decrementScrollSpeed
   const isScrolling = useKlankStore().tab.isScrolling
   const setIsScrolling = useKlankStore().setTabIsScrolling
 
   const handleKeyInput = (event: KeyboardEvent): void => {
+    console.log("key", event)
     if (event.code === 'F2') {
       setMode(mode === "Read" ? "Edit" : "Read")
       event.preventDefault()
@@ -26,11 +31,11 @@ const ScrollContainer: React.FC<ScrollContainerProps> = ({ children, ...props })
       if (event.code === 'Space') {
         setIsScrolling(!isScrolling)
         event.preventDefault()
-      } else if (event.code === 'ArrowUp') {
-        setScrollSpeed(scrollSpeed + 1)
+      } else if (event.code === 'NumpadAdd' || event.code === 'Equal') {
+        incrementScrollSpeed()
         event.preventDefault()
-      } else if (event.code === 'ArrowDown' && scrollSpeed) {
-        setScrollSpeed(scrollSpeed - 1)
+      } else if (event.code === 'NumpadSubtract' || event.code === 'Minus' ) {
+        decrementScrollSpeed()
         event.preventDefault()
       }
     }
@@ -41,9 +46,9 @@ const ScrollContainer: React.FC<ScrollContainerProps> = ({ children, ...props })
     if (isScrolling) {
       interval = setInterval(() => {
         if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop += scrollSpeed;
+          scrollContainerRef.current.scrollTop += SCROLL_SPEEDS[scrollSpeed] ?? 0;
         }
-      }, 80 / scrollSpeed)
+      }, 60)
     }
 
     return () => {
