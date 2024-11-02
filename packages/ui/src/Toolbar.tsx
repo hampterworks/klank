@@ -5,12 +5,11 @@ const MenuWrapper = styled.ul`
     display: flex;
     gap: 16px;
     position: sticky;
-    top: 8px;
+    top: 0;
+    color: ${props => props.theme.textColor};
+    background: ${props => props.theme.secondaryBackground};
 
-    background: rgba(239, 239, 239, 0.95);
     padding: 16px 32px;
-    border-radius: 4px;
-    width: min-content;
     height: 100px;
     margin-bottom: 32px;
 

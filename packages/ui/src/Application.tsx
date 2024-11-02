@@ -1,10 +1,9 @@
 "use client"
 import React, {useEffect, useState} from "react";
-import {BaseDirectory, DirEntry, readDir, readTextFile, create} from "@tauri-apps/plugin-fs";
+import {BaseDirectory, DirEntry, readDir, readTextFile, create, writeTextFile, exists} from "@tauri-apps/plugin-fs";
 import {appLocalDataDir, join} from '@tauri-apps/api/path';
 import Sheet from "./Sheet";
 import {open} from '@tauri-apps/plugin-dialog';
-import {load, Store} from '@tauri-apps/plugin-store';
 
 import styled from "styled-components";
 import Button from "./Button";
@@ -15,6 +14,11 @@ import LoadingIcon from "./icons/LoadingIcon";
 import RefreshIcon from "./icons/RefreshIcon";
 import {fetch} from "@tauri-apps/plugin-http";
 import path from "node:path";
+import useKlankStore from "web/state/store";
+import TabDetails from "./TabDetails";
+import ScrollContainer from "./ScrollContainer";
+import Toolbar from "./Toolbar";
+import Menu from "./Menu";
 
 const ApplicationWrapper = styled.main`
     display: grid;
@@ -22,22 +26,15 @@ const ApplicationWrapper = styled.main`
     overflow: hidden;
     width: 100%;
 
+    background: ${props => props.theme.background};
+    
     .loading {
         display: block;
         align-self: center;
         margin-top: 16px;
     }
 `
-const MenuWrapper = styled.ul`
-    height: 100vh;
-    border-right: 1px solid black;
-    padding: 8px;
-    overflow-y: auto;
-    font-size: 14px;
-    display: flex;
-    flex-direction: column;
 
-`
 const MenuItem = styled.li<{ $isSelected?: boolean }>`
     display: flex;
     gap: 4px;
@@ -66,7 +63,36 @@ const MenuButton = styled.button`
     }
 `
 
-type RecursiveDirEntry = {
+const Textarea = styled.textarea<{$mode: string}>`
+    width: 100%;
+    height: calc(100vh - 100px); // menu 100px padding 16px margin 32px bottom padding 16px
+    color: ${props => props.theme.textColor};
+`
+
+const ButtonContainer = styled.div`
+    display: flex;
+    gap: 4px;
+    font-weight: bold;
+`
+
+type ButtonProps = {
+  currentValue: number
+  onIncrement: (value: number) => void;
+}
+
+const IncrementDecrementButtons: React.FC<ButtonProps> = ({onIncrement, currentValue}) => {
+  return <ButtonContainer>
+    <Button label='-1' onClick={() => {
+      onIncrement(-1)
+    }}/>
+    <Button label={currentValue} disabled />
+    <Button label='+1' onClick={() => {
+      onIncrement(1)
+    }}/>
+  </ButtonContainer>
+}
+
+export type RecursiveDirEntry = {
   name: string
   isDirectory: false
   isFile: boolean
@@ -83,7 +109,7 @@ type RecursiveDirEntry = {
 
 type File = RecursiveDirEntry | DirEntry
 
-type FileTree = File[]
+export type FileTree = File[]
 
 const processEntriesRecursively = async (parent: string, entries: FileTree, filter: (name: File) => boolean): Promise<FileTree> => {
   return Promise.all(entries.filter(file => filter(file)).flatMap(async entry => {
@@ -109,13 +135,37 @@ const readDirectoryRecursively = async (dir: string, filter: (name: File) => boo
 }
 
 const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props}) => {
-  const [baseDirectory, setBaseDirectory] = useState<string>()
+  const baseDirectory = useKlankStore().baseDirectory
+  const setBaseDirectory = useKlankStore().setBaseDirectory
   const [tree, setTree] = useState<FileTree>()
-  const [selectedFilePath, setSelectedFilePath] = useState<string>()
-  const [sheetData, setSheetData] = useState<string>()
+  const [sheetData, setSheetData] = useState<string>("")
+  const [editedTab, setEditedTab] = useState<string>(sheetData)
+  const [saveError, setSaveError] = useState<string>()
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isRefreshTriggered, setIsRefreshTriggered] = useState(false)
-  const [userConfig, setUserConfig] = useState<Store>()
+  const isScrolling = useKlankStore().tab.isScrolling
+  const setIsScrolling = useKlankStore().setTabIsScrolling
+  const currentTabPath = useKlankStore().tab.path
+  const setScrollSpeed = useKlankStore().setTabScrollSpeed
+  const scrollSpeed = useKlankStore().tab.scrollSpeed
+  const setTranspose = useKlankStore().setTabTranspose
+  const transpose = useKlankStore().tab.transpose
+  const setFontSize = useKlankStore().setTabFontSize
+  const fontSize = useKlankStore().tab.fontSize
+  const mode = useKlankStore().mode
+  const setDetails = useKlankStore().setTabDetails
+  const details = useKlankStore().tab.details
+  const tabSettingByPath = useKlankStore().tabSettingByPath
+  const setTabSettingByPath = useKlankStore().setTabSettingByPath
+  const setTabSettings = useKlankStore().setTabSettings
+
+  const handleTransposeChange = (value: number): void => {
+    setTranspose(transpose + value)
+  }
+
+  const handleScrollSpeedChange = (value: number): void => {
+    setScrollSpeed(scrollSpeed + value)
+  }
 
   const doMe = async () => {
     const url = window.prompt("From what URL should we import?")
@@ -146,40 +196,6 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
     return data
   }
 
-  useEffect(() => {
-    const initStore = async () => {
-      const store = await load('store.json', {autoSave: false})
-
-      store.get<{ lastPath: string }>('last-path')
-        .then(data => {
-          if (data !== undefined)
-            setSelectedFilePath(data?.lastPath)
-        })
-
-      store.get<{ lastFolder: string }>('last-folder')
-        .then(data => {
-          if (data !== undefined) {
-            setBaseDirectory(data?.lastFolder)
-          } else {
-            appLocalDataDir().then(setBaseDirectory)
-          }
-        })
-      setUserConfig(store)
-    }
-    initStore()
-
-  }, [])
-
-  useEffect(() => {
-    if (selectedFilePath !== undefined) {
-      readTextFile(selectedFilePath).then(setSheetData)
-    }
-  }, [selectedFilePath])
-
-  const handleFilePathUpdate = (path: string) => {
-    userConfig?.set('last-path', {lastPath: path})
-    setSelectedFilePath(path)
-  }
 
   const handleFolderPathUpdate = async () => {
     const path = await open({
@@ -189,77 +205,142 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
 
     if (path) {
       setBaseDirectory(path)
-      userConfig?.set('last-folder', {lastFolder: path})
     }
   }
 
-  useEffect(() => {
-    if (selectedFilePath !== undefined) {
-      readTextFile(selectedFilePath).then(setSheetData)
-    }
-  }, [selectedFilePath, readTextFile])
+  const saveEditedTab = async () => {
+    await (writeTextFile(currentTabPath, editedTab).catch(exception => setSaveError("Couldn't save the file!")));
+    setSheetData(editedTab)
+  }
+
+  const handleFontChange = (value: number) => {
+      setFontSize(fontSize + value)
+  }
 
   useEffect(() => {
-    if (baseDirectory !== undefined) {
-      setIsLoading(true)
-      readDirectoryRecursively(baseDirectory, file => file.isDirectory || file.name.endsWith(".tab.txt"))
-        .then(tree => {
-          setTree(tree)
-          setIsLoading(false)
-          setIsRefreshTriggered(false)
-        })
-    }
+    (async () => {
+      const klankRcFilePath = path.join(baseDirectory, '.klankrc.json')
+      if (await exists(klankRcFilePath)) {
+        try {
+          const config = JSON.parse(await readTextFile(klankRcFilePath))
+          setTabSettings(config)
+        }
+        catch (exception) {
+          console.log("Could not load .klankrc.json!")
+        }
+      }
+      else {
+        const file = await create(klankRcFilePath);
+        await file.write(new TextEncoder().encode('{}'));
+        await file.close();
+      }
+    })()
+  }, [baseDirectory])
+
+  useEffect(() => {
+    (async () => {
+      if (await exists(currentTabPath)) {
+        const newSheetData = await readTextFile(currentTabPath)
+        setSheetData(newSheetData)
+        setEditedTab(newSheetData)
+        if (tabSettingByPath[currentTabPath] !== undefined) {
+          setTranspose(tabSettingByPath[currentTabPath].transpose)
+          setScrollSpeed(tabSettingByPath[currentTabPath].scrollSpeed)
+          setFontSize(tabSettingByPath[currentTabPath].fontSize)
+          setDetails(tabSettingByPath[currentTabPath].details)
+        } else {
+          setTabSettingByPath(currentTabPath, {
+            fontSize,
+            path: currentTabPath,
+            transpose,
+            isScrolling: false,
+            details: "",
+            scrollSpeed
+          })
+        }
+      }
+    })()
+  }, [currentTabPath, readTextFile])
+
+  useEffect(() => {
+    (async () => {
+      const newTabSetting = {
+        fontSize,
+        path: currentTabPath,
+        transpose,
+        isScrolling: false,
+        details,
+        scrollSpeed
+      }
+      setTabSettingByPath(currentTabPath, newTabSetting)
+
+      const klankRcFilePath = path.join(baseDirectory, '.klankrc.json')
+      const file = await create(klankRcFilePath);
+      await file.write(new TextEncoder().encode(JSON.stringify(tabSettingByPath, null, 2)));
+      await file.close();
+    })()
+  }, [fontSize, scrollSpeed, transpose, details])
+
+  useEffect(() => {
+    (async () => {
+      if (await exists(baseDirectory)) {
+        setIsLoading(true)
+        readDirectoryRecursively(baseDirectory, file => file.isDirectory || file.name.endsWith(".tab.txt"))
+          .then(tree => {
+            setTree(tree)
+            setIsLoading(false)
+            setIsRefreshTriggered(false)
+          })
+      }
+    })()
   }, [baseDirectory, isRefreshTriggered])
 
-  const createTreeStructure = (file: DirEntry | RecursiveDirEntry) => {
-    if ("path" in file) {
-      if (file.isDirectory && file.children.length !== 0 && file.children.find(item => item.isFile)) {
-        return <MenuItem key={file.path}>
-          <MenuButton>
-            <FolderIcon/>
-            <span>{file.name}</span>
-          </MenuButton>
-          <ul>{file.children && file.children.map(child => createTreeStructure(child))}</ul>
-        </MenuItem>
-      } else if (file.isFile) {
-        return <MenuItem key={file.path} $isSelected={file.path === selectedFilePath}>
-          <MenuButton>
-            <FileIcon/>
-            <span onClick={() => handleFilePathUpdate(file.path)}>
-              <ToolTip message={file.name}>
-                {file.name}
-              </ToolTip>
-            </span>
-          </MenuButton>
-        </MenuItem>
-      }
-    }
-  }
-
   return <ApplicationWrapper {...props}>
-    <MenuWrapper>
-      <MenuItem>
-        <ToolTip message={baseDirectory ?? ''}>
-          {baseDirectory}
-        </ToolTip>
-      </MenuItem>
-      <MenuItem>
-        <Button label='Change Folder' disabled={isLoading} onClick={() => handleFolderPathUpdate()}/>
-        <Button iconButton={true} icon={<RefreshIcon/>} disabled={isLoading}
-                onClick={() => setIsRefreshTriggered(true)}/>
-      </MenuItem>
-      <MenuItem>
-        <MenuButton>
-          <span onClick={async () => setSheetData(await doMe() ?? "")}>
-            Click me
-          </span>
-        </MenuButton>
-      </MenuItem>
-      {
-        isLoading ? <li className='loading'><LoadingIcon/></li> : tree?.map(createTreeStructure)
+    <Menu
+        baseDirectory={baseDirectory}
+        tree={tree}
+        isLoading={isLoading}
+        setSheetData={setSheetData}
+        setIsRefreshTriggered={setIsRefreshTriggered}
+        handleFolderPathUpdate={handleFolderPathUpdate}
+        currentTabPath={currentTabPath}
+        doMe={doMe}
+    />
+    <ScrollContainer>
+      <TabDetails/>
+      <Toolbar>
+        {mode === "Read" && <>
+          <li key='fontControl'>
+            <span>Size</span>
+            <IncrementDecrementButtons onIncrement={handleFontChange} currentValue={fontSize}/>
+          </li>
+          <li key='transposeControl'>
+            <span>Transpose</span>
+            <IncrementDecrementButtons onIncrement={handleTransposeChange} currentValue={transpose}/>
+          </li>
+          <li key='autoscroll'>
+            <span>Autoscroll</span>
+            <div>
+              <Button label={isScrolling ? 'Stop' : 'Start'} onClick={() => {
+                setIsScrolling(!isScrolling)
+              }}/>
+              <IncrementDecrementButtons onIncrement={handleScrollSpeedChange} currentValue={scrollSpeed}/>
+            </div>
+          </li>
+        </>}
+        {mode === "Edit" && <li>
+          <span>Save</span>
+          {saveError && <span>Error!</span>}
+          <Button label='Update' onClick={async () => await saveEditedTab()}/>
+        </li>}
+      </Toolbar>
+      {mode === "Read" &&
+      <Sheet data={sheetData ?? ""}/>}
+      {mode === "Edit" &&
+        <Textarea $mode={mode} id="tab-edit-textarea" defaultValue={sheetData}
+                  onChange={event => setEditedTab(event.target.value)}/>
       }
-    </MenuWrapper>
-    <Sheet data={sheetData ?? ""}/>
+    </ScrollContainer>
   </ApplicationWrapper>
 }
 

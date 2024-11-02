@@ -15,8 +15,8 @@ const HoverEffectSpan = styled.span`
 
 const ToolTipElement = styled.div`
     position: fixed;
-    border: 1px solid #aaaaaa;
-    background: #ededed;
+    border: 1px solid ${props => props.theme.borderColor};
+    background: ${props => props.theme.secondaryBackground};
     padding: 4px;
     border-radius: 4px;
     z-index: 2;

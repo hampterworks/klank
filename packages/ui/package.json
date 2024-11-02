@@ -7,7 +7,10 @@
     "./Application": "./src/Application.tsx",
     "./Sheet": "./src/Sheet.tsx",
     "./Chord": "./src/Chord.tsx",
+    "./Menu": "./src/Menu.tsx",
     "./Toolbar": "./src/Toolbar.tsx",
+    "./TabDetails": "./src/TabDetails.tsx",
+    "./ScrollContainer": "./src/ScrollContainer.tsx",
     "./ApplicationFrame": "./src/ApplicationFrame.tsx"
   },
   "scripts": {

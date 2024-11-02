@@ -8,7 +8,7 @@ const ChordWrapper = styled.span`
     font-weight: bold;
     padding: 1px 4px;
     border-radius: 2px;
-    background: #e6e6e6;
+    background: ${props => props.theme.highlight};
     cursor: pointer;
 `
 

@@ -1,14 +1,14 @@
 "use client"
 
 import styled from "styled-components";
-import Button from "./Button";
 import Chord from "./Chord";
-import Toolbar from "./Toolbar";
 import React, {useEffect, useRef, useState} from "react";
+import useKlankStore, {Mode} from "web/state/store";
 
 const SheetWrapper = styled.div<{$mode: string}>`
-    overflow-y: ${props => props.$mode === 'Edit' ? 'none' : 'auto'};;
-    padding: ${props => props.$mode === 'Edit' ? '16px 0 16px 16px' : '16px'};
+    overflow-y: ${props => props.$mode === 'Edit' ? 'none' : 'auto'};
+    padding: ${props => props.$mode === 'Edit' ? '16px 0 0 16px' : '16px'};
+    color: ${props => props.theme.textColor};
 `
 const ChordWrapper = styled.div<{ fontSize: number }>`
     white-space: pre;
@@ -22,11 +22,6 @@ const ChordLine = styled.div`
 `
 const Lyric = styled.div`
     margin-bottom: 16px;
-`
-
-const Textarea = styled.textarea`
-    width: 100%;
-    height: calc(100vh - 164px); // menu 100px padding 16px margin 32px bottom padding 16px
 `
 
 const notes = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#']
@@ -105,167 +100,28 @@ const lineMatcher = (line: string, index: number, transpose: number): React.Reac
   return <Lyric key={line + index}>{line}</Lyric>
 }
 
-const ButtonContainer = styled.div`
-    display: flex;
-    gap: 4px;
-    font-weight: bold;
-`
-type ButtonProps = {
-  onIncrement: (value: number) => void;
-}
-
-const IncrementDecrementButtons: React.FC<ButtonProps> = ({onIncrement}) => {
-  return <ButtonContainer>
-    <Button label='-1' onClick={() => {
-      onIncrement(-1)
-    }}/>
-    <Button label='+1' onClick={() => {
-      onIncrement(1)
-    }}/>
-  </ButtonContainer>
-}
-
 type SheetProps = {
   data: string;
 }
 
-type Mode = "Read" | "Edit"
-
 const Sheet: React.FC<SheetProps> = ({data, ...props}) => {
-  const [fontSize, setFontSize] = useState(14)
-  const [transpose, setTranspose] = useState(0)
-  const [scrollSpeed, setScrollSpeed] = useState(1)
-  const [isScrolling, setIsScrolling] = useState(false)
-  const [editedTab, setEditedTab] = useState(data)
-  const [mode, setMode] = useState<Mode>("Edit")
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const lastElementRef = useRef<HTMLDivElement>(null)
-
-  const handleFontChange = (value: number) => {
-    if (value < 0 && fontSize > 10) {
-      setFontSize(fontSize + value)
-    } else if (value > 0 && fontSize < 22) {
-      setFontSize(fontSize + value)
-    }
-  }
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout
-    if (isScrolling) {
-      interval = setInterval(() => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop += scrollSpeed;
-        }
-      }, 80 / scrollSpeed)
-    }
-
-    return () => {
-      clearInterval(interval)
-    }
-  }, [isScrolling, scrollSpeed, scrollContainerRef])
-
-  const handleKeyInput = (event: KeyboardEvent): void => {
-    console.log(mode)
-    if (event.code === 'F2') {
-      console.log("xouioui")
-      setMode(mode === "Read" ? "Edit" : "Read")
-      event.preventDefault()
-      return
-    }
-    if (mode === "Read") {
-      if (event.code === 'Space') {
-        setIsScrolling(prevState => !prevState)
-      } else if (event.code === 'ArrowUp') {
-        setScrollSpeed(prevState => prevState + 1)
-      } else if (event.code === 'ArrowDown' && scrollSpeed) {
-        setScrollSpeed(prevState => Math.max(prevState - 1, 0))
-      }
-    }
-  }
-
-  useEffect(() => {
-    let observer: IntersectionObserver
-
-    document.addEventListener('keydown', handleKeyInput)
-
-    if (lastElementRef.current !== null) {
-      observer = new IntersectionObserver(entries => {
-          const [entry] = entries
-          if (entry?.isIntersecting)
-            setIsScrolling(false)
-        },
-        {
-          rootMargin: '0px',
-          threshold: 1.0,
-        })
-
-      observer.observe(lastElementRef.current)
-
-      return () => {
-        document.removeEventListener('keydown', handleKeyInput)
-        observer.disconnect();
-      }
-    }
-    return () => {
-      document.removeEventListener('keydown', handleKeyInput)
-      if (observer) observer.disconnect()
-    }
-  }, [mode])
-
-  const handleTransposeChange = (value: number): void => {
-    setTranspose(transpose + value)
-  }
-
-  const handleScrollSpeedChange = (value: number): void => {
-    setScrollSpeed(prevState => (prevState === 0 && value < 0) ? prevState : prevState + value)
-  }
+  const fontSize = useKlankStore().tab.fontSize
+  const mode = useKlankStore().mode
+  const transpose = useKlankStore().tab.transpose
 
   const lines: string[] = data.split(/\r?\n|\r|\n/g)
     .filter((line) => !testSpaces(line))
 
   return <SheetWrapper
     $mode={mode}
-    ref={scrollContainerRef}
     {...props}>
-    <Toolbar>
-      <li key='fontControl'>
-        <span>Fonts {fontSize}px</span>
-        <IncrementDecrementButtons onIncrement={handleFontChange}/>
-      </li>
-      <li key='transposeControl'>
-        <span>Transpose {transpose}</span>
-        <IncrementDecrementButtons onIncrement={handleTransposeChange}/>
-      </li>
-      <li key='autoscroll'>
-        <span>Autoscroll {scrollSpeed}</span>
-        <div>
-          <Button label={isScrolling ? 'Stop' : 'Start'} onClick={() => {
-            setIsScrolling(!isScrolling)
-          }}/>
-          <IncrementDecrementButtons onIncrement={handleScrollSpeedChange}/>
-        </div>
-      </li>
-      <li>
-        <span>Save</span>
-        <Button label='Update' onClick={() => {
-
-        }}/>
-      </li>
-    </Toolbar>
-    {mode === "Read" &&
-      <ChordWrapper fontSize={fontSize}>
+    <ChordWrapper fontSize={fontSize}>
         {
           lines.map((line, index) =>
             lineMatcher(line, index, transpose)
           )
         }
-        <div ref={lastElementRef}/>
       </ChordWrapper>
-    }
-    {mode === "Edit" &&
-      <Textarea id="kek" defaultValue={data}
-                onChange={event => setEditedTab(event.target.value)}/>
-    }
   </SheetWrapper>
 }
 
