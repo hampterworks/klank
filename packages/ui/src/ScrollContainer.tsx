@@ -18,7 +18,6 @@ const ScrollContainer: React.FC<ScrollContainerProps> = ({ children, ...props })
 
   const handleKeyInput = (event: KeyboardEvent): void => {
     if (event.code === 'F2') {
-      console.log("xouioui")
       setMode(mode === "Read" ? "Edit" : "Read")
       event.preventDefault()
       return

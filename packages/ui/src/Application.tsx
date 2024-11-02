@@ -145,6 +145,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   const [isRefreshTriggered, setIsRefreshTriggered] = useState(false)
   const isScrolling = useKlankStore().tab.isScrolling
   const setIsScrolling = useKlankStore().setTabIsScrolling
+  const setCurrentTabPath = useKlankStore().setTabPath
   const currentTabPath = useKlankStore().tab.path
   const setScrollSpeed = useKlankStore().setTabScrollSpeed
   const scrollSpeed = useKlankStore().tab.scrollSpeed
@@ -182,12 +183,14 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
     console.log(json)
     const data = json.store.page.data.tab_view.wiki_tab.content.toString().replace(/(\[(ch|tab)\]|\[(\/)?(ch|tab)\])/g, ''))
 
-    const artist = json.store.page.data.tab_view.versions.find(version => version.artist_name !== null && version.artist_name !== undefined).artist_name
-    const title = json.store.page.data.tab_view.versions.find(version => version.song_name !== null && version.song_name !== undefined).song_name
+    const artist = json.store.page.data.tab.artist_name ?? ""
+    const title = json.store.page.data.tab.song_name ?? ""
     console.log("artist", artist)
     console.log("title", title)
     const filename = `${artist} - ${title}.tab.txt`
     console.log("filename", filename)
+    setCurrentTabPath(path.join(baseDirectory, filename))
+    setIsRefreshTriggered(true)
 
     const file = await create(path.join(baseDirectory ?? "", filename));
     await file.write(new TextEncoder().encode(data));

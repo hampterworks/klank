@@ -62,7 +62,7 @@ const MenuToolbarItem  = styled.li<{ $isSelected?: boolean }>`
 const MenuDirectoryContentListItem = styled.ul`
     overflow-y: auto;
     border-bottom: 1px solid ${props => props.theme.borderColor};
-    height: 100%;
+    height: calc(100% - 134px);
     button {
         margin-left: auto;
         padding: 0 6px;
@@ -143,6 +143,7 @@ const Menu: React.FC<MenuProps> = ({
   const handleFilePathUpdate = (path: string) => {
     setCurrentTabPath(path)
   }
+
   const createTreeStructure = (file: DirEntry | RecursiveDirEntry) => {
     if ("path" in file) {
       if (file.isDirectory && file.children.length !== 0 && file.children.find(item => item.isFile)) {
@@ -168,6 +169,11 @@ const Menu: React.FC<MenuProps> = ({
     }
   }
 
+  const downloadTab = async () => {
+    setSheetData(await doMe() ?? "")
+    setCurrentTabPath("")
+  }
+
   return <MenuWrapper>
     <li>
       <LogoIcon/>
@@ -177,7 +183,7 @@ const Menu: React.FC<MenuProps> = ({
     <MenuToolbarItem>
       <Button iconButton={true} icon={<RefreshIcon/>} disabled={isLoading}
               onClick={() => setIsRefreshTriggered(true)}/>
-      <Button iconButton={true} icon={<DownloadIcon/>} onClick={async () => setSheetData(await doMe() ?? "")}/>
+      <Button iconButton={true} icon={<DownloadIcon/>} onClick={downloadTab}/>
     </MenuToolbarItem>
     <MenuDirectoryItem>
       <ToolTip message={baseDirectory ?? ''}>
