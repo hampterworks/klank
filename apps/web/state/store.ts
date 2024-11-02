@@ -34,10 +34,13 @@ type KlankState = {
   setTabDetails: (details: string) => void
 }
 
+export const SCROLL_SPEEDS = [1, 1.2, 1.8, 4.0] as const
+export type ScrollSpeeds = typeof SCROLL_SPEEDS[number]
+
 const clampFontSize = (size: number) => {
   if (size < 0) {
     return 0
-  } else if (size > 22) {
+  } else if (size >= 22) {
     return 22
   }
   return size
@@ -46,8 +49,8 @@ const clampFontSize = (size: number) => {
 const clampScrollSpeed = (size: number) => {
   if (size < 0) {
     return 0
-  } else if (size > 22) {
-    return 22
+  } else if (size >= SCROLL_SPEEDS.length) {
+    return SCROLL_SPEEDS.length
   }
   return size
 }

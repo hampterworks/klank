@@ -1,13 +1,10 @@
 import * as React from "react";
 import {useEffect, useRef, useState} from "react";
-import useKlankStore from "web/state/store";
+import useKlankStore, {SCROLL_SPEEDS} from "web/state/store";
 
 type ScrollContainerProps = {
   children: React.ReactNode
 } & React.ComponentPropsWithoutRef<'div'>
-
-const SCROLL_SPEEDS = [0, 1, 1.2, 1.8, 2.0, 1.7, 2.0] as const
-type ScrollSpeeds = typeof SCROLL_SPEEDS[number]
 
 const ScrollContainer: React.FC<ScrollContainerProps> = ({ children, ...props }) => {
   const mode = useKlankStore().mode
@@ -46,7 +43,7 @@ const ScrollContainer: React.FC<ScrollContainerProps> = ({ children, ...props })
     if (isScrolling) {
       interval = setInterval(() => {
         if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop += SCROLL_SPEEDS[scrollSpeed] ?? 0;
+          scrollContainerRef.current.scrollTop += SCROLL_SPEEDS[scrollSpeed - 1] ?? 0;
         }
       }, 60)
     }
