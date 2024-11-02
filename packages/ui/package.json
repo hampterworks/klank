@@ -8,6 +8,8 @@
     "./Sheet": "./src/Sheet.tsx",
     "./Chord": "./src/Chord.tsx",
     "./Toolbar": "./src/Toolbar.tsx",
+    "./TabDetails": "./src/TabDetails.tsx",
+    "./ScrollContainer": "./src/ScrollContainer.tsx",
     "./ApplicationFrame": "./src/ApplicationFrame.tsx"
   },
   "scripts": {
