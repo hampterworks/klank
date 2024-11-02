@@ -18,6 +18,7 @@ import useKlankStore from "web/state/store";
 import TabDetails from "./TabDetails";
 import ScrollContainer from "./ScrollContainer";
 import Toolbar from "./Toolbar";
+import Menu from "./Menu";
 
 const ApplicationWrapper = styled.main`
     display: grid;
@@ -90,7 +91,7 @@ const IncrementDecrementButtons: React.FC<ButtonProps> = ({onIncrement}) => {
   </ButtonContainer>
 }
 
-type RecursiveDirEntry = {
+export type RecursiveDirEntry = {
   name: string
   isDirectory: false
   isFile: boolean
@@ -107,7 +108,7 @@ type RecursiveDirEntry = {
 
 type File = RecursiveDirEntry | DirEntry
 
-type FileTree = File[]
+export type FileTree = File[]
 
 const processEntriesRecursively = async (parent: string, entries: FileTree, filter: (name: File) => boolean): Promise<FileTree> => {
   return Promise.all(entries.filter(file => filter(file)).flatMap(async entry => {
@@ -322,28 +323,16 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   }
 
   return <ApplicationWrapper {...props}>
-    <MenuWrapper>
-      <MenuItem>
-        <ToolTip message={baseDirectory ?? ''}>
-          {baseDirectory}
-        </ToolTip>
-      </MenuItem>
-      <MenuItem>
-        <Button label='Change Folder' disabled={isLoading} onClick={() => handleFolderPathUpdate()}/>
-        <Button iconButton={true} icon={<RefreshIcon/>} disabled={isLoading}
-                onClick={() => setIsRefreshTriggered(true)}/>
-      </MenuItem>
-      <MenuItem>
-        <MenuButton>
-          <span onClick={async () => setSheetData(await doMe() ?? "")}>
-            Click me
-          </span>
-        </MenuButton>
-      </MenuItem>
-      {
-        isLoading ? <li className='loading'><LoadingIcon/></li> : tree?.map(createTreeStructure)
-      }
-    </MenuWrapper>
+    <Menu
+        baseDirectory={baseDirectory}
+        tree={tree}
+        isLoading={isLoading}
+        setSheetData={setSheetData}
+        setIsRefreshTriggered={setIsRefreshTriggered}
+        handleFolderPathUpdate={handleFolderPathUpdate}
+        createTreeStructure={createTreeStructure}
+        doMe={doMe}
+    />
     <ScrollContainer>
       <TabDetails/>
       <Toolbar>

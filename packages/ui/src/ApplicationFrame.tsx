@@ -3,7 +3,7 @@
 import * as React from "react";
 import { ThemeProvider } from "styled-components";
 import theme from "./themes/baseTheme";
-import {useMemo} from "react";
+import useKlankStore from "web/state/store";
 
 /**
  * Props for the ApplicationFrame component.
@@ -21,10 +21,8 @@ type ApplicationFrameProps = {
  * @returns {ReactElement} The rendered application frame component.
  */
 const ApplicationFrame: React.FC<ApplicationFrameProps> = ({children}) => {
-  // const themeQuery = window.matchMedia("(prefers-color-scheme: dark)");
-  // const activeTheme = useMemo(() => themeQuery.matches ? theme.dark : theme.light, [themeQuery]);
-
-  return <ThemeProvider theme={theme.light}>
+  const activeTheme = useKlankStore().theme
+  return <ThemeProvider theme={theme[activeTheme]}>
     {children}
   </ThemeProvider>
 }

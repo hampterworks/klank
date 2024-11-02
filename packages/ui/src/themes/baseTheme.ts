@@ -1,5 +1,5 @@
 const theme = {
-  dark: {
+  Dark: {
     background: '#020202',
     secondaryBackground: '#272727',
     textColor: '#fbfbfb',
@@ -7,7 +7,7 @@ const theme = {
     highlight: '#454545',
     selected: '#616161',
   },
-  light: {
+  Light: {
     background: '#fdfdfd',
     secondaryBackground: '#efefef',
     textColor: '#020202',
