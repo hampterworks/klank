@@ -150,6 +150,8 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   const setFontSize = useKlankStore().setTabFontSize
   const fontSize = useKlankStore().tab.fontSize
   const mode = useKlankStore().mode
+  const setDetails = useKlankStore().setTabDetails
+  const details = useKlankStore().tab.details
   const tabSettingByPath = useKlankStore().tabSettingByPath
   const setTabSettingByPath = useKlankStore().setTabSettingByPath
   const setTabSettings = useKlankStore().setTabSettings
@@ -190,14 +192,6 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
 
     return data
   }
-
-  useEffect(() => {
-    (async () => {
-      if (await exists(currentTabPath)) {
-        readTextFile(currentTabPath).then(setSheetData)
-      }
-    })()
-  }, [currentTabPath])
 
   const handleFilePathUpdate = (path: string) => {
     console.log(path)
@@ -253,12 +247,14 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
           setTranspose(tabSettingByPath[currentTabPath].transpose)
           setScrollSpeed(tabSettingByPath[currentTabPath].scrollSpeed)
           setFontSize(tabSettingByPath[currentTabPath].fontSize)
+          setDetails(tabSettingByPath[currentTabPath].details)
         } else {
           setTabSettingByPath(currentTabPath, {
             fontSize,
             path: currentTabPath,
             transpose,
             isScrolling: false,
+            details,
             scrollSpeed
           })
           console.log("created it", tabSettingByPath[currentTabPath])
@@ -274,6 +270,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
         path: currentTabPath,
         transpose,
         isScrolling: false,
+        details,
         scrollSpeed
       }
       setTabSettingByPath(currentTabPath, newTabSetting)
@@ -283,7 +280,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
       await file.write(new TextEncoder().encode(JSON.stringify(tabSettingByPath, null, 2)));
       await file.close();
     })()
-  }, [fontSize, scrollSpeed, transpose])
+  }, [fontSize, scrollSpeed, transpose, details])
 
   useEffect(() => {
     (async () => {
