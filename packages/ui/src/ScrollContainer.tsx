@@ -17,9 +17,6 @@ const ScrollContainer: React.FC<ScrollContainerProps> = ({ children, ...props })
   const setIsScrolling = useKlankStore().setTabIsScrolling
 
   const handleKeyInput = (event: KeyboardEvent): void => {
-    console.log(mode)
-    console.log(isScrolling)
-    console.log(scrollSpeed)
     if (event.code === 'F2') {
       console.log("xouioui")
       setMode(mode === "Read" ? "Edit" : "Read")
@@ -29,12 +26,14 @@ const ScrollContainer: React.FC<ScrollContainerProps> = ({ children, ...props })
     if (mode === "Read") {
       if (event.code === 'Space') {
         setIsScrolling(!isScrolling)
+        event.preventDefault()
       } else if (event.code === 'ArrowUp') {
         setScrollSpeed(scrollSpeed + 1)
+        event.preventDefault()
       } else if (event.code === 'ArrowDown' && scrollSpeed) {
         setScrollSpeed(scrollSpeed - 1)
+        event.preventDefault()
       }
-      event.preventDefault()
     }
   }
 

@@ -1,6 +1,6 @@
 "use client"
 import React, {useEffect, useState} from "react";
-import {BaseDirectory, DirEntry, readDir, readTextFile, create, writeTextFile} from "@tauri-apps/plugin-fs";
+import {BaseDirectory, DirEntry, readDir, readTextFile, create, writeTextFile, exists} from "@tauri-apps/plugin-fs";
 import {appLocalDataDir, join} from '@tauri-apps/api/path';
 import Sheet from "./Sheet";
 import {open} from '@tauri-apps/plugin-dialog';
@@ -189,9 +189,11 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   }
 
   useEffect(() => {
-    if (currentTabPath !== undefined && currentTabPath !== "") {
-      readTextFile(currentTabPath).then(setSheetData)
-    }
+    (async () => {
+      if (await exists(currentTabPath)) {
+        readTextFile(currentTabPath).then(setSheetData)
+      }
+    })()
   }, [currentTabPath])
 
   const handleFilePathUpdate = (path: string) => {
@@ -219,21 +221,34 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   }
 
   useEffect(() => {
-    if (currentTabPath !== undefined && currentTabPath !== "") {
-      readTextFile(currentTabPath).then(setSheetData)
+    (async () => {
+    if (await exists(baseDirectory)) {
+      const config = await readTextFile(path.join(baseDirectory, '.klankrc.json'))
+      console.log("config", config)
     }
+    })()
+  }, [baseDirectory])
+
+  useEffect(() => {
+    (async () => {
+      if (await exists(currentTabPath)) {
+        readTextFile(currentTabPath).then(setSheetData)
+      }
+    })()
   }, [currentTabPath, readTextFile])
 
   useEffect(() => {
-    if (baseDirectory !== undefined) {
-      setIsLoading(true)
-      readDirectoryRecursively(baseDirectory, file => file.isDirectory || file.name.endsWith(".tab.txt"))
-        .then(tree => {
-          setTree(tree)
-          setIsLoading(false)
-          setIsRefreshTriggered(false)
-        })
-    }
+    (async () => {
+      if (await exists(baseDirectory)) {
+        setIsLoading(true)
+        readDirectoryRecursively(baseDirectory, file => file.isDirectory || file.name.endsWith(".tab.txt"))
+          .then(tree => {
+            setTree(tree)
+            setIsLoading(false)
+            setIsRefreshTriggered(false)
+          })
+      }
+    })()
   }, [baseDirectory, isRefreshTriggered])
 
   const createTreeStructure = (file: DirEntry | RecursiveDirEntry) => {
