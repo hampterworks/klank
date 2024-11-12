@@ -58,7 +58,7 @@ const getNoteOffset = (string: string | undefined) => {
 
 const normalizeNoteIndex = (noteNumber: number): number => ((noteNumber % notes.length) + notes.length) % notes.length
 
-const matchChords = (string: string) => (new RegExp(`\\b${chordMatcher}\\b`).exec(string))
+const matchChords = (string: string) => (new RegExp(chordMatcher).exec(string))
 
 const transposeChord = (chord: string, transpose: number): string => {
   const currentNote = matchChords(chord)?.groups
