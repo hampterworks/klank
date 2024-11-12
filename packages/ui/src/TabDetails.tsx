@@ -1,6 +1,9 @@
 import * as React from "react";
 import styled from "styled-components";
 import useKlankStore from "web/state/store";
+import YoutubeIcon from "./icons/YoutubeIcon";
+import { open } from '@tauri-apps/plugin-shell';
+import Input from "./Input";
 
 const TabDetailsContainer = styled.div`
     padding: 16px;
@@ -36,13 +39,26 @@ const TabDetails: React.FC<TabDetailsProps> = ({ ...props }) => {
   const tabFileName = splitTabPath[splitTabPath.length - 1]
   const tabName = tabFileName?.substring(0, tabFileName.length - 8)
   const tabDetails = useKlankStore().tab.details
+  const tabLink = useKlankStore().tab.link
   const setTabDetails = useKlankStore().setTabDetails
+  const setTabLink = useKlankStore().setTabLink
 
   return <TabDetailsContainer {...props}>
     <h1>{tabName}</h1>
-    {mode === "Edit" &&
-    <Textarea $mode={mode} id="tab-details-edit-textarea" defaultValue={tabDetails}
-              onChange={event => setTabDetails(event.target.value)}></Textarea>}
+    {mode === "Edit" && <>
+      <Textarea $mode={mode} id="tab-details-edit-textarea" defaultValue={tabDetails}
+                onChange={event => setTabDetails(event.target.value)}></Textarea>
+      <Input
+        value={tabLink}
+        iconLeft={<YoutubeIcon/>}
+        placeholder='Youtube link'
+        onInput={(value) => setTabLink(value.toString())}
+      />
+    </>}
+
+    {mode === "Read" && tabLink !== undefined && tabLink.length !== 0 &&
+      <button onClick={() => open(tabLink ?? '')}>youtube link <YoutubeIcon/></button>}
+
     {mode === "Read" && <p>
       {tabDetails}
     </p>}

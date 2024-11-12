@@ -2,7 +2,7 @@
   "$schema": "../../../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "klank",
   "version": "1.0.0",
-  "identifier": "klank",
+  "identifier": "home.klank",
   "build": {
     "frontendDist": "../out",
     "devUrl": "http://localhost:3000",

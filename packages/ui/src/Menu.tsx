@@ -134,7 +134,6 @@ const Menu: React.FC<MenuProps> = ({
                                      isLoading,
                                      ...props
                                    }) => {
-
   const activeTheme = useKlankStore().theme
   const setActiveTheme = useKlankStore().setTheme
 
@@ -182,7 +181,7 @@ const Menu: React.FC<MenuProps> = ({
     </li>
     <MenuToolbarItem>
       <Button iconButton={true} icon={<RefreshIcon/>} disabled={isLoading}
-              onClick={() => setIsRefreshTriggered(true)}/>
+              onClick={() => window.location.reload()}/>
       <Button iconButton={true} icon={<DownloadIcon/>} onClick={downloadTab}/>
     </MenuToolbarItem>
     <MenuDirectoryItem>

@@ -38,18 +38,23 @@ const ScrollContainer: React.FC<ScrollContainerProps> = ({ children, ...props })
   }
 
   useEffect(() => {
-    let interval: NodeJS.Timeout
-    if (isScrolling) {
-      interval = setInterval(() => {
-        if (scrollContainerRef.current) {
+    let animationFrameId: number;
+
+    const scroll = () => {
+      if (scrollContainerRef.current) {
+        animationFrameId = requestAnimationFrame(scroll)
+        if (animationFrameId % 6 == 0)
           scrollContainerRef.current.scrollTop += SCROLL_SPEEDS[scrollSpeed - 1] ?? 0;
-        }
-      }, 60)
+      }
+    };
+
+    if (isScrolling) {
+      animationFrameId = requestAnimationFrame(scroll);
     }
 
     return () => {
-      clearInterval(interval)
-    }
+      cancelAnimationFrame(animationFrameId);
+    };
   }, [isScrolling, scrollSpeed, scrollContainerRef])
 
 
@@ -82,7 +87,7 @@ const ScrollContainer: React.FC<ScrollContainerProps> = ({ children, ...props })
     }
   }, [mode, isScrolling])
 
-  return <div style={{overflowY: "auto"}}
+  return <div style={{overflowY: "auto", transform: "rotateZ(0deg)", scrollBehavior: "smooth"}}
     ref={scrollContainerRef}
     {...props}>
     {children}

@@ -28,7 +28,12 @@
     "dialog:default",
     {
       "identifier": "http:default",
-      "allow": [{ "url": "https://*" }]
-    }
+      "allow": [
+        {
+          "url": "https://*"
+        }
+      ]
+    },
+    "shell:default"
   ]
 }

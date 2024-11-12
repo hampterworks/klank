@@ -12,6 +12,7 @@ export type TabSetting = {
   scrollSpeed: number
   details: string
   isScrolling: boolean
+  link?: string
 }
 type KlankState = {
   baseDirectory: string
@@ -32,9 +33,10 @@ type KlankState = {
   setTabSettingByPath: (path: string, tabSetting: TabSetting) => void
   setTabSettings: (tabSettingByPath: Record<string, TabSetting>) => void
   setTabDetails: (details: string) => void
+  setTabLink: (link: string) => void
 }
 
-export const SCROLL_SPEEDS = [1, 1.2, 1.8, 4.0] as const
+export const SCROLL_SPEEDS = [1, 2, 3, 4, 5] as const
 export type ScrollSpeeds = typeof SCROLL_SPEEDS[number]
 
 const clampFontSize = (size: number) => {
@@ -66,7 +68,8 @@ const useKlankStore = create<KlankState>()(
           transpose: 0,
           scrollSpeed: 1,
           isScrolling: false,
-          details: ""
+          details: "",
+          link: '',
         },
         tabSettingByPath: {},
         mode: "Read",
@@ -83,7 +86,8 @@ const useKlankStore = create<KlankState>()(
         setTabIsScrolling: (isScrolling) => set((state) => ({...state, tab: {...state.tab, isScrolling}})),
         setTabSettingByPath: (path, tabSetting) => set((state) => ({...state, tabSettingByPath: {...state.tabSettingByPath, [path]: tabSetting}})),
         setTabSettings: (tabSettingByPath) => set((state) => ({...state, tabSettingByPath})),
-        setTabDetails: (details) => set((state) => ({...state,tab: {...state.tab, details}}))
+        setTabDetails: (details) => set((state) => ({...state,tab: {...state.tab, details}})),
+        setTabLink: (link) => set( state => ({...state, tab: {...state.tab, link: link}})),
       }),
       {
         name: 'klank-storage',
