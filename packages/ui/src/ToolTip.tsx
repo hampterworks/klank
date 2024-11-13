@@ -1,16 +1,10 @@
 "use client"
-import React, {useState} from "react";
+import React, {useState, useRef} from "react";
 import styled from "styled-components";
 
 const ToolTipWrapper = styled.div`
     position: relative;
-`
-const HoverEffectSpan = styled.span`
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 100%;
+    display: inline-block;
 `
 
 const ToolTipElement = styled.div`
@@ -19,45 +13,46 @@ const ToolTipElement = styled.div`
     background: ${props => props.theme.secondaryBackground};
     padding: 4px;
     border-radius: 4px;
+    font-size: 14px;
+    font-weight: 400;
     z-index: 2;
+    pointer-events: none;
 `
 type ToolTipProps = {
   message: string
   children: React.ReactNode
-} & React.ComponentPropsWithoutRef<'span'>
+} & React.ComponentPropsWithoutRef<'div'>
 
 const ToolTip: React.FC<ToolTipProps> = ({message, children, ...props}) => {
   const [position, setPosition] = useState({left: '0px', top: '0px'})
   const [isVisible, setIsVisible] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
 
-  const handleMouseEnter = () => {
-    setIsVisible(true)
-  }
-
-  const handleMouseLeave = () => {
-    setIsVisible(false)
-  }
 
   const handleMouseMove = (event: React.MouseEvent) => {
-    setPosition({
-      left: `${event.clientX + 14}px`,
-      top: `${event.clientY + 14}px`,
-    })
+    const boundingRect = wrapperRef.current?.getBoundingClientRect()
+    if (boundingRect) {
+      setPosition({
+        left: `${event.clientX + 14}px`,
+        top: `${event.clientY + 14}px`,
+      })
+    }
   }
 
   return (
-    <ToolTipWrapper {...props} onMouseMove={handleMouseMove}>
+    <ToolTipWrapper
+      {...props}
+      ref={wrapperRef}
+      onMouseEnter={() => setIsVisible(true)}
+      onMouseLeave={() => setIsVisible(false)}
+      onMouseMove={handleMouseMove}
+    >
       {children}
-      <HoverEffectSpan
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        {
-          isVisible && <ToolTipElement style={position}>
-            {message}
-          </ToolTipElement>
-        }
-      </HoverEffectSpan>
+      {
+        isVisible && <ToolTipElement style={{...position, pointerEvents: 'none'}}>
+          {message}
+        </ToolTipElement>
+      }
     </ToolTipWrapper>
   )
 }
