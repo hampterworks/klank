@@ -23,31 +23,34 @@ const MenuWrapper = styled.ul<{ $isMenuExtended: boolean }>`
     display: flex;
     flex-direction: column;
     border-right: 1px solid ${props => props.theme.borderColor};
-    padding: 8px 8px 4px 8px;
     overflow: hidden;
     font-size: 14px;
     color: ${props => props.theme.textColor};
-
+    
     > li:first-of-type {
         display: flex;
         align-items: center;
         gap: 8px;
         font-size: 24px;
         font-weight: 600;
+        padding: 8px;
         ${props => !props.$isMenuExtended && 'flex-direction: column;'};
 
         button {
             padding: 0 8px;
         }
+        > div {
+            margin-left: auto;
+        }
+        svg {
+            flex-shrink: 0;
+        }
     }
 `
 
 const menuItemStyle = css<{ $isSelected?: boolean }>`
-    gap: 4px;
-    margin-bottom: 6px;
     overflow: hidden;
     background: ${props => props.$isSelected ? props.theme.selected : 'none'};
-    padding: 2px;
 `
 
 const MenuToolbarItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: boolean }>`
@@ -65,12 +68,8 @@ const MenuToolbarItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: bool
 
     border-top: 1px solid ${props => props.theme.borderColor};
     border-bottom: 1px solid ${props => props.theme.borderColor};
-
-    margin-top: 8px;
-
-    button {
-        padding: 0 6px;
-    }
+    padding: 6px 0;
+    
 `
 
 const MenuDirectoryContentListItem = styled.ul`
@@ -78,54 +77,65 @@ const MenuDirectoryContentListItem = styled.ul`
     border-bottom: 1px solid ${props => props.theme.borderColor};
     height: calc(100% - 180px);
 
-    button {
-        margin-left: auto;
-        padding: 0 6px;
-    }
+    justify-content: flex-start;
 `
 
-const MenuDirectoryItem = styled.li<{ $isSelected?: boolean }>`
+const MenuDirectoryItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: boolean }>`
     ${menuItemStyle};
     display: flex;
     align-items: center;
+    padding: 8px;
     border-bottom: 1px solid ${props => props.theme.borderColor};
-
-    button {
+    > div {
         margin-left: auto;
-        padding: 0 6px;
     }
 `
 
-const MenuFolder = styled.li<{ $isSelected?: boolean }>`
-    ${menuItemStyle}
+const MenuFolder = styled.li<{ $isSelected?: boolean, $isMenuExtended: boolean }>`
+    display: flex;
+    ${menuItemStyle};
+    align-items: flex-start;
+    flex-direction: column;
+    margin-left: 4px;
+    cursor: none;
+    
     > button {
-        margin-bottom: 8px;
-    }
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
+        width: 100%;
+        > div {
+            margin-left: ${props => props.$isMenuExtended ? '4px' : '8px'};
 
-    ul {
-        margin-left: 8px;
+        }
     }
+    
 `
-const MenuItem = styled.li<{ $isSelected?: boolean }>`
-    ${menuItemStyle}
+const MenuItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: boolean }>`
+    display: flex;
+    ${menuItemStyle};
+    ${props => !props.$isMenuExtended && 'justify-content: center;'};
+    margin: 8px;
 `
 
 const MenuButton = styled.button`
-    display: flex;
-    width: 100%;
-    cursor: pointer;
-    align-items: center;
+    > div {
+        display: flex;
+        width: 100%;
+        cursor: pointer;
+        align-items: center;
+        span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
 
-    span {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        svg {
+            flex-shrink: 0;
+            width: 24px;
+        } 
     }
 
-    svg {
-        flex-shrink: 0;
-        width: 24px;
-    }
 `
 
 const Footer = styled.li<{ $isMenuExtended: boolean }>`
@@ -170,22 +180,22 @@ const Menu: React.FC<MenuProps> = ({
   const createTreeStructure = (file: DirEntry | RecursiveDirEntry) => {
     if ("path" in file) {
       if (file.isDirectory && file.children.length !== 0 && file.children.find(item => item.isFile)) {
-        return <MenuFolder key={file.path}>
+        return <MenuFolder key={file.path} $isMenuExtended={isMenuExtended}>
           <MenuButton>
-            <FolderIcon/>
-            <span>{file.name}</span>
+            <ToolTip message={file.name}>
+              <FolderIcon/>
+              {isMenuExtended && <span>{file.name}</span>}
+            </ToolTip>
           </MenuButton>
           <ul>{file.children && file.children.map(child => createTreeStructure(child))}</ul>
         </MenuFolder>
       } else if (file.isFile) {
-        return <MenuItem key={file.path} $isSelected={file.path === currentTabPath}>
-          <MenuButton>
-            <FileIcon/>
-            <span onClick={() => handleFilePathUpdate(file.path)}>
-              <ToolTip message={file.name}>
-                {file.name}
-              </ToolTip>
-            </span>
+        return <MenuItem key={file.path} $isSelected={file.path === currentTabPath} $isMenuExtended={isMenuExtended}>
+          <MenuButton onClick={() => handleFilePathUpdate(file.path)}>
+            <ToolTip message={file.name}>
+              <FileIcon/>
+              {isMenuExtended && <span>{file.name}</span>}
+            </ToolTip>
           </MenuButton>
         </MenuItem>
       }
@@ -220,22 +230,20 @@ const Menu: React.FC<MenuProps> = ({
         <Button iconButton={true} icon={<DownloadIcon/>} onClick={downloadTab}/>
       </ToolTip>
     </MenuToolbarItem>
-    {
-      isMenuExtended && <>
-        <MenuDirectoryItem>
-          <ToolTip message={baseDirectory ?? ''}>
-            {baseDirectory}
-          </ToolTip>
-          <Button iconButton={true} icon={<FolderOpenIcon/>} disabled={isLoading}
-                  onClick={() => handleFolderPathUpdate()}/>
-        </MenuDirectoryItem>
-        <MenuDirectoryContentListItem>
-          {
-            isLoading ? <li className='loading'><LoadingIcon/></li> : tree?.map(createTreeStructure)
-          }
-        </MenuDirectoryContentListItem>
-      </>
-    }
+    <MenuDirectoryItem $isMenuExtended={isMenuExtended}>
+      {
+        isMenuExtended && baseDirectory
+      }
+      <ToolTip message={baseDirectory ?? ''}>
+        <Button iconButton={true} icon={<FolderOpenIcon/>} disabled={isLoading}
+                onClick={() => handleFolderPathUpdate()}/>
+      </ToolTip>
+    </MenuDirectoryItem>
+    <MenuDirectoryContentListItem>
+      {
+        isLoading ? <li className='loading'><LoadingIcon/></li> : tree?.map(createTreeStructure)
+      }
+    </MenuDirectoryContentListItem>
     <Footer $isMenuExtended={isMenuExtended}>
       <Button
         iconButton={true}
