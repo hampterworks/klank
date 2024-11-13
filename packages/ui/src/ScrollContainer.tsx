@@ -1,6 +1,18 @@
 import * as React from "react";
 import {useEffect, useRef, useState} from "react";
 import useKlankStore, {SCROLL_SPEEDS} from "web/state/store";
+import styled, {css} from "styled-components";
+
+const ScrollWrapper = styled.div<{$isEdit: boolean}>`
+    overflow-Y: auto; 
+    transform: rotateZ(0deg); 
+    scroll-behavior: smooth;
+
+    ${props => props.$isEdit && css`
+        display: flex;
+        flex-direction: column;
+    `}
+`
 
 type ScrollContainerProps = {
   children: React.ReactNode
@@ -87,12 +99,13 @@ const ScrollContainer: React.FC<ScrollContainerProps> = ({ children, ...props })
     }
   }, [mode, isScrolling])
 
-  return <div style={{overflowY: "auto", transform: "rotateZ(0deg)", scrollBehavior: "smooth"}}
+  return <ScrollWrapper
     ref={scrollContainerRef}
+    $isEdit={mode === 'Edit'}
     {...props}>
     {children}
     <div ref={lastElementRef}/>
-  </div>
+  </ScrollWrapper>
 }
 
 export default ScrollContainer
