@@ -15,9 +15,15 @@ import ScrollContainer from "./ScrollContainer";
 import Toolbar from "./Toolbar";
 import Menu from "./Menu";
 
-const ApplicationWrapper = styled.main`
+const ApplicationWrapper = styled.main<{$isMenuExtended: boolean}>`
     display: grid;
-    grid-template-columns: 250px 1fr;
+    transition: 100ms;
+    ${props => 
+            props.$isMenuExtended 
+                    ? 'grid-template-columns: 250px 1fr;' 
+                    : 'grid-template-columns: 64px 1fr;'
+}
+    
     overflow: hidden;
     width: 100%;
 
@@ -50,6 +56,14 @@ const SaveButtonContainer = styled.li`
     button {
         align-self: center;
     }
+`
+
+const EditButtonContainer = styled.li`
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-self: center;
+    padding: 8px;
 `
 
 type ButtonProps = {
@@ -120,6 +134,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   const [saveState, setSaveState] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string>()
   const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [isMenuExtended, setIsMenuExtended] = useState<boolean>(true)
   const [isRefreshTriggered, setIsRefreshTriggered] = useState(false)
   const isScrolling = useKlankStore().tab.isScrolling
   const setIsScrolling = useKlankStore().setTabIsScrolling
@@ -132,6 +147,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   const setFontSize = useKlankStore().setTabFontSize
   const fontSize = useKlankStore().tab.fontSize
   const mode = useKlankStore().mode
+  const setMode = useKlankStore().setMode
   const setDetails = useKlankStore().setTabDetails
   const details = useKlankStore().tab.details
   const youtubeLink = useKlankStore().tab.link
@@ -281,16 +297,17 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
     })()
   }, [baseDirectory, isRefreshTriggered])
 
-  return <ApplicationWrapper {...props}>
+  return <ApplicationWrapper $isMenuExtended={isMenuExtended} {...props}>
     <Menu
         baseDirectory={baseDirectory}
         tree={tree}
         isLoading={isLoading}
         setSheetData={setSheetData}
-        setIsRefreshTriggered={setIsRefreshTriggered}
         handleFolderPathUpdate={handleFolderPathUpdate}
         currentTabPath={currentTabPath}
         doMe={doMe}
+        setIsMenuExtended={setIsMenuExtended}
+        isMenuExtended={isMenuExtended}
     />
     <ScrollContainer>
       <TabDetails/>
@@ -313,8 +330,12 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
               <IncrementDecrementButtons onIncrement={handleScrollSpeedChange} currentValue={scrollSpeed}/>
             </div>
           </li>
+          <EditButtonContainer key='edit'>
+            <Button label='Edit' onClick={() => setMode('Edit')}/>
+          </EditButtonContainer>
         </>}
         {mode === "Edit" && <SaveButtonContainer>
+          <Button label='Close' onClick={() => setMode('Read')}/>
           <Button label='Save' onClick={async () => {
             setSaveState('Saving')
             await saveEditedTab()

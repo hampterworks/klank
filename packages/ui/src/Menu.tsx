@@ -15,23 +15,27 @@ import FolderOpenIcon from "./icons/FolderOpenIcon";
 import DownloadIcon from "./icons/DownloadIcon";
 import ThemeIcon from "./icons/ThemeIcon";
 import LogoIcon from "./icons/LogoIcon";
+import MenuToggleIcon from "./icons/MenuToggleIcon";
 
-const MenuWrapper = styled.ul`
-    height: 100vh;
+const MenuWrapper = styled.ul<{$isMenuExtended: boolean}>`
+    display: flex;
+    flex-direction: column;
     border-right: 1px solid ${props => props.theme.borderColor};
-    padding: 8px;
+    padding: 8px 8px 4px 8px;
     overflow: hidden;
     font-size: 14px;
     color: ${props => props.theme.textColor};
+
     > li:first-of-type {
         display: flex;
         align-items: center;
         gap: 8px;
         font-size: 24px;
         font-weight: 600;
+        ${props => !props.$isMenuExtended && 'flex-direction: column;'};
         button {
             margin-left: auto;
-            padding: 0 6px;
+            padding: 0 8px;
         }
     }
 `
@@ -44,16 +48,17 @@ const menuItemStyle = css<{ $isSelected?: boolean }>`
     padding: 2px;
 `
 
-const MenuToolbarItem  = styled.li<{ $isSelected?: boolean }>`
+const MenuToolbarItem = styled.li<{ $isSelected?: boolean }>`
     ${menuItemStyle};
     display: flex;
     align-items: center;
     justify-content: space-around;
-    
+
     border-top: 1px solid ${props => props.theme.borderColor};
     border-bottom: 1px solid ${props => props.theme.borderColor};
-    
+
     margin-top: 8px;
+
     button {
         padding: 0 6px;
     }
@@ -62,7 +67,8 @@ const MenuToolbarItem  = styled.li<{ $isSelected?: boolean }>`
 const MenuDirectoryContentListItem = styled.ul`
     overflow-y: auto;
     border-bottom: 1px solid ${props => props.theme.borderColor};
-    height: calc(100% - 134px);
+    height: calc(100% - 180px);
+
     button {
         margin-left: auto;
         padding: 0 6px;
@@ -86,6 +92,7 @@ const MenuFolder = styled.li<{ $isSelected?: boolean }>`
     > button {
         margin-bottom: 8px;
     }
+
     ul {
         margin-left: 8px;
     }
@@ -112,22 +119,30 @@ const MenuButton = styled.button`
     }
 `
 
+const Footer = styled.li<{$isMenuExtended: boolean}>`
+    margin-top: auto;
+    display: flex;
+    justify-content: ${props => props.$isMenuExtended ? 'flex-end' : 'center'};
+`
+
 type MenuProps = {
   baseDirectory: string,
   tree?: FileTree
   isLoading: boolean
   setSheetData: (data: string) => void
-  setIsRefreshTriggered: (isRefreshTriggered: boolean) => void
   handleFolderPathUpdate: () => void
   currentTabPath: string
   doMe: () => Promise<string | undefined>
+  isMenuExtended: boolean
+  setIsMenuExtended: React.Dispatch<React.SetStateAction<boolean>>
 } & React.ComponentPropsWithoutRef<'ul'>
 
 const Menu: React.FC<MenuProps> = ({
                                      baseDirectory,
                                      tree,
                                      doMe,
-                                     setIsRefreshTriggered,
+                                     isMenuExtended,
+                                     setIsMenuExtended,
                                      setSheetData,
                                      handleFolderPathUpdate,
                                      currentTabPath,
@@ -173,28 +188,44 @@ const Menu: React.FC<MenuProps> = ({
     setCurrentTabPath("")
   }
 
-  return <MenuWrapper>
+  return <MenuWrapper $isMenuExtended={isMenuExtended}>
     <li>
       <LogoIcon/>
-      KLANK
-      <Button iconButton={true} icon={<ThemeIcon/>} onClick={() => setActiveTheme(activeTheme === 'Light' ? 'Dark' : 'Light')}/>
+      {
+        isMenuExtended && 'KLANK'
+      }
+      <Button iconButton={true} icon={<ThemeIcon/>}
+              onClick={() => setActiveTheme(activeTheme === 'Light' ? 'Dark' : 'Light')}/>
     </li>
     <MenuToolbarItem>
       <Button iconButton={true} icon={<RefreshIcon/>} disabled={isLoading}
               onClick={() => window.location.reload()}/>
-      <Button iconButton={true} icon={<DownloadIcon/>} onClick={downloadTab}/>
+      {
+        isMenuExtended && <Button iconButton={true} icon={<DownloadIcon/>} onClick={downloadTab}/>
+      }
     </MenuToolbarItem>
-    <MenuDirectoryItem>
-      <ToolTip message={baseDirectory ?? ''}>
-        {baseDirectory}
-      </ToolTip>
-      <Button iconButton={true} icon={<FolderOpenIcon/>} disabled={isLoading} onClick={() => handleFolderPathUpdate()}/>
-    </MenuDirectoryItem>
-    <MenuDirectoryContentListItem>
     {
-      isLoading ? <li className='loading'><LoadingIcon/></li> : tree?.map(createTreeStructure)
+      isMenuExtended && <>
+        <MenuDirectoryItem>
+          <ToolTip message={baseDirectory ?? ''}>
+            {baseDirectory}
+          </ToolTip>
+          <Button iconButton={true} icon={<FolderOpenIcon/>} disabled={isLoading} onClick={() => handleFolderPathUpdate()}/>
+        </MenuDirectoryItem>
+        <MenuDirectoryContentListItem>
+          {
+            isLoading ? <li className='loading'><LoadingIcon/></li> : tree?.map(createTreeStructure)
+          }
+        </MenuDirectoryContentListItem>
+      </>
     }
-    </MenuDirectoryContentListItem>
+    <Footer $isMenuExtended={isMenuExtended}>
+      <Button
+        iconButton={true}
+        icon={<MenuToggleIcon isMenuExtended={isMenuExtended}/>}
+        onClick={() => setIsMenuExtended(prevState => !prevState)}
+      />
+    </Footer>
   </MenuWrapper>
 }
 
