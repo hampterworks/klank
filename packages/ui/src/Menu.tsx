@@ -19,7 +19,7 @@ import MenuToggleIcon from "./icons/MenuToggleIcon";
 import SettingsIcon from "./icons/SettingsIcon";
 import Link from "next/link";
 
-const MenuWrapper = styled.ul<{$isMenuExtended: boolean}>`
+const MenuWrapper = styled.ul<{ $isMenuExtended: boolean }>`
     display: flex;
     flex-direction: column;
     border-right: 1px solid ${props => props.theme.borderColor};
@@ -35,8 +35,8 @@ const MenuWrapper = styled.ul<{$isMenuExtended: boolean}>`
         font-size: 24px;
         font-weight: 600;
         ${props => !props.$isMenuExtended && 'flex-direction: column;'};
+
         button {
-            margin-left: auto;
             padding: 0 8px;
         }
     }
@@ -50,11 +50,18 @@ const menuItemStyle = css<{ $isSelected?: boolean }>`
     padding: 2px;
 `
 
-const MenuToolbarItem = styled.li<{ $isSelected?: boolean }>`
+const MenuToolbarItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: boolean }>`
     ${menuItemStyle};
     display: flex;
     align-items: center;
-    justify-content: space-around;
+    ${props =>
+            props.$isMenuExtended
+                    ? css`justify-content: space-around;`
+                    : css`
+                        justify-content: center;
+                        flex-direction: column;
+                    `
+    };
 
     border-top: 1px solid ${props => props.theme.borderColor};
     border-bottom: 1px solid ${props => props.theme.borderColor};
@@ -121,7 +128,7 @@ const MenuButton = styled.button`
     }
 `
 
-const Footer = styled.li<{$isMenuExtended: boolean}>`
+const Footer = styled.li<{ $isMenuExtended: boolean }>`
     margin-top: auto;
     display: flex;
     justify-content: ${props => props.$isMenuExtended ? 'flex-end' : 'center'};
@@ -194,18 +201,24 @@ const Menu: React.FC<MenuProps> = ({
     <li>
       <LogoIcon/>
       {isMenuExtended && 'KLANK'}
-      <Button iconButton={true} icon={<ThemeIcon/>}
-              onClick={() => setActiveTheme(activeTheme === 'Light' ? 'Dark' : 'Light')}/>
+      <ToolTip message='Change theme'>
+        <Button iconButton={true} icon={<ThemeIcon/>}
+                onClick={() => setActiveTheme(activeTheme === 'Light' ? 'Dark' : 'Light')}/>
+      </ToolTip>
     </li>
-    <MenuToolbarItem>
-      <Button iconButton={true} icon={<RefreshIcon/>} disabled={isLoading}
-              onClick={() => window.location.reload()}/>
-      <Link href='/settings'>
-        <Button iconButton={true} icon={<SettingsIcon/>} disabled={isLoading}/>
-      </Link>
-      {
-        isMenuExtended && <Button iconButton={true} icon={<DownloadIcon/>} onClick={downloadTab}/>
-      }
+    <MenuToolbarItem $isMenuExtended={isMenuExtended}>
+      <ToolTip message='Refeash'>
+        <Button iconButton={true} icon={<RefreshIcon/>} disabled={isLoading}
+                onClick={() => window.location.reload()}/>
+      </ToolTip>
+      <ToolTip message='Settings'>
+        <Link href='/settings'>
+          <Button iconButton={true} icon={<SettingsIcon/>} disabled={isLoading}/>
+        </Link>
+      </ToolTip>
+      <ToolTip message='Download tab'>
+        <Button iconButton={true} icon={<DownloadIcon/>} onClick={downloadTab}/>
+      </ToolTip>
     </MenuToolbarItem>
     {
       isMenuExtended && <>
@@ -213,7 +226,8 @@ const Menu: React.FC<MenuProps> = ({
           <ToolTip message={baseDirectory ?? ''}>
             {baseDirectory}
           </ToolTip>
-          <Button iconButton={true} icon={<FolderOpenIcon/>} disabled={isLoading} onClick={() => handleFolderPathUpdate()}/>
+          <Button iconButton={true} icon={<FolderOpenIcon/>} disabled={isLoading}
+                  onClick={() => handleFolderPathUpdate()}/>
         </MenuDirectoryItem>
         <MenuDirectoryContentListItem>
           {
