@@ -14,13 +14,10 @@ const MenuWrapper = styled.ul`
     margin-bottom: 32px;
 
     li {
-        display: flex;
-        gap: 4px;
-        justify-content: flex-start;
-        flex-direction: column;
-
         > span {
+            display: block;
             white-space: nowrap;
+            margin-bottom: 4px;
         }
         > div {
             display: flex;

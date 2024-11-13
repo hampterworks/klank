@@ -16,8 +16,11 @@ const TabDetailsContainer = styled.div`
         font-size: 1.1em;
         line-height: 1.3em;
     }
-    p {
-        
+    > button {
+        cursor: pointer;
+        display: flex;
+        gap: 8px;
+        margin: 8px 0;
     }
 `
 
@@ -25,12 +28,13 @@ type TabDetailsProps = {
 
 }
 
-
 const Textarea = styled.textarea<{$mode: string}>`
     width: 100%;
     color: ${props => props.theme.textColor};
+    border: 1px solid ${props => props.theme.borderColor};
+    padding: 8px;
+    margin: 8px 0;
 `
-
 
 const TabDetails: React.FC<TabDetailsProps> = ({ ...props }) => {
   const mode = useKlankStore().mode
@@ -46,8 +50,12 @@ const TabDetails: React.FC<TabDetailsProps> = ({ ...props }) => {
   return <TabDetailsContainer {...props}>
     <h1>{tabName}</h1>
     {mode === "Edit" && <>
-      <Textarea $mode={mode} id="tab-details-edit-textarea" defaultValue={tabDetails}
-                onChange={event => setTabDetails(event.target.value)}></Textarea>
+      <Textarea
+        $mode={mode}
+        id="tab-details-edit-textarea"
+        defaultValue={tabDetails}
+        placeholder='Notes'
+        onChange={event => setTabDetails(event.target.value)}></Textarea>
       <Input
         value={tabLink}
         iconLeft={<YoutubeIcon/>}
@@ -57,7 +65,7 @@ const TabDetails: React.FC<TabDetailsProps> = ({ ...props }) => {
     </>}
 
     {mode === "Read" && tabLink !== undefined && tabLink.length !== 0 &&
-      <button onClick={() => open(tabLink ?? '')}>youtube link <YoutubeIcon/></button>}
+      <button onClick={() => open(tabLink ?? '')}><YoutubeIcon/>Youtube</button>}
 
     {mode === "Read" && <p>
       {tabDetails}

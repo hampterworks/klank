@@ -1,7 +1,7 @@
 "use client"
 import React, {useEffect, useState} from "react";
-import {BaseDirectory, DirEntry, readDir, readTextFile, create, writeTextFile, exists} from "@tauri-apps/plugin-fs";
-import {appLocalDataDir, join} from '@tauri-apps/api/path';
+import {BaseDirectory, create, DirEntry, exists, readDir, readTextFile, writeTextFile} from "@tauri-apps/plugin-fs";
+import {join} from '@tauri-apps/api/path';
 import Sheet from "./Sheet";
 import {open} from '@tauri-apps/plugin-dialog';
 
@@ -30,44 +30,26 @@ const ApplicationWrapper = styled.main`
     }
 `
 
-const MenuItem = styled.li<{ $isSelected?: boolean }>`
-    display: flex;
-    gap: 4px;
-    margin-bottom: 6px;
-    overflow: hidden;
-    background: ${props => props.$isSelected ? '#e3e3e3' : 'none'};
-    border-radius: 4px;
-    padding: 2px;
-`
-
-const MenuButton = styled.button`
-    display: flex;
-    width: 100%;
-    cursor: pointer;
-    align-items: center;
-
-    span {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    svg {
-        flex-shrink: 0;
-        width: 24px;
-    }
-`
-
 const Textarea = styled.textarea<{$mode: string}>`
     width: 100%;
     height: calc(100vh - 100px); // menu 100px padding 16px margin 32px bottom padding 16px
     color: ${props => props.theme.textColor};
+    padding: 16px;
 `
 
 const ButtonContainer = styled.div`
     display: flex;
     gap: 4px;
     font-weight: bold;
+`
+
+const SaveButtonContainer = styled.li`
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    button {
+        align-self: center;
+    }
 `
 
 type ButtonProps = {
@@ -135,6 +117,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   const [tree, setTree] = useState<FileTree>()
   const [sheetData, setSheetData] = useState<string>("")
   const [editedTab, setEditedTab] = useState<string>(sheetData)
+  const [saveState, setSaveState] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string>()
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isRefreshTriggered, setIsRefreshTriggered] = useState(false)
@@ -151,6 +134,8 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   const mode = useKlankStore().mode
   const setDetails = useKlankStore().setTabDetails
   const details = useKlankStore().tab.details
+  const youtubeLink = useKlankStore().tab.link
+  const setYoutubeLink = useKlankStore().setTabLink
   const tabSettingByPath = useKlankStore().tabSettingByPath
   const setTabSettingByPath = useKlankStore().setTabSettingByPath
   const setTabSettings = useKlankStore().setTabSettings
@@ -246,6 +231,8 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
           setScrollSpeed(tabSettingByPath[currentTabPath].scrollSpeed)
           setFontSize(tabSettingByPath[currentTabPath].fontSize)
           setDetails(tabSettingByPath[currentTabPath].details)
+          setYoutubeLink(tabSettingByPath[currentTabPath].link ?? '')
+
         } else {
           setTabSettingByPath(currentTabPath, {
             fontSize,
@@ -268,6 +255,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
         transpose,
         isScrolling: false,
         details,
+        link: youtubeLink,
         scrollSpeed
       }
       setTabSettingByPath(currentTabPath, newTabSetting)
@@ -277,7 +265,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
       await file.write(new TextEncoder().encode(JSON.stringify(tabSettingByPath, null, 2)));
       await file.close();
     })()
-  }, [fontSize, scrollSpeed, transpose, details])
+  }, [fontSize, scrollSpeed, transpose, details, youtubeLink])
 
   useEffect(() => {
     (async () => {
@@ -326,11 +314,18 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
             </div>
           </li>
         </>}
-        {mode === "Edit" && <li>
-          <span>Save</span>
+        {mode === "Edit" && <SaveButtonContainer>
+          <Button label='Save' onClick={async () => {
+            setSaveState('Saving')
+            await saveEditedTab()
+              .then(() => {
+                setSaveState('Saved')
+                setTimeout(() => {setSaveState(null)}, 1000)
+              })
+          }}/>
+          {saveState !== null && <span>{saveState}</span>}
           {saveError && <span>Error!</span>}
-          <Button label='Update' onClick={async () => await saveEditedTab()}/>
-        </li>}
+        </SaveButtonContainer>}
       </Toolbar>
       {mode === "Read" &&
       <Sheet data={sheetData ?? ""}/>}

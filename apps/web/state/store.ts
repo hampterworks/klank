@@ -87,7 +87,7 @@ const useKlankStore = create<KlankState>()(
         setTabSettingByPath: (path, tabSetting) => set((state) => ({...state, tabSettingByPath: {...state.tabSettingByPath, [path]: tabSetting}})),
         setTabSettings: (tabSettingByPath) => set((state) => ({...state, tabSettingByPath})),
         setTabDetails: (details) => set((state) => ({...state,tab: {...state.tab, details}})),
-        setTabLink: (link) => set( state => ({...state, tab: {...state.tab, link: link}})),
+        setTabLink: (link) => set( state => ({...state, tab: {...state.tab, link}})),
       }),
       {
         name: 'klank-storage',
