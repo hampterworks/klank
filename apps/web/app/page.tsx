@@ -1,7 +1,6 @@
-
+import Application from "@repo/ui/Application";
 import styles from "./page.module.css";
 import React from "react";
-import Application from "../../../packages/ui/src/Application";
 
 
 export default async function Home() {

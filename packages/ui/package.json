@@ -5,6 +5,8 @@
   "exports": {
     "./button": "./src/button.tsx",
     "./Application": "./src/Application.tsx",
+    "./Settings": "./src/Settings.tsx",
+    "./Typography": "./src/Typography.tsx",
     "./Sheet": "./src/Sheet.tsx",
     "./Chord": "./src/Chord.tsx",
     "./Input": "./src/Input.tsx",

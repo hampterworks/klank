@@ -16,6 +16,8 @@ import DownloadIcon from "./icons/DownloadIcon";
 import ThemeIcon from "./icons/ThemeIcon";
 import LogoIcon from "./icons/LogoIcon";
 import MenuToggleIcon from "./icons/MenuToggleIcon";
+import SettingsIcon from "./icons/SettingsIcon";
+import Link from "next/link";
 
 const MenuWrapper = styled.ul<{$isMenuExtended: boolean}>`
     display: flex;
@@ -191,15 +193,16 @@ const Menu: React.FC<MenuProps> = ({
   return <MenuWrapper $isMenuExtended={isMenuExtended}>
     <li>
       <LogoIcon/>
-      {
-        isMenuExtended && 'KLANK'
-      }
+      {isMenuExtended && 'KLANK'}
       <Button iconButton={true} icon={<ThemeIcon/>}
               onClick={() => setActiveTheme(activeTheme === 'Light' ? 'Dark' : 'Light')}/>
     </li>
     <MenuToolbarItem>
       <Button iconButton={true} icon={<RefreshIcon/>} disabled={isLoading}
               onClick={() => window.location.reload()}/>
+      <Link href='/settings'>
+        <Button iconButton={true} icon={<SettingsIcon/>} disabled={isLoading}/>
+      </Link>
       {
         isMenuExtended && <Button iconButton={true} icon={<DownloadIcon/>} onClick={downloadTab}/>
       }
