@@ -8,12 +8,14 @@ const MenuWrapper = styled.ul`
     top: 0;
     color: ${props => props.theme.textColor};
     background: ${props => props.theme.secondaryBackground};
-
+    flex-wrap: wrap;
     padding: 16px 32px;
-    height: 100px;
     margin-bottom: 32px;
 
     li {
+        flex-shrink: 1; 
+        flex-grow: 0;
+        min-width: 0;
         > span {
             display: block;
             white-space: nowrap;

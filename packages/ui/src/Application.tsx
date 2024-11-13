@@ -62,8 +62,8 @@ const EditButtonContainer = styled.li`
     width: 150px;
     height: 100%;
     display: flex;
-    align-self: center;
-    padding: 8px;
+    align-self: flex-end;
+
 `
 
 type ButtonProps = {
