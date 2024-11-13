@@ -59,7 +59,7 @@ const SaveButtonContainer = styled.li`
 `
 
 const EditButtonContainer = styled.li`
-    width: 100%;
+    width: 150px;
     height: 100%;
     display: flex;
     align-self: center;
@@ -106,7 +106,6 @@ const processEntriesRecursively = async (parent: string, entries: FileTree, filt
   return Promise.all(entries.filter(file => filter(file)).flatMap(async entry => {
     const dir = await join(parent, entry.name);
     if (entry.isDirectory) {
-      // console.log(entry)
       return {
         ...entry,
         path: dir,
@@ -166,25 +165,23 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
 
   const doMe = async () => {
     const url = window.prompt("From what URL should we import?")
-    console.log(url)
     if (url === undefined || url === null || url === "")
       return
-    // 'https://tabs.ultimate-guitar.com/tab/print?flats=0&font_size=1&id=3860363&is_ukulele=0&simplified=0&transpose=0
+
     const result = await fetch(url)
-    console.log(result)
     const htmlData = await result.text()
-    const parser = new DOMParser();
-    const htmlDoc = parser.parseFromString(htmlData, 'text/html');
+    const parser = new DOMParser()
+    const htmlDoc = parser.parseFromString(htmlData, 'text/html')
+
     const json = JSON.parse(htmlDoc.getElementsByClassName('js-store')[0]?.getAttribute('data-content') ?? "{}")
-    console.log(json)
     const data = json.store.page.data.tab_view.wiki_tab.content.toString().replace(/(\[(ch|tab)\]|\[(\/)?(ch|tab)\])/g, '')
 
     const artist = json.store.page.data.tab.artist_name ?? ""
     const title = json.store.page.data.tab.song_name ?? ""
-    console.log("artist", artist)
-    console.log("title", title)
+
+
     const filename = `${artist} - ${title}.tab.txt`
-    console.log("filename", filename)
+
     setCurrentTabPath(path.join(baseDirectory, filename))
     setIsRefreshTriggered(true)
 
