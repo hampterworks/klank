@@ -40,10 +40,6 @@ const MenuWrapper = styled.ul<{ $isMenuExtended: boolean }>`
         padding: 8px;
         ${props => !props.$isMenuExtended && 'flex-direction: column;'};
 
-        button {
-            padding: 0 8px;
-        }
-
         > div {
             margin-left: auto;
         }
@@ -103,7 +99,7 @@ const MenuFolder = styled.li<{ $isSelected?: boolean, $isMenuExtended: boolean }
     ${menuItemStyle};
     align-items: flex-start;
     flex-direction: column;
-    margin-left: 4px;
+    margin-left: ${props => props.$isMenuExtended ? '0' : '4px'};
     cursor: none;
 
     > button {
@@ -113,8 +109,7 @@ const MenuFolder = styled.li<{ $isSelected?: boolean, $isMenuExtended: boolean }
         width: 100%;
 
         > div {
-            margin-left: ${props => props.$isMenuExtended ? '4px' : '8px'};
-
+            margin-left: 8px;
         }
     }
 
