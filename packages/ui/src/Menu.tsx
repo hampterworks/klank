@@ -18,6 +18,10 @@ import LogoIcon from "./icons/LogoIcon";
 import MenuToggleIcon from "./icons/MenuToggleIcon";
 import SettingsIcon from "./icons/SettingsIcon";
 import Link from "next/link";
+import Input from "./Input";
+import SearchIcon from "./icons/SearchIcon";
+import {useState} from "react";
+import CloseIcon from "./icons/CloseIcon";
 
 const MenuWrapper = styled.ul<{ $isMenuExtended: boolean }>`
     display: flex;
@@ -26,7 +30,7 @@ const MenuWrapper = styled.ul<{ $isMenuExtended: boolean }>`
     overflow: hidden;
     font-size: 14px;
     color: ${props => props.theme.textColor};
-    
+
     > li:first-of-type {
         display: flex;
         align-items: center;
@@ -39,9 +43,11 @@ const MenuWrapper = styled.ul<{ $isMenuExtended: boolean }>`
         button {
             padding: 0 8px;
         }
+
         > div {
             margin-left: auto;
         }
+
         svg {
             flex-shrink: 0;
         }
@@ -69,7 +75,7 @@ const MenuToolbarItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: bool
     border-top: 1px solid ${props => props.theme.borderColor};
     border-bottom: 1px solid ${props => props.theme.borderColor};
     padding: 6px 0;
-    
+
 `
 
 const MenuDirectoryContentListItem = styled.ul`
@@ -86,6 +92,7 @@ const MenuDirectoryItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: bo
     align-items: center;
     padding: 8px;
     border-bottom: 1px solid ${props => props.theme.borderColor};
+
     > div {
         margin-left: auto;
     }
@@ -98,18 +105,19 @@ const MenuFolder = styled.li<{ $isSelected?: boolean, $isMenuExtended: boolean }
     flex-direction: column;
     margin-left: 4px;
     cursor: none;
-    
+
     > button {
         display: flex;
         align-items: center;
         white-space: nowrap;
         width: 100%;
+
         > div {
             margin-left: ${props => props.$isMenuExtended ? '4px' : '8px'};
 
         }
     }
-    
+
 `
 const MenuItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: boolean }>`
     display: flex;
@@ -124,6 +132,7 @@ const MenuButton = styled.button`
         width: 100%;
         cursor: pointer;
         align-items: center;
+
         span {
             overflow: hidden;
             text-overflow: ellipsis;
@@ -133,14 +142,16 @@ const MenuButton = styled.button`
         svg {
             flex-shrink: 0;
             width: 24px;
-        } 
+        }
     }
 
 `
 
 const Footer = styled.li<{ $isMenuExtended: boolean }>`
+    padding: 8px 4px;
     margin-top: auto;
     display: flex;
+    gap: 4px;
     justify-content: ${props => props.$isMenuExtended ? 'flex-end' : 'center'};
 `
 
@@ -170,15 +181,19 @@ const Menu: React.FC<MenuProps> = ({
                                    }) => {
   const activeTheme = useKlankStore().theme
   const setActiveTheme = useKlankStore().setTheme
+  const setMode = useKlankStore().setMode
+  const [searchFilter, setSearchFilter] = useState<string>('')
 
   const setCurrentTabPath = useKlankStore().setTabPath
 
   const handleFilePathUpdate = (path: string) => {
+    setMode('Read')
     setCurrentTabPath(path)
   }
 
   const createTreeStructure = (file: DirEntry | RecursiveDirEntry) => {
-    if ("path" in file) {
+    if ("path" in file && file.name.toLowerCase().includes(searchFilter.toLowerCase())) {
+
       if (file.isDirectory && file.children.length !== 0 && file.children.find(item => item.isFile)) {
         return <MenuFolder key={file.path} $isMenuExtended={isMenuExtended}>
           <MenuButton>
@@ -190,7 +205,8 @@ const Menu: React.FC<MenuProps> = ({
           <ul>{file.children && file.children.map(child => createTreeStructure(child))}</ul>
         </MenuFolder>
       } else if (file.isFile) {
-        return <MenuItem key={file.path} $isSelected={file.path === currentTabPath} $isMenuExtended={isMenuExtended}>
+        return <MenuItem key={file.path} $isSelected={file.path === currentTabPath.replace(/\//g, '\\')}
+                         $isMenuExtended={isMenuExtended}>
           <MenuButton onClick={() => handleFilePathUpdate(file.path)}>
             <ToolTip message={file.name}>
               <FileIcon/>
@@ -203,8 +219,8 @@ const Menu: React.FC<MenuProps> = ({
   }
 
   const downloadTab = async () => {
+    console.log(currentTabPath)
     setSheetData(await doMe() ?? "")
-    setCurrentTabPath("")
   }
 
   return <MenuWrapper $isMenuExtended={isMenuExtended}>
@@ -245,6 +261,18 @@ const Menu: React.FC<MenuProps> = ({
       }
     </MenuDirectoryContentListItem>
     <Footer $isMenuExtended={isMenuExtended}>
+      {
+
+        isMenuExtended &&
+        <Input
+          value={searchFilter}
+          onInput={(input) =>
+            setSearchFilter(input.toString())}
+          iconLeft={searchFilter.length > 0
+            ? <CloseIcon onClick={() => setSearchFilter('')}/>
+            : <SearchIcon/>}
+        />
+      }
       <Button
         iconButton={true}
         icon={<MenuToggleIcon isMenuExtended={isMenuExtended}/>}

@@ -35,7 +35,7 @@ const ScrollContainer: React.FC<ScrollContainerProps> = ({ children, ...props })
       event.preventDefault()
       return
     }
-    if (mode === "Read") {
+    if (mode === "Read" && (event.target as HTMLElement).tagName !== 'INPUT') {
       if (event.code === 'Space') {
         setIsScrolling(!isScrolling)
         event.preventDefault()
