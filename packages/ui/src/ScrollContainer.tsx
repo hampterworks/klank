@@ -28,6 +28,14 @@ const ScrollContainer: React.FC<ScrollContainerProps> = ({ children, ...props })
   const decrementScrollSpeed = useKlankStore().decrementScrollSpeed
   const isScrolling = useKlankStore().tab.isScrolling
   const setIsScrolling = useKlankStore().setTabIsScrolling
+  const tabPath = useKlankStore().tab.path
+
+  useEffect(() => {
+    if (scrollContainerRef.current)
+      scrollContainerRef.current.scrollTop = 0
+
+    setIsScrolling(false)
+  }, [tabPath])
 
   const handleKeyInput = (event: KeyboardEvent): void => {
     if (event.code === 'F2') {
@@ -82,7 +90,7 @@ const ScrollContainer: React.FC<ScrollContainerProps> = ({ children, ...props })
             setIsScrolling(false)
         },
         {
-          rootMargin: '0px',
+          rootMargin: '8px',
           threshold: 1.0,
         })
 

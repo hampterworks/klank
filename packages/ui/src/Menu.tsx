@@ -214,7 +214,6 @@ const Menu: React.FC<MenuProps> = ({
   }
 
   const downloadTab = async () => {
-    console.log(currentTabPath)
     setSheetData(await doMe() ?? "")
   }
 
