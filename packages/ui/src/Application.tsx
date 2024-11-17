@@ -14,6 +14,7 @@ import TabDetails from "./TabDetails";
 import ScrollContainer from "./ScrollContainer";
 import Toolbar from "./Toolbar";
 import Menu from "./Menu";
+import {appLocalDataDir} from '@tauri-apps/api/path';
 
 const ApplicationWrapper = styled.main<{$isMenuExtended: boolean}>`
     display: grid;
@@ -212,6 +213,13 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   const handleFontChange = (value: number) => {
       setFontSize(fontSize + value)
   }
+
+  useEffect(() => {
+    (async () => {
+    if (baseDirectory === "")
+      setBaseDirectory(await appLocalDataDir())
+    })()
+  }, [setBaseDirectory, baseDirectory])
 
   useEffect(() => {
     (async () => {

@@ -1,7 +1,6 @@
 import {create} from 'zustand'
 import {devtools, persist} from 'zustand/middleware'
 import type {} from '@redux-devtools/extension' // required for devtools typing
-// import {appLocalDataDir, join} from '@tauri-apps/api/path';
 
 export type Mode = "Read" | "Edit"
 export type Theme = "Light" | "Dark"
@@ -14,6 +13,7 @@ export type TabSetting = {
   isScrolling: boolean
   link?: string
 }
+
 type KlankState = {
   baseDirectory: string
   tab: TabSetting
