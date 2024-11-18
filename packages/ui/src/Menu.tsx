@@ -89,7 +89,13 @@ const MenuDirectoryItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: bo
     padding: 8px;
     border-bottom: 1px solid ${props => props.theme.borderColor};
 
-    > div {
+    div:first-of-type {
+        max-width: 80%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    div:last-of-type {
         margin-left: auto;
     }
 `
@@ -242,9 +248,9 @@ const Menu: React.FC<MenuProps> = ({
     </MenuToolbarItem>
     <MenuDirectoryItem $isMenuExtended={isMenuExtended}>
       {
-        isMenuExtended && baseDirectory
+        isMenuExtended && <ToolTip message={baseDirectory ?? ''}><span>{baseDirectory}</span></ToolTip>
       }
-      <ToolTip message={baseDirectory ?? ''}>
+      <ToolTip message='Change folder'>
         <Button iconButton={true} icon={<FolderOpenIcon/>} disabled={isLoading}
                 onClick={() => handleFolderPathUpdate()}/>
       </ToolTip>
