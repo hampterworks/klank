@@ -37,7 +37,7 @@ const MenuWrapper = styled.ul<{ $isMenuExtended: boolean }>`
         gap: 8px;
         font-size: 24px;
         font-weight: 600;
-        padding: 8px;
+        padding: ${props => props.$isMenuExtended ? '8px' : '6px 0'};
         ${props => !props.$isMenuExtended && 'flex-direction: column;'};
 
         > div {
@@ -86,17 +86,15 @@ const MenuDirectoryItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: bo
     ${menuItemStyle};
     display: flex;
     align-items: center;
-    padding: 8px;
+    padding: ${props => props.$isMenuExtended ? '8px' : '6px 0'};
     border-bottom: 1px solid ${props => props.theme.borderColor};
-
+    justify-content: space-around;
+    
     div:first-of-type {
-        max-width: 80%;
+        display: flex;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-    }
-    div:last-of-type {
-        margin-left: auto;
     }
 `
 
