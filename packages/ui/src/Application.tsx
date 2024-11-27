@@ -15,29 +15,24 @@ import ScrollContainer from "./ScrollContainer";
 import Toolbar from "./Toolbar";
 import Menu from "./Menu";
 import {appLocalDataDir} from '@tauri-apps/api/path';
+import {ifError} from "node:assert";
 
-const ApplicationWrapper = styled.main<{$isMenuExtended: boolean}>`
+const ApplicationWrapper = styled.main<{ $isMenuExtended: boolean }>`
     display: grid;
     transition: 100ms;
-    ${props => 
-            props.$isMenuExtended 
-                    ? 'grid-template-columns: 250px 1fr;' 
+    ${props =>
+            props.$isMenuExtended
+                    ? 'grid-template-columns: 250px 1fr;'
                     : 'grid-template-columns: 64px 1fr;'
-}
-    
+    }
+
     overflow: hidden;
     width: 100%;
 
     background: ${props => props.theme.background};
-    
-    .loading {
-        display: block;
-        align-self: center;
-        margin-top: 16px;
-    }
 `
 
-const Textarea = styled.textarea<{$mode: string}>`
+const Textarea = styled.textarea<{ $mode: string }>`
     width: 100%;
     height: calc(100vh - 100px); // menu 100px padding 16px margin 32px bottom padding 16px
     color: ${props => props.theme.textColor};
@@ -54,6 +49,7 @@ const SaveButtonContainer = styled.li`
     display: flex;
     align-items: center;
     gap: 16px;
+
     button {
         align-self: center;
     }
@@ -77,7 +73,7 @@ const IncrementDecrementButtons: React.FC<ButtonProps> = ({onIncrement, currentV
     <Button label='-1' onClick={() => {
       onIncrement(-1)
     }}/>
-    <Button label={currentValue} disabled />
+    <Button label={currentValue} disabled/>
     <Button label='+1' onClick={() => {
       onIncrement(1)
     }}/>
@@ -183,7 +179,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
 
     const filename = `${artist} - ${title}.tab.txt`
 
-    setCurrentTabPath(path.join(baseDirectory, filename))
+    setCurrentTabPath(path.join(baseDirectory ?? "", filename))
     setIsRefreshTriggered(true)
 
     const file = await create(path.join(baseDirectory ?? "", filename));
@@ -193,13 +189,11 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
     return data
   }
 
-
   const handleFolderPathUpdate = async () => {
     const path = await open({
       multiple: false,
       directory: true,
     })
-
     if (path) {
       setBaseDirectory(path)
     }
@@ -211,34 +205,35 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   }
 
   const handleFontChange = (value: number) => {
-      setFontSize(fontSize + value)
+    setFontSize(fontSize + value)
   }
 
   useEffect(() => {
-    (async () => {
-    if (baseDirectory === "")
-      setBaseDirectory(await appLocalDataDir())
-    })()
-  }, [setBaseDirectory, baseDirectory])
+    if (baseDirectory === undefined || baseDirectory === null) {
+      appLocalDataDir().then(folder => {
+        setBaseDirectory(folder);
+      })
+    }
+  }, [baseDirectory])
 
   useEffect(() => {
     (async () => {
-      const klankRcFilePath = path.join(baseDirectory, '.klankrc.json')
+      const klankRcFilePath = path.join(baseDirectory ?? '', '.klankrc.json')
       if (await exists(klankRcFilePath)) {
         try {
           const config = JSON.parse(await readTextFile(klankRcFilePath))
           setTabSettings(config)
-        }
-        catch (exception) {
+        } catch (exception) {
           console.log("Could not load .klankrc.json!")
         }
-      }
-      else {
+      } else {
         const file = await create(klankRcFilePath);
         await file.write(new TextEncoder().encode('{}'));
         await file.close();
       }
     })()
+
+
   }, [baseDirectory])
 
   useEffect(() => {
@@ -269,28 +264,30 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   }, [currentTabPath, readTextFile])
 
   useEffect(() => {
-    (async () => {
-      const newTabSetting = {
-        fontSize,
-        path: currentTabPath,
-        transpose,
-        isScrolling: false,
-        details,
-        link: youtubeLink,
-        scrollSpeed
-      }
-      setTabSettingByPath(currentTabPath, newTabSetting)
+    if (baseDirectory) {
+      (async () => {
+        const newTabSetting = {
+          fontSize,
+          path: currentTabPath,
+          transpose,
+          isScrolling: false,
+          details,
+          link: youtubeLink,
+          scrollSpeed
+        }
+        setTabSettingByPath(currentTabPath, newTabSetting)
 
-      const klankRcFilePath = path.join(baseDirectory, '.klankrc.json')
-      const file = await create(klankRcFilePath);
-      await file.write(new TextEncoder().encode(JSON.stringify(tabSettingByPath, null, 2)));
-      await file.close();
-    })()
+        const klankRcFilePath = path.join(baseDirectory, '.klankrc.json')
+        const file = await create(klankRcFilePath);
+        await file.write(new TextEncoder().encode(JSON.stringify(tabSettingByPath, null, 2)));
+        await file.close();
+      })()
+    }
   }, [fontSize, scrollSpeed, transpose, details, youtubeLink])
 
   useEffect(() => {
     (async () => {
-      if (await exists(baseDirectory)) {
+      if (baseDirectory && await exists(baseDirectory)) {
         setIsLoading(true)
         readDirectoryRecursively(baseDirectory, file => file.isDirectory || file.name.endsWith(".tab.txt"))
           .then(tree => {
@@ -304,15 +301,15 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
 
   return <ApplicationWrapper $isMenuExtended={isMenuExtended} {...props}>
     <Menu
-        baseDirectory={baseDirectory}
-        tree={tree}
-        isLoading={isLoading}
-        setSheetData={setSheetData}
-        handleFolderPathUpdate={handleFolderPathUpdate}
-        currentTabPath={currentTabPath}
-        doMe={doMe}
-        setIsMenuExtended={setIsMenuExtended}
-        isMenuExtended={isMenuExtended}
+      baseDirectory={baseDirectory ?? ''}
+      tree={tree}
+      isLoading={isLoading}
+      setSheetData={setSheetData}
+      handleFolderPathUpdate={handleFolderPathUpdate}
+      currentTabPath={currentTabPath}
+      doMe={doMe}
+      setIsMenuExtended={setIsMenuExtended}
+      isMenuExtended={isMenuExtended}
     />
     <ScrollContainer>
       <TabDetails/>
@@ -346,7 +343,9 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
             await saveEditedTab()
               .then(() => {
                 setSaveState('Saved')
-                setTimeout(() => {setSaveState(null)}, 1000)
+                setTimeout(() => {
+                  setSaveState(null)
+                }, 1000)
               })
           }}/>
           {saveState !== null && <span>{saveState}</span>}
@@ -354,7 +353,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
         </SaveButtonContainer>}
       </Toolbar>
       {mode === "Read" &&
-      <Sheet data={sheetData ?? ""}/>}
+        <Sheet data={sheetData ?? ""}/>}
       {mode === "Edit" &&
         <Textarea $mode={mode} id="tab-edit-textarea" defaultValue={sheetData}
                   onChange={event => setEditedTab(event.target.value)}/>

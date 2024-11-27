@@ -25,20 +25,8 @@ const SettingsWrapper = styled.main`
     gap: 8px;
     padding: 16px;
 
-    //div {
-    //    display: flex;
-    //    align-items: flex-end;
-    //    gap: 8px;
-    //}
-    //
-    //div:first-of-type {
-    //    display: block;
-    //    margin-bottom: 16px;
-    //}
-    //
-    //button {
-    //    margin-top: auto;
-    //}
+    background: ${props => props.theme.background};
+    color: ${props => props.theme.textColor};
 `
 
 const Settings: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props}) => {

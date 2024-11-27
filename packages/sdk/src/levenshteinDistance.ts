@@ -1,3 +1,4 @@
+// @ts-nocheck
 const levenshteinDistance = (a: string, b: string): number => {
   const an = a ? a.length : 0
   const bn = b ? b.length : 0

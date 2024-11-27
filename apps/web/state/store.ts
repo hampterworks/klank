@@ -15,7 +15,7 @@ export type TabSetting = {
 }
 
 type KlankState = {
-  baseDirectory: string
+  baseDirectory?: string
   tab: TabSetting
   mode: Mode
   theme: Theme
@@ -65,7 +65,6 @@ const useKlankStore = create<KlankState>()(
   devtools(
     persist(
       (set) => ({
-        baseDirectory: "",
         streamerSongListEnabled: false,
         streamerSongListUser: "",
         tab: {
@@ -99,6 +98,7 @@ const useKlankStore = create<KlankState>()(
       }),
       {
         name: 'klank-storage',
+
       }
     )
   )

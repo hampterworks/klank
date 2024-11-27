@@ -8,7 +8,7 @@ import Check from "./icons/Check";
 const CheckboxWrapper = styled.div<{ $sx?: ReturnType<typeof css> }>`
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
     position: relative;
     label, svg {
         cursor: pointer;

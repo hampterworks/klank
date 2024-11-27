@@ -157,7 +157,12 @@ const Footer = styled.li<{ $isMenuExtended: boolean }>`
     gap: 4px;
     justify-content: ${props => props.$isMenuExtended ? 'flex-end' : 'center'};
 `
-
+const LoadingIconContainer = styled.li`
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+`
 type SongWithDistance = { name: string, path: string, distance: number }
 
 type MenuProps = {
@@ -308,19 +313,19 @@ const Menu: React.FC<MenuProps> = ({
       </ToolTip>
       {
         streamerSongListEnabled && streamerSongListUser !== undefined && streamerSongListUser !== "" &&
-        <ToolTip message='Song queue'>
-          <Button iconButton={true} icon={<QueueIcon/>} onClick={() => HandleQueueUpdate()}/>
+        <ToolTip message='Update Queue'>
+          <Button iconButton={true} icon={<QueueIcon/>} disabled={isLoading} onClick={() => HandleQueueUpdate()}/>
         </ToolTip>
       }
-      <ToolTip message='Download tab'>
-        <Button iconButton={true} icon={<DownloadIcon/>} onClick={downloadTab}/>
+      <ToolTip message='Download Tab'>
+        <Button iconButton={true} icon={<DownloadIcon/>} disabled={isLoading} onClick={downloadTab}/>
       </ToolTip>
     </MenuToolbarItem>
     <MenuDirectoryItem $isMenuExtended={isMenuExtended}>
       {
         isMenuExtended && <ToolTip message={baseDirectory ?? ''}><span>{baseDirectory}</span></ToolTip>
       }
-      <ToolTip message='Change folder'>
+      <ToolTip message='Change Folder'>
         <Button iconButton={true} icon={<FolderOpenIcon/>} disabled={isLoading}
                 onClick={() => handleFolderPathUpdate()}/>
       </ToolTip>
@@ -331,7 +336,7 @@ const Menu: React.FC<MenuProps> = ({
     }
     <MenuDirectoryContentListItem>
       {
-        isLoading ? <li className='loading'><LoadingIcon/></li> : tree?.map(createTreeStructure)
+        isLoading ? <LoadingIconContainer className='loading'><LoadingIcon/></LoadingIconContainer> : tree?.map(createTreeStructure)
       }
     </MenuDirectoryContentListItem>
     <Footer $isMenuExtended={isMenuExtended}>
