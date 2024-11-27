@@ -20,7 +20,7 @@ const SongQueueWrapper = styled.li`
         padding: 8px;
         white-space: nowrap;
         &:nth-child(even) {
-            background: #f6f6f6;
+            background: ${props => props.theme.secondaryBackground};
         }
     }
 `
