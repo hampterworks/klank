@@ -20,8 +20,12 @@ import SettingsIcon from "./icons/SettingsIcon";
 import Link from "next/link";
 import Input from "./Input";
 import SearchIcon from "./icons/SearchIcon";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import CloseIcon from "./icons/CloseIcon";
+import QueueIcon from "./icons/QueueIcon";
+import SongQueue from "./SongQueue";
+import levenshteinDistance from "@repo/sdk/levenshteinDistance";
+import getQueue from "@repo/sdk/getQueue";
 
 const MenuWrapper = styled.ul<{ $isMenuExtended: boolean }>`
     display: flex;
@@ -89,7 +93,7 @@ const MenuDirectoryItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: bo
     padding: ${props => props.$isMenuExtended ? '8px' : '6px 0'};
     border-bottom: 1px solid ${props => props.theme.borderColor};
     justify-content: space-around;
-    
+
     div:first-of-type {
         display: flex;
         overflow: hidden;
@@ -154,6 +158,8 @@ const Footer = styled.li<{ $isMenuExtended: boolean }>`
     justify-content: ${props => props.$isMenuExtended ? 'flex-end' : 'center'};
 `
 
+type SongWithDistance = { name: string, path: string, distance: number }
+
 type MenuProps = {
   baseDirectory: string,
   tree?: FileTree
@@ -182,17 +188,57 @@ const Menu: React.FC<MenuProps> = ({
   const setActiveTheme = useKlankStore().setTheme
   const setMode = useKlankStore().setMode
   const [searchFilter, setSearchFilter] = useState<string>('')
+  const [songQueue, setSongQueue] = useState<any[]>()
+  const [songList, setSongList] = useState<{ name: string, path: string }[]>([])
 
   const setCurrentTabPath = useKlankStore().setTabPath
+  const streamerSongListUser = useKlankStore().streamerSongListUser
+  const streamerSongListEnabled = useKlankStore().streamerSongListEnabled
 
   const handleFilePathUpdate = (path: string) => {
     setMode('Read')
     setCurrentTabPath(path)
   }
 
+  const handleQueuePathUpdate = (songName: string) => {
+    setMode('Read')
+
+    const result = songList.reduce<SongWithDistance>((acc, next) => {
+      const distance = levenshteinDistance(next.name.toLowerCase(), songName.toLowerCase())
+      if (distance < acc.distance) {
+        return {...next, distance}
+      }
+      return acc
+    }, {distance: Infinity, path: "", name: ""})
+
+    if (result.path !== "" && result.distance < 5) {
+      setCurrentTabPath(result.path)
+    }
+  }
+
+  useEffect(() => {
+    const mapTreeStructure = (files: (DirEntry | RecursiveDirEntry)[]): { name: string, path: string }[] => {
+      return files?.flatMap((file: DirEntry | RecursiveDirEntry) => {
+        if ("path" in file) {
+          if (file.isDirectory && file.children.length !== 0) {
+            return mapTreeStructure(file.children)
+          } else if (file.isFile) {
+            return {
+              name: file.name.replace(/\.tab\.txt$/, ""),
+              path: file.path
+            }
+          }
+        }
+      }).filter(Boolean) as { name: string, path: string }[] // Filter out undefined values from the map and assert the type
+    }
+
+    const result = mapTreeStructure(tree || [])
+    setSongList(result)
+
+  }, [tree, searchFilter])
+
   const createTreeStructure = (file: DirEntry | RecursiveDirEntry) => {
     if ("path" in file && file.name.toLowerCase().includes(searchFilter.toLowerCase())) {
-
       if (file.isDirectory && file.children.length !== 0 && file.children.find(item => item.isFile)) {
         return <MenuFolder key={file.path} $isMenuExtended={isMenuExtended}>
           <MenuButton>
@@ -204,8 +250,11 @@ const Menu: React.FC<MenuProps> = ({
           <ul>{file.children && file.children.map(child => createTreeStructure(child))}</ul>
         </MenuFolder>
       } else if (file.isFile) {
-        return <MenuItem key={file.path} $isSelected={file.path === currentTabPath.replace(/\//g, '\\')}
-                         $isMenuExtended={isMenuExtended}>
+        return <MenuItem
+          key={file.path}
+          $isSelected={file.path === currentTabPath.replace(/\//g, '\\')}
+          $isMenuExtended={isMenuExtended}
+        >
           <MenuButton onClick={() => handleFilePathUpdate(file.path)}>
             <ToolTip message={file.name}>
               <FileIcon/>
@@ -220,6 +269,23 @@ const Menu: React.FC<MenuProps> = ({
   const downloadTab = async () => {
     setSheetData(await doMe() ?? "")
   }
+
+  const HandleQueueUpdate = () => {
+    getQueue(streamerSongListUser)
+      .then(async (data) => setSongQueue(await data?.json()))
+  }
+
+  useEffect(() => {
+    if (streamerSongListEnabled) {
+      HandleQueueUpdate()
+
+      const intervalId = setInterval(() => {
+        HandleQueueUpdate()
+      }, 10000)
+
+      return () => clearInterval(intervalId)
+    }
+  }, [streamerSongListUser, streamerSongListEnabled])
 
   return <MenuWrapper $isMenuExtended={isMenuExtended}>
     <li>
@@ -240,6 +306,12 @@ const Menu: React.FC<MenuProps> = ({
           <Button iconButton={true} icon={<SettingsIcon/>} disabled={isLoading}/>
         </Link>
       </ToolTip>
+      {
+        streamerSongListEnabled && streamerSongListUser !== undefined && streamerSongListUser !== "" &&
+        <ToolTip message='Song queue'>
+          <Button iconButton={true} icon={<QueueIcon/>} onClick={() => HandleQueueUpdate()}/>
+        </ToolTip>
+      }
       <ToolTip message='Download tab'>
         <Button iconButton={true} icon={<DownloadIcon/>} onClick={downloadTab}/>
       </ToolTip>
@@ -253,6 +325,10 @@ const Menu: React.FC<MenuProps> = ({
                 onClick={() => handleFolderPathUpdate()}/>
       </ToolTip>
     </MenuDirectoryItem>
+    {
+      streamerSongListEnabled && streamerSongListUser !== undefined && streamerSongListUser !== "" &&
+      <SongQueue songQueue={songQueue} handleFilePathUpdate={handleQueuePathUpdate}/>
+    }
     <MenuDirectoryContentListItem>
       {
         isLoading ? <li className='loading'><LoadingIcon/></li> : tree?.map(createTreeStructure)
