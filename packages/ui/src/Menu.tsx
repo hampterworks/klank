@@ -63,9 +63,10 @@ const MenuToolbarItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: bool
     ${menuItemStyle};
     display: flex;
     align-items: center;
+    
     ${props =>
             props.$isMenuExtended
-                    ? css`justify-content: space-around;`
+                    ? css`justify-content: space-between;`
                     : css`
                         justify-content: center;
                         flex-direction: column;
@@ -74,7 +75,7 @@ const MenuToolbarItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: bool
 
     border-top: 1px solid ${props => props.theme.borderColor};
     border-bottom: 1px solid ${props => props.theme.borderColor};
-    padding: 6px 0;
+    padding: 8px;
 
 `
 
@@ -92,8 +93,8 @@ const MenuDirectoryItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: bo
     align-items: center;
     padding: ${props => props.$isMenuExtended ? '8px' : '6px 0'};
     border-bottom: 1px solid ${props => props.theme.borderColor};
-    justify-content: space-around;
-
+    justify-content: space-between;
+    margin-left: 8px;
     div:first-of-type {
         display: flex;
         overflow: hidden;
