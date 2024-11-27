@@ -1,0 +1,22 @@
+{
+  "name": "@repo/sdk",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc"
+  },
+  "exports": {
+    "./levenshteinDistance": {
+      "types": "./src/levenshteinDistance.ts",
+      "default": "./dist/levenshteinDistance.js"
+    },
+    "./getQueue": {
+      "types": "./src/getQueue.ts",
+      "default": "./dist/getQueue.js"
+    }
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "*",
+    "typescript": "latest"
+  }
+}
