@@ -13,6 +13,7 @@
 - [x] Theme support
 
 #### WIP
+- [ ] CI/CD automation
 - [ ] Full streamersonglist intergration
 - [ ] Root certificates
 
