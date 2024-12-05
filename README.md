@@ -1,5 +1,5 @@
 # Klank
-## Chord tabs management
+#### Chord and tabs management
 
 #### Features
 - [x] Read tabs from file
