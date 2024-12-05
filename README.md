@@ -1,5 +1,6 @@
 # Klank
 #### Chord and tabs management
+![image](https://github.com/user-attachments/assets/c38fc012-4d26-41c1-8c70-736816d663bc)
 
 #### Features
 - [x] Read tabs from file
