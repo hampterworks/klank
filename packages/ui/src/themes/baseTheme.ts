@@ -1,3 +1,5 @@
+import SuccessIcon from "../icons/SuccesIcon";
+
 const theme = {
   Dark: {
     background: '#020202',
@@ -6,6 +8,8 @@ const theme = {
     borderColor: '#272727',
     highlight: '#454545',
     selected: '#616161',
+    success: '#36b15d',
+    fail: '#b13636',
   },
   Light: {
     background: '#fdfdfd',
@@ -14,6 +18,8 @@ const theme = {
     borderColor: '#c1c1c1',
     highlight: '#f3f3f3',
     selected: '#ededed',
+    success: '#36b15d',
+    fail: '#b13636',
   }
 }
 

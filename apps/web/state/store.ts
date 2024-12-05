@@ -15,21 +15,25 @@ export type TabSetting = {
 }
 
 type KlankState = {
-  baseDirectory: string
+  baseDirectory?: string
   tab: TabSetting
   mode: Mode
   theme: Theme
+  streamerSongListEnabled: boolean
+  streamerSongListUser: string
   tabSettingByPath: Record<string, TabSetting>
   setBaseDirectory: (directory: string) => void
   setMode: (mode: Mode) => void
   setTheme: (theme: Theme) => void
   setTabPath: (path: string) => void
+  setStreamerSongListUser: (user: string) => void
   setTabFontSize: (size: number) => void
   setTabTranspose: (transpose: number) => void
   setTabScrollSpeed: (speed: number) => void
   incrementScrollSpeed: () => void
   decrementScrollSpeed: () => void
   setTabIsScrolling: (isScrolling: boolean) => void
+  setStreamerSongListToggle: (streamerSongListEnabled: boolean) => void
   setTabSettingByPath: (path: string, tabSetting: TabSetting) => void
   setTabSettings: (tabSettingByPath: Record<string, TabSetting>) => void
   setTabDetails: (details: string) => void
@@ -61,7 +65,8 @@ const useKlankStore = create<KlankState>()(
   devtools(
     persist(
       (set) => ({
-        baseDirectory: "",
+        streamerSongListEnabled: false,
+        streamerSongListUser: "",
         tab: {
           path: "",
           fontSize: 14,
@@ -76,8 +81,10 @@ const useKlankStore = create<KlankState>()(
         theme: "Light",
         setBaseDirectory: (baseDirectory) => set((state) => ({...state, baseDirectory})),
         setMode: (mode) => set((state) => ({...state, mode})),
+        setStreamerSongListToggle: (streamerSongListEnabled) => set((state) => ({...state, streamerSongListEnabled})),
         setTheme: (theme) => set((state) => ({...state, theme})),
         setTabPath: (path) => set((state) => ({...state, tab: {...state.tab, path}})),
+        setStreamerSongListUser: (user) => set((state) => ({...state, streamerSongListUser: user})),
         setTabFontSize: (fontSize) => set((state) => ({...state, tab: {...state.tab, fontSize: clampFontSize(fontSize)}})),
         setTabTranspose: (transpose) => set((state) => ({...state, tab: {...state.tab, transpose}})),
         setTabScrollSpeed: (scrollSpeed) => set((state) => ({...state, tab: {...state.tab, scrollSpeed: clampScrollSpeed(scrollSpeed)}})),
@@ -91,6 +98,7 @@ const useKlankStore = create<KlankState>()(
       }),
       {
         name: 'klank-storage',
+
       }
     )
   )

@@ -12,6 +12,7 @@
   "dependencies": {
     "@redux-devtools/extension": "^3.3.0",
     "@repo/ui": "*",
+    "@repo/sdk": "*",
     "@tauri-apps/plugin-dialog": "^2.0.1",
     "@tauri-apps/plugin-fs": "^2.0.1",
     "@tauri-apps/plugin-http": "^2.0.1",

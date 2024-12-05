@@ -4,9 +4,11 @@
   "private": true,
   "exports": {
     "./button": "./src/button.tsx",
+    "./Checkbox": "./src/Checkbox.tsx",
     "./Application": "./src/Application.tsx",
     "./Settings": "./src/Settings.tsx",
     "./Typography": "./src/Typography.tsx",
+    "./SongQueue": "./src/SongQueue.tsx",
     "./Sheet": "./src/Sheet.tsx",
     "./Chord": "./src/Chord.tsx",
     "./Input": "./src/Input.tsx",

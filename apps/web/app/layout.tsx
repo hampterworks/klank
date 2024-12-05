@@ -2,6 +2,7 @@ import type {Metadata} from "next";
 import "./globals.css";
 import ApplicationFrame from "@repo/ui/ApplicationFrame";
 import {Roboto_Mono} from "next/font/google";
+import HydrationZustand from "./HydrationZustand";
 
 const robotoMono = Roboto_Mono({subsets: ["latin"]});
 
@@ -18,9 +19,11 @@ export default function RootLayout({
   return (
     <html lang="en">
     <body className={`${robotoMono.className}`}>
-    <ApplicationFrame>
-      {children}
-    </ApplicationFrame>
+    <HydrationZustand>
+      <ApplicationFrame>
+        {children}
+      </ApplicationFrame>
+    </HydrationZustand>
     </body>
     </html>
   );
