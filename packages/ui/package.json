@@ -34,8 +34,12 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "@tauri-apps/plugin-fs": "^2.0.1",
-    "react": "^18.2.0",
+    "@tauri-apps/plugin-fs": "^2.2.0",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.1",
+    "@types/react-dom": "^19.0.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "styled-components": "^6.1.13"
   }
 }
