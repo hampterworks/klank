@@ -94,7 +94,7 @@ const MenuDirectoryItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: bo
     padding: ${props => props.$isMenuExtended ? '8px' : '6px 0'};
     border-bottom: 1px solid ${props => props.theme.borderColor};
     justify-content: space-between;
-    margin-left: 8px;
+    margin-left: ${props => props.$isMenuExtended ? '8px' : '6px'};
     div:first-of-type {
         display: flex;
         overflow: hidden;
@@ -313,7 +313,11 @@ const Menu: React.FC<MenuProps> = ({
         </Link>
       </ToolTip>
       {
-        streamerSongListEnabled && streamerSongListUser !== undefined && streamerSongListUser !== "" &&
+        streamerSongListEnabled
+        && streamerSongListUser !== undefined
+        && streamerSongListUser !== ""
+        && isMenuExtended
+        &&
         <ToolTip message='Update Queue'>
           <Button iconButton={true} icon={<QueueIcon/>} disabled={isLoading} onClick={() => HandleQueueUpdate()}/>
         </ToolTip>
@@ -332,7 +336,11 @@ const Menu: React.FC<MenuProps> = ({
       </ToolTip>
     </MenuDirectoryItem>
     {
-      streamerSongListEnabled && streamerSongListUser !== undefined && streamerSongListUser !== "" &&
+      streamerSongListEnabled
+      && streamerSongListUser !== undefined
+      && streamerSongListUser !== ""
+      && isMenuExtended
+      &&
       <SongQueue songQueue={songQueue} handleFilePathUpdate={handleQueuePathUpdate}/>
     }
     <MenuDirectoryContentListItem>
