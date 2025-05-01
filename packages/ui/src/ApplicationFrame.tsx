@@ -21,7 +21,7 @@ type ApplicationFrameProps = {
  * @returns {ReactElement} The rendered application frame component.
  */
 const ApplicationFrame: React.FC<ApplicationFrameProps> = ({children}) => {
-  const activeTheme = useKlankStore().theme
+  const activeTheme: keyof typeof theme = useKlankStore().theme
   return <ThemeProvider theme={theme[activeTheme]}>
     {children}
   </ThemeProvider>
