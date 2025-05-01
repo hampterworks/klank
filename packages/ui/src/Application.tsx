@@ -5,7 +5,7 @@ import {join} from '@tauri-apps/api/path';
 import Sheet from "./Sheet";
 import {open} from '@tauri-apps/plugin-dialog';
 
-import styled from "styled-components";
+import styled, {css} from "styled-components";
 import Button from "./Button";
 import {fetch} from "@tauri-apps/plugin-http";
 import path from "path";
@@ -15,22 +15,29 @@ import ScrollContainer from "./ScrollContainer";
 import Toolbar from "./Toolbar";
 import Menu from "./Menu";
 import {appLocalDataDir} from '@tauri-apps/api/path';
-import {ifError} from "node:assert";
 
-const ApplicationWrapper = styled.main<{ $isMenuExtended: boolean }>`
+
+const ApplicationWrapper = styled.main<{ $isMenuExtended: boolean; $menuWidth: number }>`
     display: grid;
     transition: 100ms;
-    ${props =>
-            props.$isMenuExtended
-                    ? 'grid-template-columns: 250px 1fr;'
-                    : 'grid-template-columns: 64px 1fr;'
-    }
-
+    grid-template-columns: ${(props) => `${props.$menuWidth}px 1fr`};
     overflow: hidden;
     width: 100%;
-
-    background: ${props => props.theme.background};
-`
+    height: 100vh;
+    background: ${(props) => props.theme.background};
+    position: relative;
+    
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: ${(props) => `${props.$menuWidth - 3}px`};
+        width: 6px; /* Define the resize zone width */
+        ${props => props.$isMenuExtended && 'cursor: ew-resize;'}
+        z-index: 1;
+    }
+`;
 
 const Textarea = styled.textarea<{ $mode: string }>`
     width: 100%;
@@ -131,6 +138,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   const [saveError, setSaveError] = useState<string>()
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isMenuExtended, setIsMenuExtended] = useState<boolean>(true)
+  const [menuWidth, setMenuWidth] = useState(250)
   const [isRefreshTriggered, setIsRefreshTriggered] = useState(false)
   const isScrolling = useKlankStore().tab.isScrolling
   const setIsScrolling = useKlankStore().setTabIsScrolling
@@ -151,6 +159,30 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   const tabSettingByPath = useKlankStore().tabSettingByPath
   const setTabSettingByPath = useKlankStore().setTabSettingByPath
   const setTabSettings = useKlankStore().setTabSettings
+
+  const handleMouseDown = (event: React.MouseEvent) => {
+    const startX = event.clientX
+    const startWidth = menuWidth
+    let animationFrame: number | null = null
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (animationFrame) return
+      animationFrame = requestAnimationFrame(() => {
+        const newWidth = Math.max(64, startWidth + (e.clientX - startX)) // Minimum width is 64px
+        setMenuWidth(newWidth)
+        animationFrame = null
+      })
+    }
+
+    const onMouseUp = () => {
+      if (animationFrame) cancelAnimationFrame(animationFrame)
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }
 
   const handleTransposeChange = (value: number): void => {
     setTranspose(transpose + value)
@@ -181,6 +213,8 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
 
     setCurrentTabPath(path.join(baseDirectory ?? "", filename))
     setIsRefreshTriggered(true)
+    setTranspose(0)
+    setScrollSpeed(1)
 
     const file = await create(path.join(baseDirectory ?? "", filename));
     await file.write(new TextEncoder().encode(data));
@@ -299,7 +333,26 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
     })()
   }, [baseDirectory, isRefreshTriggered])
 
-  return <ApplicationWrapper $isMenuExtended={isMenuExtended} {...props}>
+  useEffect(() => {
+    if (isMenuExtended) {
+      setMenuWidth(250)
+    } else {
+      setMenuWidth(64)
+    }
+  }, [isMenuExtended])
+
+  return <ApplicationWrapper
+    $isMenuExtended={isMenuExtended}
+    $menuWidth={menuWidth}
+    onMouseDown={(e) => {
+      const rect = e.currentTarget.getBoundingClientRect()
+      if (isMenuExtended && e.clientX >= rect.left + menuWidth - 3 && e.clientX <= rect.left + menuWidth + 3) {
+        e.preventDefault()
+        handleMouseDown(e)
+      }
+    }}
+    {...props}
+  >
     <Menu
       baseDirectory={baseDirectory ?? ''}
       tree={tree}
