@@ -17,27 +17,34 @@ import Menu from "./Menu";
 import {appLocalDataDir} from '@tauri-apps/api/path';
 
 
-const ApplicationWrapper = styled.main<{ $isMenuExtended: boolean; $menuWidth: number }>`
-    display: grid;
-    transition: 100ms;
-    grid-template-columns: ${(props) => `${props.$menuWidth}px 1fr`};
-    overflow: hidden;
-    width: 100%;
-    height: 100vh;
-    background: ${(props) => props.theme.background};
-    position: relative;
-    
-    &::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: ${(props) => `${props.$menuWidth - 3}px`};
-        width: 6px; /* Define the resize zone width */
-        ${props => props.$isMenuExtended && 'cursor: ew-resize;'}
-        z-index: 1;
-    }
-`;
+const ApplicationWrapper = styled.main.attrs<{ $isMenuExtended: boolean; $menuWidth: number }>(props => ({
+  style: {
+    gridTemplateColumns: `${props.$menuWidth}px 1fr`,
+    '--menu-width': `${props.$menuWidth - 3}px`,
+    background: props.theme.background,
+    cursor: props.$isMenuExtended ? 'ew-resize' : 'default'
+  }
+}))<{ $isMenuExtended: boolean; $menuWidth: number }>`
+  display: grid;
+  transition: 100ms;
+  overflow: hidden;
+  width: 100%;
+  height: 100vh;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--menu-width);
+    width: 6px;
+    z-index: 1;
+  }
+`
+
+
+
 
 const Textarea = styled.textarea<{ $mode: string }>`
     width: 100%;
