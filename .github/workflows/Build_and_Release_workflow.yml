@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     branches:
-      - '**'
+      - 'main'
   workflow_dispatch:
 
 permissions:
@@ -54,7 +54,6 @@ jobs:
         with:
           targets: ${{ matrix.platform == 'windows-latest' && 'x86_64-pc-windows-msvc' || matrix.platform == 'macos-latest' && 'x86_64-apple-darwin' || 'x86_64-unknown-linux-gnu' }}
 
-      # Cache Rust dependencies
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
@@ -101,10 +100,7 @@ jobs:
       - name: Generate safe tag name
         id: safe_tag
         run: |
-          # Replace slashes with dashes and remove any other unsafe characters
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          SAFE_TAG=$(echo "${BRANCH_NAME}" | tr '/' '-' | tr ' ' '-')
-          echo "safe_tag=release-${SAFE_TAG}-${{ github.run_number }}" >> $GITHUB_OUTPUT
+          echo "safe_tag=release-${{ steps.date.outputs.date }}-${{ github.run_number }}" >> $GITHUB_OUTPUT
 
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
@@ -116,9 +112,9 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.safe_tag.outputs.safe_tag }}
-          name: Build from ${{ github.ref_name }} (${{ steps.date.outputs.date }})
+          name: Release from main (${{ steps.date.outputs.date }})
           draft: false
-          prerelease: true
+          prerelease: false
           fail_on_unmatched_files: false
           files: artifacts/**/*.{msi,deb,dmg}
         env:
