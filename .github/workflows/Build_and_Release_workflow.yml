@@ -1,0 +1,76 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*' # Triggers on version tags like v1.0.0
+  workflow_dispatch: # Allows manual triggers
+
+jobs:
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Set up Node.js (matching your engine constraints)
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      # Install dependencies
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
+
+      # Build the Turbo Repo project
+      - name: Build Turbo Repo
+        run: yarn build
+
+      # Cache Tauri dependencies (optional, speeds up builds)
+      - name: Cache Tauri Dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.tauri
+          key: ${{ runner.os }}-tauri-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-tauri
+
+      # Install Tauri CLI
+      - name: Install Tauri CLI
+        run: yarn global add @tauri-apps/cli
+
+      # Build Tauri App
+      - name: Build Tauri App
+        run: yarn tauri build
+
+      # Upload built artifacts for debugging (optional)
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: src-tauri/target/release/bundle/
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build # Ensure this runs after build
+
+    steps:
+      # Checkout the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Create a new release
+      - name: Create GitHub Release
+        with:
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            This release was automatically generated from the build.
+          files: |
+            src-tauri/target/release/bundle/**/*
