@@ -17,6 +17,6 @@
   },
   "devDependencies": {
     "@repo/typescript-config": "*",
-    "typescript": "latest"
+    "typescript": "^5.8.3"
   }
 }

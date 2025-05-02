@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react";
-import { ThemeProvider } from "styled-components";
+import {DefaultTheme, ThemeProvider} from "styled-components";
 import theme from "./themes/baseTheme";
 import useKlankStore from "web/state/store";
 
@@ -22,7 +22,10 @@ type ApplicationFrameProps = {
  */
 const ApplicationFrame: React.FC<ApplicationFrameProps> = ({children}) => {
   const activeTheme: keyof typeof theme = useKlankStore().theme
-  return <ThemeProvider theme={theme[activeTheme]}>
+
+  const currentTheme: DefaultTheme = theme[activeTheme]
+
+  return <ThemeProvider theme={currentTheme}>
     {children}
   </ThemeProvider>
 }
