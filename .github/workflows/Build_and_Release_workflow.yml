@@ -2,8 +2,8 @@ name: Build and Release
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches:
+      - '**'  # This will trigger on any branch push
   workflow_dispatch:
 
 permissions:
@@ -22,142 +22,99 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 1  # Shallow clone for faster checkout
 
-      # Windows-specific setup
       - name: Install Windows Build Tools
         if: matrix.platform == 'windows-latest'
         uses: microsoft/setup-msbuild@v1.1
 
-      # Ubuntu-specific setup
       - name: Install Linux Dependencies
         if: matrix.platform == 'ubuntu-latest'
         run: |
-          sudo apt-get update
-          sudo apt-get remove -y libappindicator3-1 libappindicator3-dev
-          sudo apt-get install -y \
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
             libgtk-3-dev \
             libwebkit2gtk-4.1-dev \
             librsvg2-dev \
             patchelf \
             libglib2.0-dev \
             build-essential \
-            curl \
-            wget \
-            file \
             libssl-dev \
             libayatana-appindicator3-dev
 
-      # Setup Node and Yarn
       - name: Setup Node and Yarn
         uses: actions/setup-node@v3
         with:
           node-version: '18'
           cache: 'yarn'
 
-      # Install Rust with required targets
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform == 'windows-latest' && 'x86_64-pc-windows-msvc' || matrix.platform == 'macos-latest' && 'x86_64-apple-darwin' || 'x86_64-unknown-linux-gnu' }}
 
-      # Debug: List current directory
-      - name: List Current Directory
-        shell: bash
-        run: |
-          pwd
-          ls -la
+      # Cache Rust dependencies
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
 
-      # Setup Yarn properly
-      - name: Setup Yarn
-        run: |
-          corepack enable
-          corepack prepare yarn@stable --activate
-          yarn --version
-
-      # Install dependencies with verbose logging
       - name: Install Dependencies
         run: |
-          yarn install --verbose
+          corepack enable
+          yarn install --frozen-lockfile --prefer-offline
         env:
           YARN_ENABLE_IMMUTABLE_INSTALLS: false
-
-      # Debug: Check package.json
-      - name: Check package.json
-        shell: bash
-        run: |
-          echo "Package.json content:"
-          cat package.json
 
       - name: Build Turbo Repo
         run: yarn build
         continue-on-error: true
 
-      - name: Install Tauri CLI
-        run: yarn global add @tauri-apps/cli
-
-      # Debug: Check src-tauri directory
-      - name: Check Tauri Directory
-        shell: bash
-        run: |
-          echo "Checking src-tauri directory:"
-          ls -la src-tauri || echo "src-tauri directory not found"
-
       - name: Build Tauri App
-        run: |
-          echo "Starting Tauri build..."
-          yarn tauri build --verbose
+        run: yarn tauri build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUST_BACKTRACE: 1
-
-      - name: List Build Directory (Debug)
-        shell: bash
-        run: |
-          echo "Current directory:"
-          pwd
-          echo "Directory contents:"
-          ls -la
-          echo "Searching for build artifacts:"
-          find . -name "*.msi" -o -name "*.deb" -o -name "*.dmg" -o -name "*.app"
+          CARGO_INCREMENTAL: 0
+          RUST_BACKTRACE: 0
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}-artifacts
           path: |
-            **/target/release/bundle/**/*.msi
-            **/target/release/bundle/**/*.deb
-            **/target/release/bundle/**/*.dmg
+            **/target/release/bundle/**/*.{msi,deb,dmg}
             **/target/release/bundle/macos/*.app/**/*
-            **/target/release/bundle/dmg/**/*
           if-no-files-found: warn
+          compression-level: 0  # Faster upload, artifacts are already compressed
 
   release:
     needs: build
     runs-on: ubuntu-latest
     if: success() || failure()
-
+    
     steps:
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y.%m.%d')" >> $GITHUB_OUTPUT
+
+      - name: Extract branch name
+        shell: bash
+        run: echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+        id: extract_branch
+
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
 
-      - name: Display structure of downloaded files
-        run: ls -R artifacts/
-
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
+          tag_name: release-${{ steps.date.outputs.date }}-${{ github.run_number }}
+          name: Release from ${{ steps.extract_branch.outputs.branch }} (${{ steps.date.outputs.date }})
           draft: false
-          prerelease: false
+          prerelease: true
           fail_on_unmatched_files: false
-          files: |
-            artifacts/**/*.msi
-            artifacts/**/*.deb
-            artifacts/**/*.dmg
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          files: artifacts/**/*.{msi,deb,dmg}
