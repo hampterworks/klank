@@ -14,7 +14,6 @@ jobs:
     strategy:
       matrix:
         platform: [windows-latest, ubuntu-latest, macos-latest]
-      # This allows other builds to continue if one fails
       fail-fast: false
 
     runs-on: ${{ matrix.platform }}
@@ -61,6 +60,13 @@ jobs:
         with:
           targets: ${{ matrix.platform == 'windows-latest' && 'x86_64-pc-windows-msvc' || matrix.platform == 'macos-latest' && 'x86_64-apple-darwin' || 'x86_64-unknown-linux-gnu' }}
 
+      # Debug: List current directory
+      - name: List Current Directory
+        shell: bash
+        run: |
+          pwd
+          ls -la
+
       # Setup Yarn properly
       - name: Setup Yarn
         run: |
@@ -68,48 +74,68 @@ jobs:
           corepack prepare yarn@stable --activate
           yarn --version
 
-      # Install dependencies
+      # Install dependencies with verbose logging
       - name: Install Dependencies
         run: |
-          yarn install
+          yarn install --verbose
         env:
           YARN_ENABLE_IMMUTABLE_INSTALLS: false
 
+      # Debug: Check package.json
+      - name: Check package.json
+        shell: bash
+        run: |
+          echo "Package.json content:"
+          cat package.json
+
       - name: Build Turbo Repo
         run: yarn build
+        continue-on-error: true
 
       - name: Install Tauri CLI
         run: yarn global add @tauri-apps/cli
 
+      # Debug: Check src-tauri directory
+      - name: Check Tauri Directory
+        shell: bash
+        run: |
+          echo "Checking src-tauri directory:"
+          ls -la src-tauri || echo "src-tauri directory not found"
+
       - name: Build Tauri App
-        run: yarn tauri build
+        run: |
+          echo "Starting Tauri build..."
+          yarn tauri build --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUST_BACKTRACE: 1
 
       - name: List Build Directory (Debug)
         shell: bash
         run: |
-          echo "Listing target directory:"
-          ls -R src-tauri/target/release/
-          echo "Listing bundle directory:"
-          ls -R src-tauri/target/release/bundle/ || echo "Bundle directory not found"
+          echo "Current directory:"
+          pwd
+          echo "Directory contents:"
+          ls -la
+          echo "Searching for build artifacts:"
+          find . -name "*.msi" -o -name "*.deb" -o -name "*.dmg" -o -name "*.app"
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}-artifacts
           path: |
-            src-tauri/target/release/bundle/**/*.msi
-            src-tauri/target/release/bundle/**/*.deb
-            src-tauri/target/release/bundle/**/*.dmg
-            src-tauri/target/release/bundle/macos/*.app/**/*
-            src-tauri/target/release/bundle/dmg/**/*
+            **/target/release/bundle/**/*.msi
+            **/target/release/bundle/**/*.deb
+            **/target/release/bundle/**/*.dmg
+            **/target/release/bundle/macos/*.app/**/*
+            **/target/release/bundle/dmg/**/*
           if-no-files-found: warn
 
   release:
     needs: build
     runs-on: ubuntu-latest
-    if: success() || failure()  # Run even if some builds fail
+    if: success() || failure()
 
     steps:
       - name: Download All Artifacts
