@@ -1,4 +1,4 @@
-   // theme.d.ts
+   // themeDeclaration.d.ts
    import 'styled-components'
 
    declare module 'styled-components' {
