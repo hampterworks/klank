@@ -14,6 +14,8 @@ jobs:
     strategy:
       matrix:
         platform: [windows-latest, ubuntu-latest, macos-latest]
+      # This allows other builds to continue if one fails
+      fail-fast: false
 
     runs-on: ${{ matrix.platform }}
     name: Build (${{ matrix.platform }})
@@ -25,10 +27,7 @@ jobs:
       # Windows-specific setup
       - name: Install Windows Build Tools
         if: matrix.platform == 'windows-latest'
-        run: |
-          yarn global add windows-build-tools
-          yarn global add node-gyp
-        shell: powershell
+        uses: microsoft/setup-msbuild@v1.1
 
       # Ubuntu-specific setup
       - name: Install Linux Dependencies
@@ -87,18 +86,30 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: List Build Directory (Debug)
+        shell: bash
+        run: |
+          echo "Listing target directory:"
+          ls -R src-tauri/target/release/
+          echo "Listing bundle directory:"
+          ls -R src-tauri/target/release/bundle/ || echo "Bundle directory not found"
+
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}-artifacts
           path: |
-            src-tauri/target/release/klank*
-            src-tauri/target/release/bundle/**/*
-          if-no-files-found: error
+            src-tauri/target/release/bundle/**/*.msi
+            src-tauri/target/release/bundle/**/*.deb
+            src-tauri/target/release/bundle/**/*.dmg
+            src-tauri/target/release/bundle/macos/*.app/**/*
+            src-tauri/target/release/bundle/dmg/**/*
+          if-no-files-found: warn
 
   release:
     needs: build
     runs-on: ubuntu-latest
+    if: success() || failure()  # Run even if some builds fail
 
     steps:
       - name: Download All Artifacts
@@ -111,45 +122,16 @@ jobs:
         run: ls -R artifacts/
 
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
-
-      - name: Upload Windows MSI
-        uses: actions/upload-release-asset@v1
+          fail_on_unmatched_files: false
+          files: |
+            artifacts/**/*.msi
+            artifacts/**/*.deb
+            artifacts/**/*.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/bundle/msi/klank_*_x64_en-US.msi
-          asset_name: klank-windows-installer.msi
-          asset_content_type: application/x-msi
-        if: ${{ hashFiles('./artifacts/bundle/msi/*.msi') }}
-
-      - name: Upload Linux DEB
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/bundle/deb/klank_*.deb
-          asset_name: klank-linux.deb
-          asset_content_type: application/vnd.debian.binary-package
-        if: ${{ hashFiles('./artifacts/bundle/deb/*.deb') }}
-
-      - name: Upload macOS DMG
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/bundle/dmg/klank_*.dmg
-          asset_name: klank-macos.dmg
-          asset_content_type: application/x-apple-diskimage
-        if: ${{ hashFiles('./artifacts/bundle/dmg/*.dmg') }}
