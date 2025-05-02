@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     branches:
-      - '**'  # This will trigger on any branch push
+      - '**'
   workflow_dispatch:
 
 permissions:
@@ -23,7 +23,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 1  # Shallow clone for faster checkout
+          fetch-depth: 1
 
       - name: Install Windows Build Tools
         if: matrix.platform == 'windows-latest'
@@ -63,7 +63,7 @@ jobs:
       - name: Install Dependencies
         run: |
           corepack enable
-          yarn install --frozen-lockfile --prefer-offline
+          yarn install
         env:
           YARN_ENABLE_IMMUTABLE_INSTALLS: false
 
@@ -86,22 +86,25 @@ jobs:
             **/target/release/bundle/**/*.{msi,deb,dmg}
             **/target/release/bundle/macos/*.app/**/*
           if-no-files-found: warn
-          compression-level: 0  # Faster upload, artifacts are already compressed
+          compression-level: 0
 
   release:
     needs: build
     runs-on: ubuntu-latest
     if: success() || failure()
-    
+
     steps:
       - name: Get current date
         id: date
-        run: echo "date=$(date +'%Y.%m.%d')" >> $GITHUB_OUTPUT
+        run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
 
-      - name: Extract branch name
-        shell: bash
-        run: echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
-        id: extract_branch
+      - name: Generate safe tag name
+        id: safe_tag
+        run: |
+          # Replace slashes with dashes and remove any other unsafe characters
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          SAFE_TAG=$(echo "${BRANCH_NAME}" | tr '/' '-' | tr ' ' '-')
+          echo "safe_tag=release-${SAFE_TAG}-${{ github.run_number }}" >> $GITHUB_OUTPUT
 
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
@@ -112,9 +115,11 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: release-${{ steps.date.outputs.date }}-${{ github.run_number }}
-          name: Release from ${{ steps.extract_branch.outputs.branch }} (${{ steps.date.outputs.date }})
+          tag_name: ${{ steps.safe_tag.outputs.safe_tag }}
+          name: Build from ${{ github.ref_name }} (${{ steps.date.outputs.date }})
           draft: false
           prerelease: true
           fail_on_unmatched_files: false
           files: artifacts/**/*.{msi,deb,dmg}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
