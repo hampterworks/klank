@@ -1,11 +1,10 @@
 "use client"
 import React, {useEffect, useState} from "react";
 import {BaseDirectory, create, DirEntry, exists, readDir, readTextFile, writeTextFile} from "@tauri-apps/plugin-fs";
-import {join} from '@tauri-apps/api/path';
+import {appLocalDataDir, join} from '@tauri-apps/api/path';
 import Sheet from "./Sheet";
 import {open} from '@tauri-apps/plugin-dialog';
-
-import styled, {css} from "styled-components";
+import styled from "styled-components";
 import Button from "./Button";
 import {fetch} from "@tauri-apps/plugin-http";
 import path from "path";
@@ -14,7 +13,6 @@ import TabDetails from "./TabDetails";
 import ScrollContainer from "./ScrollContainer";
 import Toolbar from "./Toolbar";
 import Menu from "./Menu";
-import {appLocalDataDir} from '@tauri-apps/api/path';
 
 
 const ApplicationWrapper = styled.main.attrs<{ $isMenuExtended: boolean; $menuWidth: number }>(props => ({
@@ -22,7 +20,7 @@ const ApplicationWrapper = styled.main.attrs<{ $isMenuExtended: boolean; $menuWi
     gridTemplateColumns: `${props.$menuWidth}px 1fr`,
     '--menu-width': `${props.$menuWidth - 3}px`,
     background: props.theme.background,
-    cursor: props.$isMenuExtended ? 'ew-resize' : 'default'
+    '--cursor-ew-resize': `${props.$isMenuExtended ? 'ew-resize' : 'default'}`
   }
 }))<{ $isMenuExtended: boolean; $menuWidth: number }>`
   display: grid;
@@ -38,13 +36,11 @@ const ApplicationWrapper = styled.main.attrs<{ $isMenuExtended: boolean; $menuWi
     top: 0;
     bottom: 0;
     left: var(--menu-width);
+    cursor: var(--cursor-ew-resize);
     width: 6px;
     z-index: 1;
   }
 `
-
-
-
 
 const Textarea = styled.textarea<{ $mode: string }>`
     width: 100%;

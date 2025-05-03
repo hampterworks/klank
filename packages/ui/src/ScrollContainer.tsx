@@ -29,6 +29,8 @@ const ScrollContainer: React.FC<ScrollContainerProps> = ({ children, ...props })
   const isScrolling = useKlankStore().tab.isScrolling
   const setIsScrolling = useKlankStore().setTabIsScrolling
   const tabPath = useKlankStore().tab.path
+  const lastTimeRef = useRef<number>(0)
+  const accumulatedDeltaRef = useRef<number>(0)
 
   useEffect(() => {
     if (scrollContainerRef.current)
@@ -60,23 +62,41 @@ const ScrollContainer: React.FC<ScrollContainerProps> = ({ children, ...props })
   useEffect(() => {
     let animationFrameId: number;
 
-    const scroll = () => {
+    const scroll = (currentTime: number) => {
+      if (!lastTimeRef.current) {
+        lastTimeRef.current = currentTime
+      }
+
+      const deltaTime = currentTime - lastTimeRef.current
+      lastTimeRef.current = currentTime
+
       if (scrollContainerRef.current) {
+        const baseSpeed = (SCROLL_SPEEDS[scrollSpeed - 1] ?? 0) * 3 + 3
+        const pixelsPerMillisecond = baseSpeed / 1000
+        accumulatedDeltaRef.current += deltaTime * pixelsPerMillisecond
+
+        if (accumulatedDeltaRef.current >= 1) {
+          const pixels = Math.floor(accumulatedDeltaRef.current)
+          scrollContainerRef.current.scrollTop += pixels
+          accumulatedDeltaRef.current -= pixels
+        }
+
         animationFrameId = requestAnimationFrame(scroll)
-        if (animationFrameId % 6 == 0)
-          scrollContainerRef.current.scrollTop += SCROLL_SPEEDS[scrollSpeed - 1] ?? 0;
       }
     };
 
     if (isScrolling) {
-      animationFrameId = requestAnimationFrame(scroll);
+      accumulatedDeltaRef.current = 0;
+      lastTimeRef.current = 0;
+      animationFrameId = requestAnimationFrame(scroll)
     }
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId)
+      }
     };
-  }, [isScrolling, scrollSpeed, scrollContainerRef])
-
+  }, [isScrolling, scrollSpeed])
 
   useEffect(() => {
     let observer: IntersectionObserver
