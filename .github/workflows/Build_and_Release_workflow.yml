@@ -52,7 +52,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'windows-latest' && 'x86_64-pc-windows-msvc' || matrix.platform == 'macos-latest' && 'x86_64-apple-darwin' || 'x86_64-unknown-linux-gnu' }}
+          targets: ${{ matrix.platform == 'windows-latest' && 'x86_64-pc-windows-msvc' || matrix.platform == 'macos-latest' && 'aarch64-apple-darwin x86_64-apple-darwin' || 'x86_64-unknown-linux-gnu' }}
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -76,6 +76,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CARGO_INCREMENTAL: 0
           RUST_BACKTRACE: 0
+          MACOSX_DEPLOYMENT_TARGET: '10.13'
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE != '' }}
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4

@@ -303,7 +303,7 @@ const Menu: React.FC<MenuProps> = ({
       </ToolTip>
     </li>
     <MenuToolbarItem $isMenuExtended={isMenuExtended}>
-      <ToolTip message='Refeash'>
+      <ToolTip message='Refresh'>
         <Button iconButton={true} icon={<RefreshIcon/>} disabled={isLoading}
                 onClick={() => window.location.reload()}/>
       </ToolTip>
