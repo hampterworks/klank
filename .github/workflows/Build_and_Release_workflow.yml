@@ -121,9 +121,6 @@ jobs:
           prerelease: false
           fail_on_unmatched_files: false
           files: |
-            artifacts/**/*.dmg
-            artifacts/**/*.msi
-            artifacts/**/*.deb
+            artifacts/**/*.{msi,exe,dmg,deb}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
