@@ -114,6 +114,13 @@ jobs:
           path: artifacts
           merge-multiple: true
 
+      - name: Display structure of downloaded files
+        run: |
+          echo "Listing all files in artifacts directory:"
+          find artifacts -type f
+          echo "Contents of artifacts directory:"
+          ls -R artifacts/
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -123,7 +130,11 @@ jobs:
           prerelease: false
           fail_on_unmatched_files: false
           files: |
-            artifacts/**/*.{msi,exe,dmg,deb}
+            artifacts/**/*.msi
+            artifacts/**/*.exe
+            artifacts/**/*.deb
+            artifacts/**/*.AppImage
+            artifacts/**/*.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
