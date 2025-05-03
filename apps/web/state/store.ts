@@ -40,7 +40,7 @@ type KlankState = {
   setTabLink: (link: string) => void
 }
 
-export const SCROLL_SPEEDS = [1, 2, 3, 4, 5] as const
+export const SCROLL_SPEEDS = [...new Array(10).keys()] as const
 export type ScrollSpeeds = typeof SCROLL_SPEEDS[number]
 
 const clampFontSize = (size: number) => {
