@@ -760,7 +760,7 @@
   dependencies:
     "@tauri-apps/api" "^2.0.0"
 
-"@tauri-apps/plugin-shell@^2.2.1":
+"@tauri-apps/plugin-shell@^2.2.1", "@tauri-apps/plugin-shell@~2":
   version "2.2.1"
   resolved "https://registry.npmjs.org/@tauri-apps/plugin-shell/-/plugin-shell-2.2.1.tgz"
   integrity sha512-G1GFYyWe/KlCsymuLiNImUgC8zGY0tI0Y3p8JgBCWduR5IEXlIJS+JuG1qtveitwYXlfJrsExt3enhv5l2/yhA==

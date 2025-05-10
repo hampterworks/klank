@@ -9,6 +9,7 @@
     "./Settings": "./src/Settings.tsx",
     "./Typography": "./src/Typography.tsx",
     "./SongQueue": "./src/SongQueue.tsx",
+    "./GitController": "./src/GitController.tsx",
     "./Sheet": "./src/Sheet.tsx",
     "./Chord": "./src/Chord.tsx",
     "./Input": "./src/Input.tsx",
