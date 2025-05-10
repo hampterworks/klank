@@ -248,7 +248,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   useEffect(() => {
     if (baseDirectory === undefined || baseDirectory === null) {
       appLocalDataDir().then(folder => {
-        setBaseDirectory(folder);
+        setBaseDirectory(folder)
       })
     }
   }, [baseDirectory])
@@ -264,13 +264,11 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
           console.log("Could not load .klankrc.json!")
         }
       } else {
-        const file = await create(klankRcFilePath);
-        await file.write(new TextEncoder().encode('{}'));
+        const file = await create(klankRcFilePath)
+        await file.write(new TextEncoder().encode('{}'))
         await file.close();
       }
     })()
-
-
   }, [baseDirectory])
 
   useEffect(() => {
@@ -315,8 +313,8 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
         setTabSettingByPath(currentTabPath, newTabSetting)
 
         const klankRcFilePath = path.join(baseDirectory, '.klankrc.json')
-        const file = await create(klankRcFilePath);
-        await file.write(new TextEncoder().encode(JSON.stringify(tabSettingByPath, null, 2)));
+        const file = await create(klankRcFilePath)
+        await file.write(new TextEncoder().encode(JSON.stringify(tabSettingByPath, null, 2)))
         await file.close();
       })()
     }
