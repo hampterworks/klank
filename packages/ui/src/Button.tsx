@@ -21,7 +21,7 @@ const StyledButton = styled.button<{
     color: ${props => props.theme.textColor};
     cursor: pointer;
 
-    ${props => props.disabled && css`background: #c3c3c3; cursor: progress;`}
+    ${props => props.disabled && css`background: #c3c3c3; cursor: not-allowed;`}
     
 
     ${props => !props.$iconButton && 'border: 1px solid gray;'};
