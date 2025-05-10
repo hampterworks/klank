@@ -13,7 +13,16 @@
     "./getQueue": {
       "types": "./src/getQueue.ts",
       "default": "./dist/getQueue.js"
+    },
+    "./git": {
+      "types": "./src/git.ts",
+      "default": "./dist/git.js"
     }
+  },
+  "dependencies": {
+    "@tauri-apps/plugin-shell": "^2.2.1",
+    "@tauri-apps/plugin-fs": "^2.2.1",
+    "@tauri-apps/api": "^2.0.0"
   },
   "devDependencies": {
     "@repo/typescript-config": "*",

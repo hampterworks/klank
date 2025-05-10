@@ -34,6 +34,29 @@
         }
       ]
     },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "git",
+          "cmd": "git",
+          "args": true,
+          "sidecar": false
+        },
+        {
+          "name": "exec-sh",
+          "cmd": "sh",
+          "args": [
+            "-c",
+            {
+              "validator": "\\S+"
+            }
+          ],
+          "sidecar": false
+        }
+      ]
+    },
+    "shell:default",
     "shell:default"
   ]
 }
