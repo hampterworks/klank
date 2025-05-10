@@ -15,7 +15,7 @@ import ErrorIcon from "./icons/ErrorIcon";
 import LoadingIcon from "./icons/LoadingIcon";
 import SearchIcon from "./icons/SearchIcon";
 import Checkbox from "./Checkbox";
-import {log} from "node:util";
+import GitController from "./GitController";
 
 
 const SettingsWrapper = styled.main`
@@ -87,6 +87,7 @@ const Settings: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props}) 
         />
       }
     </div>
+    <GitController/>
     <div>
       Created by: <Typography variant='h4' component='h2'>HampterDoo</Typography>
     </div>
