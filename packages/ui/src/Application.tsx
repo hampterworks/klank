@@ -299,22 +299,30 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   }, [currentTabPath, readTextFile])
 
   useEffect(() => {
-    if (baseDirectory) {
+    if (baseDirectory && currentTabPath) {
       (async () => {
+        if (currentTabPath.trim() === '') return
+        
+        const normalizedPath = path.normalize(currentTabPath)
+        
         const newTabSetting = {
           fontSize,
-          path: currentTabPath,
+          path: normalizedPath,
           transpose,
           isScrolling: false,
           details,
           link: youtubeLink,
           scrollSpeed
         }
-        setTabSettingByPath(currentTabPath, newTabSetting)
+        setTabSettingByPath(normalizedPath, newTabSetting)
+
+        const cleanSettings = Object.fromEntries(
+          Object.entries(tabSettingByPath).filter(([key]) => key.trim() !== '')
+        )
 
         const klankRcFilePath = path.join(baseDirectory, '.klankrc.json')
         const file = await create(klankRcFilePath)
-        await file.write(new TextEncoder().encode(JSON.stringify(tabSettingByPath, null, 2)))
+        await file.write(new TextEncoder().encode(JSON.stringify(cleanSettings, null, 2)))
         await file.close();
       })()
     }
