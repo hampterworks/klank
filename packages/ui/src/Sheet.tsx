@@ -2,8 +2,8 @@
 
 import styled from "styled-components";
 import Chord from "./Chord";
-import React, {useEffect, useRef, useState} from "react";
-import useKlankStore, {Mode} from "web/state/store";
+import React from "react";
+import useKlankStore from "web/state/store";
 
 const SheetWrapper = styled.div<{$mode: string}>`
     overflow-y: ${props => props.$mode === 'Edit' ? 'none' : 'auto'};
@@ -82,9 +82,12 @@ const transposeChord = (chord: string, transpose: number): string => {
 
 const lineMatcher = (line: string, index: number, transpose: number): React.ReactNode => {
   const tokens = line.split(delimiterMatcher).filter(token => token !== '')
-  const filteredChordLine = tokens
-    .filter((value) => testChords(value))
-  if (filteredChordLine.length > 0) {
+  
+  // Check if the line contains any valid chords
+  const hasValidChords = tokens.some(token => testChords(token.replace('|', '')))
+
+  // If any token is a valid chord, or it's a single complex chord
+  if (hasValidChords || (tokens.length === 1 && tokens[0] !== undefined && testChords(tokens[0].replace('|', '')))) {
     const processedChords = line.split(delimiterMatcher).map((currentValue, i) => {
       if (testChords(currentValue.replace('|', ''))) {
         return <Chord key={currentValue + index + i}>{transposeChord(currentValue, transpose)}</Chord>

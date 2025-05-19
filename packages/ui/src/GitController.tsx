@@ -5,7 +5,9 @@ import {
     checkGitCleanState,
     checkGitFolder,
     checkUnpushedCommits,
-    commitChanges, getChangedFiles, GitChanges,
+    commitChanges,
+    getChangedFiles,
+    GitChanges,
     pullChanges,
     pushChanges
 } from "@repo/sdk/git";
@@ -20,6 +22,23 @@ const GitController: React.FC = () => {
     const [gitState, setGitState] = useState<string>('')
     const [gitChanges, setGitChanges] = useState<GitChanges | null>(null)
 
+    const refreshGitState = async () => {
+        if (isGitFolder) {
+            const cleanState = await checkGitCleanState(baseDirectory ?? '')
+            setIsGiClean(cleanState.isClean);
+            
+            if (!cleanState.isClean) {
+                const changedFiles = await getChangedFiles(baseDirectory ?? '')
+                setGitChanges(changedFiles.changes ?? null)
+            } else {
+                setGitChanges(null)
+            }
+
+            const unpushedState = await checkUnpushedCommits(baseDirectory ?? '')
+            setIsGitUnpushedCommits(unpushedState.hasUnpushedCommits)
+        }
+    };
+
     useEffect(() => {
         const checkGit = async () =>
             await checkGitFolder(baseDirectory ?? '')
@@ -29,27 +48,10 @@ const GitController: React.FC = () => {
 
     useEffect(() => {
         if (isGitFolder) {
-            checkGitCleanState(baseDirectory ?? '').then(
-                results => setIsGiClean(results.isClean)
-            )
-            checkUnpushedCommits(baseDirectory ?? '').then(
-                results => {
-                    if (results.hasUnpushedCommits)
-                        setIsGitUnpushedCommits(true)
-                }
-            )
+            refreshGitState()
         }
-
         return
     }, [isGitFolder])
-
-    useEffect(() => {
-        if (!isGitClean) {
-            getChangedFiles(baseDirectory ?? '').then(
-                results => setGitChanges(results.changes ?? null)
-            )
-        }
-    }, [isGitClean])
 
     return <section className={styles.container}>
         <Typography variant='h3' component='h2'>Git</Typography>
@@ -92,25 +94,24 @@ const GitController: React.FC = () => {
                     label='commit changes'
                     onClick={() => {
                         commitChanges(baseDirectory ?? '').then(result => {
-                            if (result.success)
+                            if (result.success) {
                                 setIsGitUnpushedCommits(true)
-
+                                refreshGitState()
+                            }
                             setGitState(result.status)
                         })
-
                     }}
                     disabled={isGitClean}
                 />
                 <Button
                     label='push changes'
-                    onClick={() => {
-                        pushChanges(baseDirectory ?? '').then(result => {
-                            if (result.success)
-                                setIsGitUnpushedCommits(false)
-
-                            setGitState(result.status)
-                        })
-
+                    onClick={async () => {
+                        const result = await pushChanges(baseDirectory ?? '')
+                        if (result.success) {
+                            setIsGitUnpushedCommits(false)
+                            await refreshGitState()
+                        }
+                        setGitState(result.status)
                     }}
                     disabled={!isGitFolder || !isGitUnpushedCommits}
                 />

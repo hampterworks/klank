@@ -1,6 +1,15 @@
 "use client"
 import React, {useEffect, useState} from "react";
-import {BaseDirectory, create, DirEntry, exists, readDir, readTextFile, writeTextFile} from "@tauri-apps/plugin-fs";
+import {
+  BaseDirectory,
+  create,
+  DirEntry,
+  exists,
+  readDir,
+  readTextFile,
+  remove,
+  writeTextFile
+} from "@tauri-apps/plugin-fs";
 import {appLocalDataDir, join} from '@tauri-apps/api/path';
 import Sheet from "./Sheet";
 import {open} from '@tauri-apps/plugin-dialog';
@@ -13,6 +22,7 @@ import TabDetails from "./TabDetails";
 import ScrollContainer from "./ScrollContainer";
 import Toolbar from "./Toolbar";
 import Menu from "./Menu";
+import { confirm } from '@tauri-apps/plugin-dialog';
 
 
 const ApplicationWrapper = styled.main.attrs<{ $isMenuExtended: boolean; $menuWidth: number }>(props => ({
@@ -56,13 +66,17 @@ const ButtonContainer = styled.div`
 `
 
 const SaveButtonContainer = styled.li`
-    display: flex;
-    align-items: center;
-    gap: 16px;
-
-    button {
-        align-self: center;
-    }
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  button {
+    align-self: center;
+    flex-basis: content;
+  }
+  > button:last-of-type {
+    margin-left: auto;
+  }
 `
 
 const EditButtonContainer = styled.li`
@@ -237,8 +251,35 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   }
 
   const saveEditedTab = async () => {
-    await (writeTextFile(currentTabPath, editedTab).catch(exception => setSaveError("Couldn't save the file!")));
+    await writeTextFile(currentTabPath, editedTab).catch(exception => setSaveError("Couldn't save the file!"))
     setSheetData(editedTab)
+  }
+
+  const removeTab = async () => {
+    await remove(currentTabPath)
+        .then(() => {
+          setMode('Read')
+
+          const findAnyFile = (items: FileTree = []): string | undefined => {
+            const foundItem = items.find(item =>
+                "path" in item && item.isFile && item.path !== currentTabPath
+            )
+            if (foundItem && "path" in foundItem) {
+              return foundItem.path
+            }
+            return undefined
+          }
+
+          const nextPath = findAnyFile(tree)
+          if (nextPath) {
+            setCurrentTabPath(nextPath)
+          } else {
+            setCurrentTabPath('')
+          }
+
+          setSheetData('')
+          setIsRefreshTriggered(true)
+        })
   }
 
   const handleFontChange = (value: number) => {
@@ -299,22 +340,30 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   }, [currentTabPath, readTextFile])
 
   useEffect(() => {
-    if (baseDirectory) {
+    if (baseDirectory && currentTabPath) {
       (async () => {
+        if (currentTabPath.trim() === '') return
+        
+        const normalizedPath = path.normalize(currentTabPath)
+        
         const newTabSetting = {
           fontSize,
-          path: currentTabPath,
+          path: normalizedPath,
           transpose,
           isScrolling: false,
           details,
           link: youtubeLink,
           scrollSpeed
         }
-        setTabSettingByPath(currentTabPath, newTabSetting)
+        setTabSettingByPath(normalizedPath, newTabSetting)
+
+        const cleanSettings = Object.fromEntries(
+          Object.entries(tabSettingByPath).filter(([key]) => key.trim() !== '')
+        )
 
         const klankRcFilePath = path.join(baseDirectory, '.klankrc.json')
         const file = await create(klankRcFilePath)
-        await file.write(new TextEncoder().encode(JSON.stringify(tabSettingByPath, null, 2)))
+        await file.write(new TextEncoder().encode(JSON.stringify(cleanSettings, null, 2)))
         await file.close();
       })()
     }
@@ -404,6 +453,17 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
           }}/>
           {saveState !== null && <span>{saveState}</span>}
           {saveError && <span>Error!</span>}
+          <Button label='delete' onClick={async () => {
+            await confirm(
+                'This action cannot be reverted. Are you sure?',
+                { title: 'Klank', kind: 'warning' })
+                .then(result =>
+                    result
+                        ? removeTab().catch(exception => setSaveError("Couldn't delete the file!"))
+                        : null
+                )
+
+          }}/>
         </SaveButtonContainer>}
       </Toolbar>
       {mode === "Read" &&
