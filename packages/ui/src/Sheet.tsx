@@ -2,8 +2,8 @@
 
 import styled from "styled-components";
 import Chord from "./Chord";
-import React, {useEffect, useRef, useState} from "react";
-import useKlankStore, {Mode} from "web/state/store";
+import React from "react";
+import useKlankStore from "web/state/store";
 
 const SheetWrapper = styled.div<{$mode: string}>`
     overflow-y: ${props => props.$mode === 'Edit' ? 'none' : 'auto'};

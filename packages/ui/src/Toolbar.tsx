@@ -13,9 +13,6 @@ const MenuWrapper = styled.ul`
     margin-bottom: 32px;
 
     li {
-        flex-shrink: 1; 
-        flex-grow: 0;
-        min-width: 0;
         > span {
             display: block;
             white-space: nowrap;
