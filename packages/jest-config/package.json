@@ -1,0 +1,17 @@
+{
+  "name": "@repo/jest-config",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "main": "index.js",
+  "files": [
+    "jest-preset.js",
+    "setup.js"
+  ],
+  "dependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "@types/jest": "^29.5.5"
+  }
+}

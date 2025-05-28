@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "tsc --watch",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "jest"
   },
   "exports": {
     "./levenshteinDistance": {
@@ -17,6 +18,10 @@
     "./git": {
       "types": "./src/git.ts",
       "default": "./dist/git.js"
+    },
+    "./chords": {
+      "types": "./src/chords.ts",
+      "default": "./dist/chords.js"
     }
   },
   "dependencies": {
@@ -25,6 +30,7 @@
     "@tauri-apps/api": "^2.0.0"
   },
   "devDependencies": {
+    "@repo/jest-config": "*",
     "@repo/typescript-config": "*",
     "typescript": "^5.8.3"
   }
