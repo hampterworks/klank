@@ -73,13 +73,16 @@ export const transposeChord = (chord: string, transpose: number): string => {
             ? `/${notes[transposedBassNoteIndex]}`
             : '';
 
-        return `${notes[transposedNoteIndex]}${bassChord}${matchedChords ?? ''}`
+        return `${notes[transposedNoteIndex]}${matchedChords ?? ''}${bassChord}`
     }
     return chord
 }
 
 export const testTokenContext = (tokens: string[]) => {
+    if (tokens[1] === '|') return false
+
     const normalizedTokens = tokens.filter(token => !delimiterMatcher.test(token))
+
     if (normalizedTokens.every(token => testChords(token)) || normalizedTokens.every(token => !testChords(token))) return false
 
     const tokenCount = normalizedTokens.reduce((previousValue, currentValue) => {

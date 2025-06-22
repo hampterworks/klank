@@ -35,7 +35,9 @@ const Lyric = styled.div`
 const lineMatcher = (line: string, index: number, transpose: number): React.ReactNode => {
   const tokens = line.split(delimiterMatcher).filter(token => token !== '')
 
-  const isComplexToken = (tokens[0] === 'A' || tokens[0] === 'Am') ? testTokenContext(tokens) : false
+  const sanitizedTokens = tokens.filter(token => !testSpaces(token))
+
+  const isComplexToken = (sanitizedTokens[0] === 'A' || sanitizedTokens[0] === 'Am') ? testTokenContext(sanitizedTokens) : false
   const hasValidChords = tokens.some(token => testChords(token.replace('|', '')))
 
   if (hasValidChords && !isComplexToken) {
