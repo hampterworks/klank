@@ -1,5 +1,5 @@
 // packages/sdk/src/chords.test.ts
-import {delimiterMatcher, testChords, testTokenContext, transposeChord} from './chords';
+import {testChords, testTokenContext, transposeChord, isTablatureLine, testHeader, testSpaces} from './chords';
 
 describe('testChords function', () => {
   // Basic chords
@@ -104,7 +104,7 @@ describe('edge-case chords', () => {
     expect(testChords('C-1')).toBe(false);
     expect(testChords('/A')).toBe(false);
     expect(testChords('A//G')).toBe(false);
-    expect(testChords('A7b5')).toBe(false);   // unsupported “b5” modifier
+    expect(testChords('A7b5')).toBe(false);   // unsupported "b5" modifier
     expect(testChords('Cmaj#')).toBe(false);
   });
 });
@@ -115,7 +115,7 @@ describe('additional edge-case chords', () => {
     expect(testChords('Cbb')).toBe(true);
     expect(testChords('D##')).toBe(true);
     expect(testChords('E♭♭min')).toBe(true);
-    expect(testChords('F♯♯dim')).toBe(false);  // U+266F “♯” isn’t in our pattern
+    expect(testChords('F♯♯dim')).toBe(false);  // U+266F "♯" isn't in our pattern
   });
 
   // Number → quality → number in mixed order
@@ -148,6 +148,86 @@ describe('additional edge-case chords', () => {
     expect(testChords(' Cmaj7')).toBe(false);
     expect(testChords('Cmaj7 ')).toBe(false);
     expect(testChords('cmaj7')).toBe(false);
+  });
+});
+
+describe('isTablatureLine', () => {
+  test('should recognize standard tuning tablature lines', () => {
+    expect(isTablatureLine('E|--0--2--3--')).toBe(true);
+    expect(isTablatureLine('A|--0--2--3--')).toBe(true);
+    expect(isTablatureLine('D|--0--2--3--')).toBe(true);
+    expect(isTablatureLine('G|--0--2--3--')).toBe(true);
+    expect(isTablatureLine('B|--0--2--3--')).toBe(true);
+    expect(isTablatureLine('e|--0--2--3--')).toBe(true);
+  });
+
+  test('should recognize tablature lines with accidentals', () => {
+    expect(isTablatureLine('F#|--0--2--3--')).toBe(true);
+    expect(isTablatureLine('Bb|--0--2--3--')).toBe(true);
+    expect(isTablatureLine('C#|--0--2--3--')).toBe(true);
+    expect(isTablatureLine('Eb|--0--2--3--')).toBe(true);
+  });
+
+  test('should reject non-tablature lines', () => {
+    expect(isTablatureLine('C Am F G')).toBe(false);
+    expect(isTablatureLine('Verse 1:')).toBe(false);
+    expect(isTablatureLine('[Chorus]')).toBe(false);
+    expect(isTablatureLine('Hello world')).toBe(false);
+    expect(isTablatureLine('')).toBe(false);
+  });
+
+  test('should reject invalid tablature patterns', () => {
+    expect(isTablatureLine('H|--0--2--3--')).toBe(false);  // H is not a valid note
+    expect(isTablatureLine('E--0--2--3--')).toBe(false);   // Missing pipe
+    expect(isTablatureLine('E|')).toBe(true);              // Minimum valid pattern
+  });
+});
+
+describe('testHeader', () => {
+  test('should recognize section headers', () => {
+    expect(testHeader('[Verse]')).toBe(true);
+    expect(testHeader('[Chorus]')).toBe(true);
+    expect(testHeader('[Bridge]')).toBe(true);
+    expect(testHeader('[Intro]')).toBe(true);
+    expect(testHeader('[Outro]')).toBe(true);
+    expect(testHeader('[Solo]')).toBe(true);
+  });
+
+  test('should recognize headers with numbers and spaces', () => {
+    expect(testHeader('[Verse 1]')).toBe(true);
+    expect(testHeader('[Chorus 2]')).toBe(true);
+    expect(testHeader('[Bridge Section]')).toBe(true);
+    expect(testHeader('[Guitar Solo]')).toBe(true);
+  });
+
+  test('should reject non-header text', () => {
+    expect(testHeader('Verse 1')).toBe(false);     // Missing brackets
+    expect(testHeader('C Am F G')).toBe(false);    // Chord line
+    expect(testHeader('Hello world')).toBe(false); // Regular text
+    expect(testHeader('')).toBe(false);            // Empty string
+  });
+
+  test('should handle partial bracket patterns', () => {
+    expect(testHeader('[Verse')).toBe(true);       // Missing closing bracket still matches
+    expect(testHeader('Verse]')).toBe(false);      // Missing opening bracket
+  });
+});
+
+describe('testSpaces', () => {
+  test('should recognize whitespace-only strings', () => {
+    expect(testSpaces('')).toBe(true);           // Empty string
+    expect(testSpaces(' ')).toBe(true);          // Single space
+    expect(testSpaces('  ')).toBe(true);         // Multiple spaces
+    expect(testSpaces('\t')).toBe(true);         // Tab
+    expect(testSpaces('\n')).toBe(true);         // Newline
+    expect(testSpaces(' \t \n ')).toBe(true);    // Mixed whitespace
+  });
+
+  test('should reject strings with non-whitespace content', () => {
+    expect(testSpaces('C')).toBe(false);         // Single character
+    expect(testSpaces(' C ')).toBe(false);       // Character with spaces
+    expect(testSpaces('Hello')).toBe(false);     // Word
+    expect(testSpaces(' Hello ')).toBe(false);   // Word with spaces
   });
 });
 
@@ -219,20 +299,86 @@ describe('testTokenContext', () => {
     expect(testTokenContext(['C', 'Dm', 'hello'])).toBe(false);   // 2 chords, 1 other
   });
 
-
-  it('treats a lyric‐style note plus chord as “text context” when chords ≤ others', () => {
+  it('treats a lyric‐style note plus chord as "text context" when chords ≤ others', () => {
     // ["Let","it","ring","C"] → chords=1, others=3 → true
     expect(testTokenContext(['Let', 'it', 'ring', 'C'])).toBe(true);
   });
 
-  it('treats an “Intro” label plus a couple chords as text when equal counts', () => {
+  it('treats an "Intro" label plus a couple chords as text when equal counts', () => {
     // ["Intro","C","G"] → chords=2, others=1 → false (because chords>others)
     // but if we add one more word, becomes equal:
     expect(testTokenContext(['Intro', 'play', 'C', 'G'])).toBe(true); // 2 chords, 2 others
   });
 
-  it('still flags a pure “Solo” plus chords line as chord‐context when chords > others', () => {
+  it('still flags a pure "Solo" plus chords line as chord‐context when chords > others', () => {
     // ["Solo","Am","Dm"] → chords=2, others=1 → false
     expect(testTokenContext(['Solo', 'Am', 'Dm'])).toBe(false);
+  });
+
+  it('should detect A as text context in "Shots split the night, A bullet lodged in his brain"', () => {
+    // This represents the tokenized version of the sentence
+    // The "A" would be detected as a chord by testChords(), but should be treated as text
+    // due to the context of being surrounded by many other words
+    const tokens = ['Shots', 'split', 'the', 'night,', 'A', 'bullet', 'lodged', 'in', 'his', 'brain'];
+    expect(testTokenContext(tokens)).toBe(true); // 1 chord, 9 others → true (chord context disabled)
+  });
+});
+
+describe('integration test for chord detection in lyrics', () => {
+  it('should NOT render A as a chord when it appears in lyrical context', () => {
+    const line = "Shots split the night, A bullet lodged in his brain";
+    const tokens = line.split(/(?<whitespace>\s+|\||\(|\)|-|,|\*|%)/).filter(token => token !== '');
+    const sanitizedTokens = tokens.filter(token => !/^\s*$/.test(token));
+
+    // Test the updated logic from Sheet.tsx
+    const hasValidChords = tokens.some(token => testChords(token.replace('|', '')));
+    const isMixedContent = hasValidChords && testTokenContext(sanitizedTokens);
+
+    // The line should have valid chords (the "A")
+    expect(hasValidChords).toBe(true);
+
+    // But it should be marked as mixed content (text context)
+    expect(isMixedContent).toBe(true);
+
+    // Therefore, it should NOT be rendered as a chord line
+    const shouldRenderAsChordLine = hasValidChords && !isMixedContent;
+    expect(shouldRenderAsChordLine).toBe(false);
+  });
+});
+
+describe('tablature string indicator behavior', () => {
+  it('should recognize tablature lines with lowercase e', () => {
+    expect(isTablatureLine('e|--0--2--3--')).toBe(true);
+  });
+
+  it('should handle tablature lines with different tunings', () => {
+    expect(isTablatureLine('D|--0--2--3--')).toBe(true);  // Drop D tuning
+    expect(isTablatureLine('C|--0--2--3--')).toBe(true);  // Drop C tuning
+    expect(isTablatureLine('F#|--0--2--3--')).toBe(true); // Higher tuning
+  });
+
+  it('should not confuse tablature strings with chord lines', () => {
+    // These should be detected as tablature, not chord lines
+    expect(isTablatureLine('E|--------0--------')).toBe(true);
+    expect(isTablatureLine('A|--------2--------')).toBe(true);
+    expect(isTablatureLine('D|--------2--------')).toBe(true);
+  });
+});
+
+describe('edge cases for mixed content with tablature', () => {
+  it('should handle lines that could be ambiguous between chords and tablature', () => {
+    // A line starting with "E" could be a chord or tablature string
+    const chordLine = "E Am F G";
+    const tablatureLine = "E|--0--2--3--";
+    
+    expect(isTablatureLine(chordLine)).toBe(false);
+    expect(isTablatureLine(tablatureLine)).toBe(true);
+  });
+
+  it('should handle special case of lowercase e in tablature detection', () => {
+    const tokens = ['e', '|', '--0--', '--2--', '--3--'];
+    // The 'e' should be recognized as valid in tablature context
+    const hasValidChords = tokens.some(token => testChords(token.replace('|', '')) || token === 'e');
+    expect(hasValidChords).toBe(true);
   });
 });

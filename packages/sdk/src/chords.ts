@@ -1,6 +1,9 @@
 export const notes = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#']
 
-export const delimiterMatcher = /(?<whitespace>\s+|\||\(|\)|-)/
+export const delimiterMatcher = /(?<whitespace>\s+|\||\(|\)|-|,|\*|%)/
+
+export const isTablatureLine = (line: string): boolean =>
+    /^[A-G][#b]?\|/.test(line) || /^e\|/.test(line)
 
 // Note pattern - captures the basic note and any accidentals
 const notePattern = "(?<note>[A-G])(?<accidentals>(?:bb|b|♭♭|♭)|(?:##|#))?"

@@ -5,7 +5,7 @@ import Chord from "./Chord";
 import React from "react";
 import useKlankStore from "web/state/store";
 import {
-  delimiterMatcher,
+  delimiterMatcher, isTablatureLine,
   testChords,
   testHeader,
   testSpaces,
@@ -34,21 +34,31 @@ const Lyric = styled.div`
 
 const lineMatcher = (line: string, index: number, transpose: number): React.ReactNode => {
   const tokens = line.split(delimiterMatcher).filter(token => token !== '')
-
   const sanitizedTokens = tokens.filter(token => !testSpaces(token))
 
-  const isComplexToken = (sanitizedTokens[0] === 'A' || sanitizedTokens[0] === 'Am') ? testTokenContext(sanitizedTokens) : false
-  const hasValidChords = tokens.some(token => testChords(token.replace('|', '')))
+  // Check if this is a tablature line
+  const isTablature = isTablatureLine(line)
 
-  if (hasValidChords && !isComplexToken) {
+  // Check for chords, including lowercase 'e' for tablature
+  const hasValidChords = tokens.some(token => testChords(token.replace('|', '')) || token === 'e')
+  const isMixedContent = hasValidChords && testTokenContext(sanitizedTokens)
+
+  if (hasValidChords && !isMixedContent) {
     const processedChords = line.split(delimiterMatcher).map((currentValue, i) => {
-      if (testChords(currentValue)) {
-        return <Chord key={currentValue + index + i}>{transposeChord(currentValue, transpose)}</Chord>
-      }
-      return <React.Fragment key={currentValue + index + i}>{currentValue}</React.Fragment>
-    })
-    return <ChordLine key={line + index}>{processedChords}</ChordLine>
-  }
+      if (testChords(currentValue) || currentValue === 'e') {
+        const chordToTranspose = currentValue === 'e' ? 'E' : currentValue
+      
+      // Check if this is a string indicator (first token in a tablature line)
+      const isStringIndicator = isTablature && i === 0
+
+      return <Chord key={currentValue + index + i} isTablature={isTablature}>
+        {isStringIndicator ? currentValue : transposeChord(chordToTranspose, transpose)}
+      </Chord>
+    }
+    return <React.Fragment key={currentValue + index + i}>{currentValue}</React.Fragment>
+  })
+  return <ChordLine key={line + index}>{processedChords}</ChordLine>
+}
 
   if (testHeader(line)) {
     return <Header key={line + index}>{line}</Header>
