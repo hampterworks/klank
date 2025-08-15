@@ -84,7 +84,14 @@ export const transposeChord = (chord: string, transpose: number): string => {
 export const testTokenContext = (tokens: string[]) => {
     if (tokens[1] === '|') return false
 
-    const normalizedTokens = tokens.filter(token => !delimiterMatcher.test(token))
+    const tokensWithoutParentheses =  tokens.reduce<{ result: string[], skip: boolean }>((acc, token) => {
+        if (token === '(') return { ...acc, skip: true }
+        if (token === ')') return { ...acc, skip: false }
+        if (!acc.skip) return { ...acc, result: [...acc.result, token] }
+        return acc
+    }, { result: [], skip: false }).result
+
+    const normalizedTokens = tokensWithoutParentheses.filter(token => !delimiterMatcher.test(token))
 
     if (normalizedTokens.every(token => testChords(token)) || normalizedTokens.every(token => !testChords(token))) return false
 
@@ -95,7 +102,7 @@ export const testTokenContext = (tokens: string[]) => {
         return {chords: previousValue.chords, other: previousValue.other + 1}
     }, {chords: 0, other: 0})
 
-    if (tokenCount.chords > tokenCount.other) return false
+    if (tokenCount.chords >= tokenCount.other) return false
 
     return true
 }

@@ -291,7 +291,7 @@ describe('testTokenContext', () => {
   });
 
   it('returns true when mixed and chords ≤ others', () => {
-    expect(testTokenContext(['|','C','|','hello'])).toBe(true);   // 1 chord, 1 other
+    expect(testTokenContext(['|','C','|','hello'])).toBe(false);   // 1 chord, 1 other
     expect(testTokenContext(['C','hello','bye'])).toBe(true);     // 1 chord, 2 others
   });
 
@@ -302,12 +302,6 @@ describe('testTokenContext', () => {
   it('treats a lyric‐style note plus chord as "text context" when chords ≤ others', () => {
     // ["Let","it","ring","C"] → chords=1, others=3 → true
     expect(testTokenContext(['Let', 'it', 'ring', 'C'])).toBe(true);
-  });
-
-  it('treats an "Intro" label plus a couple chords as text when equal counts', () => {
-    // ["Intro","C","G"] → chords=2, others=1 → false (because chords>others)
-    // but if we add one more word, becomes equal:
-    expect(testTokenContext(['Intro', 'play', 'C', 'G'])).toBe(true); // 2 chords, 2 others
   });
 
   it('still flags a pure "Solo" plus chords line as chord‐context when chords > others', () => {

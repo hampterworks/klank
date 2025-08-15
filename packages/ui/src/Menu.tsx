@@ -26,6 +26,7 @@ import QueueIcon from "./icons/QueueIcon";
 import SongQueue from "./SongQueue";
 import levenshteinDistance from "@repo/sdk/levenshteinDistance";
 import getQueue from "@repo/sdk/getQueue";
+import TargetIcon from "./icons/TargetIcon";
 
 const MenuWrapper = styled.ul<{ $isMenuExtended: boolean }>`
     display: flex;
@@ -256,9 +257,12 @@ const Menu: React.FC<MenuProps> = ({
           <ul>{file.children && file.children.map(child => createTreeStructure(child))}</ul>
         </MenuFolder>
       } else if (file.isFile) {
+        const isSelected = file.path === currentTabPath.replace(/\//g, '\\')
+        
         return <MenuItem
           key={file.path}
-          $isSelected={file.path === currentTabPath.replace(/\//g, '\\')}
+          id={isSelected ? 'active' : undefined}
+          $isSelected={isSelected}
           $isMenuExtended={isMenuExtended}
         >
           <MenuButton onClick={() => handleFilePathUpdate(file.path)}>
@@ -274,6 +278,17 @@ const Menu: React.FC<MenuProps> = ({
 
   const downloadTab = async () => {
     setSheetData(await doMe() ?? "")
+  }
+  
+  const goToActiveTab = () => {
+    const activeElement = document.getElementById('active')
+    
+    if (activeElement) {
+      activeElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      })
+    }
   }
 
   const HandleQueueUpdate = () => {
@@ -322,6 +337,9 @@ const Menu: React.FC<MenuProps> = ({
           <Button iconButton={true} icon={<QueueIcon/>} disabled={isLoading} onClick={() => HandleQueueUpdate()}/>
         </ToolTip>
       }
+      <ToolTip message='Go to File'>
+        <Button iconButton={true} icon={<TargetIcon/>} disabled={isLoading} onClick={goToActiveTab}/>
+      </ToolTip>
       <ToolTip message='Download Tab'>
         <Button iconButton={true} icon={<DownloadIcon/>} disabled={isLoading} onClick={downloadTab}/>
       </ToolTip>

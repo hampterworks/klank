@@ -26,7 +26,7 @@ const StyledButton = styled.button<{
 
     ${props => !props.$iconButton && 'border: 1px solid gray;'};
     
-    &:hover, &:focus {
+    &:hover {
         background: ${props => !props.disabled && props.theme.highlight};
     }
     
