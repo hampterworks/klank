@@ -27,6 +27,7 @@
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
     "@tauri-apps/cli": "^2.5.0",
+    "@types/minimatch": "^5.1.2",
     "@types/node": "^22.15.3",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.3",
