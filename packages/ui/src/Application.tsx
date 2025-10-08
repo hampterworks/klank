@@ -385,7 +385,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
 
   useEffect(() => {
     if (isMenuExtended) {
-      setMenuWidth(250)
+      setMenuWidth(400)
     } else {
       setMenuWidth(64)
     }
