@@ -78,7 +78,7 @@ const MenuToolbarItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: bool
 
     border-top: 1px solid ${props => props.theme.borderColor};
     border-bottom: 1px solid ${props => props.theme.borderColor};
-    padding: 8px;
+    padding: ${props => props.$isMenuExtended ? '8px' : '32px 0'};
 
 `
 
