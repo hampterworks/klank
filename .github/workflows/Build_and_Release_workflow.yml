@@ -10,7 +10,10 @@ jobs:
   build:
     strategy:
       matrix:
-        platform: [windows-latest, ubuntu-latest, macos-latest]
+        platform: [windows-latest]
+        # Uncomment the lines below when you want to build for other platforms
+        # platform: [windows-latest, ubuntu-latest, macos-latest]
+
       fail-fast: false
 
     runs-on: ${{ matrix.platform }}
