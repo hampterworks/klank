@@ -29,6 +29,7 @@ import levenshteinDistance from "@repo/sdk/levenshteinDistance";
 import getQueue from "@repo/sdk/getQueue";
 import TargetIcon from "./icons/TargetIcon";
 import ShuffleIcon from "./icons/ShuffleIcon";
+import path from "path";
 
 const MenuWrapper = styled.ul<{ $isMenuExtended: boolean }>`
     display: flex;
@@ -199,21 +200,23 @@ const Menu: React.FC<MenuProps> = ({
   const [searchFilter, setSearchFilter] = useState<string>('')
   const [songQueue, setSongQueue] = useState<any[]>()
   const [songList, setSongList] = useState<{ name: string, path: string }[]>([])
-
+  const [shouldScrollToActive, setShouldScrollToActive] = useState<boolean>(false)
   const setCurrentTabPath = useKlankStore().setTabPath
   const streamerSongListUser = useKlankStore().streamerSongListUser
   const streamerSongListEnabled = useKlankStore().streamerSongListEnabled
 
-  const handleFilePathUpdate = (path: string, callback?: () => void) => {
-    flushSync(() => {
-      setMode('Read')
-      setCurrentTabPath(path)
-    })
-    
-    // DOM is now updated, safe to call callback
-    callback?.()
+  const handleFilePathUpdate = (path: string, scrollTo?: boolean) => {
+    setMode('Read')
+    setCurrentTabPath(path)
+    if (scrollTo)
+      setShouldScrollToActive(true)
   }
-  
+
+  useEffect(() => {
+    goToActiveTab()
+    return (() => setShouldScrollToActive(false))
+  }, [shouldScrollToActive]);
+
   const handleQueuePathUpdate = (songName: string) => {
     setMode('Read')
 
@@ -300,7 +303,7 @@ const Menu: React.FC<MenuProps> = ({
 
   const shuffleSong = () => {
     const randomSong = songList[Math.floor(Math.random() * songList.length)]
-    handleFilePathUpdate(randomSong?.path ?? '', goToActiveTab)
+    handleFilePathUpdate(randomSong?.path ?? '', true)
   }
 
   const HandleQueueUpdate = () => {
