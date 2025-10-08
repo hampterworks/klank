@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from "react";
+import { flushSync } from 'react-dom';
 import ToolTip from "./ToolTip";
 import Button from "./Button";
 import RefreshIcon from "./icons/RefreshIcon";
@@ -27,6 +28,7 @@ import SongQueue from "./SongQueue";
 import levenshteinDistance from "@repo/sdk/levenshteinDistance";
 import getQueue from "@repo/sdk/getQueue";
 import TargetIcon from "./icons/TargetIcon";
+import ShuffleIcon from "./icons/ShuffleIcon";
 
 const MenuWrapper = styled.ul<{ $isMenuExtended: boolean }>`
     display: flex;
@@ -202,11 +204,16 @@ const Menu: React.FC<MenuProps> = ({
   const streamerSongListUser = useKlankStore().streamerSongListUser
   const streamerSongListEnabled = useKlankStore().streamerSongListEnabled
 
-  const handleFilePathUpdate = (path: string) => {
-    setMode('Read')
-    setCurrentTabPath(path)
+  const handleFilePathUpdate = (path: string, callback?: () => void) => {
+    flushSync(() => {
+      setMode('Read')
+      setCurrentTabPath(path)
+    })
+    
+    // DOM is now updated, safe to call callback
+    callback?.()
   }
-
+  
   const handleQueuePathUpdate = (songName: string) => {
     setMode('Read')
 
@@ -291,6 +298,11 @@ const Menu: React.FC<MenuProps> = ({
     }
   }
 
+  const shuffleSong = () => {
+    const randomSong = songList[Math.floor(Math.random() * songList.length)]
+    handleFilePathUpdate(randomSong?.path ?? '', goToActiveTab)
+  }
+
   const HandleQueueUpdate = () => {
     getQueue(streamerSongListUser)
       .then(async (data) => setSongQueue(await data?.json()))
@@ -339,6 +351,9 @@ const Menu: React.FC<MenuProps> = ({
       }
       <ToolTip message='Go to File'>
         <Button iconButton={true} icon={<TargetIcon/>} disabled={isLoading} onClick={goToActiveTab}/>
+      </ToolTip>
+      <ToolTip message='Shuffle Song'>
+        <Button iconButton={true} icon={<ShuffleIcon/>} disabled={isLoading} onClick={shuffleSong}/>
       </ToolTip>
       <ToolTip message='Download Tab'>
         <Button iconButton={true} icon={<DownloadIcon/>} disabled={isLoading} onClick={downloadTab}/>
