@@ -92,7 +92,9 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20'
-          cache: 'yarn'
+
+      - name: Enable Corepack
+        run: corepack enable
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -105,9 +107,7 @@ jobs:
           cache-on-failure: true
 
       - name: Install Dependencies
-        run: |
-          corepack enable
-          yarn install
+        run: yarn install
         env:
           YARN_ENABLE_IMMUTABLE_INSTALLS: false
 
@@ -196,7 +196,7 @@ jobs:
           name: Release from main (${{ steps.date.outputs.date }})
           draft: false
           prerelease: false
-          fail_on-unmatched_files: false
+          fail_on_unmatched_files: false
           files: |
             artifacts/**/*.msi
             artifacts/**/*.exe
