@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from "react";
-import { flushSync } from 'react-dom';
+import {useEffect, useState} from "react";
 import ToolTip from "./ToolTip";
 import Button from "./Button";
 import RefreshIcon from "./icons/RefreshIcon";
@@ -21,7 +21,6 @@ import SettingsIcon from "./icons/SettingsIcon";
 import Link from "next/link";
 import Input from "./Input";
 import SearchIcon from "./icons/SearchIcon";
-import {useEffect, useState} from "react";
 import CloseIcon from "./icons/CloseIcon";
 import QueueIcon from "./icons/QueueIcon";
 import SongQueue from "./SongQueue";
@@ -29,7 +28,6 @@ import levenshteinDistance from "@repo/sdk/levenshteinDistance";
 import getQueue from "@repo/sdk/getQueue";
 import TargetIcon from "./icons/TargetIcon";
 import ShuffleIcon from "./icons/ShuffleIcon";
-import path from "path";
 
 const MenuWrapper = styled.ul<{ $isMenuExtended: boolean }>`
     display: flex;
@@ -67,7 +65,7 @@ const MenuToolbarItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: bool
     ${menuItemStyle};
     display: flex;
     align-items: center;
-    
+
     ${props =>
             props.$isMenuExtended
                     ? css`justify-content: space-between;`
@@ -99,6 +97,7 @@ const MenuDirectoryItem = styled.li<{ $isSelected?: boolean, $isMenuExtended: bo
     border-bottom: 1px solid ${props => props.theme.borderColor};
     justify-content: space-between;
     margin-left: ${props => props.$isMenuExtended ? '8px' : '6px'};
+
     div:first-of-type {
         display: flex;
         overflow: hidden;
@@ -171,239 +170,245 @@ const LoadingIconContainer = styled.li`
 type SongWithDistance = { name: string, path: string, distance: number }
 
 type MenuProps = {
-  baseDirectory: string,
-  tree?: FileTree
-  isLoading: boolean
-  setSheetData: (data: string) => void
-  handleFolderPathUpdate: () => void
-  currentTabPath: string
-  doMe: () => Promise<string | undefined>
-  isMenuExtended: boolean
-  setIsMenuExtended: React.Dispatch<React.SetStateAction<boolean>>
+    baseDirectory: string,
+    tree?: FileTree
+    isLoading: boolean
+    setSheetData: (data: string) => void
+    handleFolderPathUpdate: () => void
+    currentTabPath: string
+    doMe: () => Promise<string | undefined>
+    isMenuExtended: boolean
+    isMobile: boolean
+    setIsMenuExtended: React.Dispatch<React.SetStateAction<boolean>>
 } & React.ComponentPropsWithoutRef<'ul'>
 
 const Menu: React.FC<MenuProps> = ({
-                                     baseDirectory,
-                                     tree,
-                                     doMe,
-                                     isMenuExtended,
-                                     setIsMenuExtended,
-                                     setSheetData,
-                                     handleFolderPathUpdate,
-                                     currentTabPath,
-                                     isLoading,
-                                     ...props
+                                       baseDirectory,
+                                       tree,
+                                       doMe,
+                                       isMenuExtended,
+                                       setIsMenuExtended,
+                                       setSheetData,
+                                       handleFolderPathUpdate,
+                                       currentTabPath,
+                                       isLoading,
+                                       isMobile,
+                                       ...props
                                    }) => {
-  const activeTheme = useKlankStore().theme
-  const setActiveTheme = useKlankStore().setTheme
-  const setMode = useKlankStore().setMode
-  const [searchFilter, setSearchFilter] = useState<string>('')
-  const [songQueue, setSongQueue] = useState<any[]>()
-  const [songList, setSongList] = useState<{ name: string, path: string }[]>([])
-  const [shouldScrollToActive, setShouldScrollToActive] = useState<boolean>(false)
-  const setCurrentTabPath = useKlankStore().setTabPath
-  const streamerSongListUser = useKlankStore().streamerSongListUser
-  const streamerSongListEnabled = useKlankStore().streamerSongListEnabled
+    const activeTheme = useKlankStore().theme
+    const setActiveTheme = useKlankStore().setTheme
+    const setMode = useKlankStore().setMode
+    const [searchFilter, setSearchFilter] = useState<string>('')
+    const [songQueue, setSongQueue] = useState<any[]>()
+    const [songList, setSongList] = useState<{ name: string, path: string }[]>([])
+    const [shouldScrollToActive, setShouldScrollToActive] = useState<boolean>(false)
+    const setCurrentTabPath = useKlankStore().setTabPath
+    const streamerSongListUser = useKlankStore().streamerSongListUser
+    const streamerSongListEnabled = useKlankStore().streamerSongListEnabled
 
-  const handleFilePathUpdate = (path: string, scrollTo?: boolean) => {
-    setMode('Read')
-    setCurrentTabPath(path)
-    if (scrollTo)
-      setShouldScrollToActive(true)
-  }
-
-  useEffect(() => {
-    goToActiveTab()
-    return (() => setShouldScrollToActive(false))
-  }, [shouldScrollToActive]);
-
-  const handleQueuePathUpdate = (songName: string) => {
-    setMode('Read')
-
-    const result = songList.reduce<SongWithDistance>((acc, next) => {
-      const distance = levenshteinDistance(next.name.toLowerCase(), songName.toLowerCase())
-      if (distance < acc.distance) {
-        return {...next, distance}
-      }
-      return acc
-    }, {distance: Infinity, path: "", name: ""})
-
-    if (result.path !== "" && result.distance < 5) {
-      setCurrentTabPath(result.path)
+    const handleFilePathUpdate = (path: string, scrollTo?: boolean) => {
+        setMode('Read')
+        setCurrentTabPath(path)
+        if (scrollTo)
+            setShouldScrollToActive(true)
     }
-  }
 
-  useEffect(() => {
-    const mapTreeStructure = (files: (DirEntry | RecursiveDirEntry)[]): { name: string, path: string }[] => {
-      return files?.flatMap((file: DirEntry | RecursiveDirEntry) => {
-        if ("path" in file) {
-          if (file.isDirectory && file.children.length !== 0) {
-            return mapTreeStructure(file.children)
-          } else if (file.isFile) {
-            return {
-              name: file.name.replace(/\.tab\.txt$/, ""),
-              path: file.path
+    useEffect(() => {
+        goToActiveTab()
+        return (() => setShouldScrollToActive(false))
+    }, [shouldScrollToActive]);
+
+    const handleQueuePathUpdate = (songName: string) => {
+        setMode('Read')
+
+        const result = songList.reduce<SongWithDistance>((acc, next) => {
+            const distance = levenshteinDistance(next.name.toLowerCase(), songName.toLowerCase())
+            if (distance < acc.distance) {
+                return {...next, distance}
             }
-          }
+            return acc
+        }, {distance: Infinity, path: "", name: ""})
+
+        if (result.path !== "" && result.distance < 5) {
+            setCurrentTabPath(result.path)
         }
-      }).filter(Boolean) as { name: string, path: string }[] // Filter out undefined values from the map and assert the type
     }
 
-    const result = mapTreeStructure(tree || [])
-    setSongList(result)
+    useEffect(() => {
+        const mapTreeStructure = (files: (DirEntry | RecursiveDirEntry)[]): { name: string, path: string }[] => {
+            return files?.flatMap((file: DirEntry | RecursiveDirEntry) => {
+                if ("path" in file) {
+                    if (file.isDirectory && file.children.length !== 0) {
+                        return mapTreeStructure(file.children)
+                    } else if (file.isFile) {
+                        return {
+                            name: file.name.replace(/\.tab\.txt$/, ""),
+                            path: file.path
+                        }
+                    }
+                }
+            }).filter(Boolean) as { name: string, path: string }[] // Filter out undefined values from the map and assert the type
+        }
 
-  }, [tree, searchFilter])
+        const result = mapTreeStructure(tree || [])
+        setSongList(result)
 
-  const createTreeStructure = (file: DirEntry | RecursiveDirEntry) => {
-    if ("path" in file && file.name.toLowerCase().includes(searchFilter.toLowerCase())) {
-      if (file.isDirectory && file.children.length !== 0 && file.children.find(item => item.isFile)) {
-        return <MenuFolder key={file.path} $isMenuExtended={isMenuExtended}>
-          <MenuButton>
-            <ToolTip message={file.name}>
-              <FolderIcon/>
-              {isMenuExtended && <span>{file.name}</span>}
+    }, [tree, searchFilter])
+
+    const createTreeStructure = (file: DirEntry | RecursiveDirEntry) => {
+        if ("path" in file && file.name.toLowerCase().includes(searchFilter.toLowerCase())) {
+            if (file.isDirectory && file.children.length !== 0 && file.children.find(item => item.isFile)) {
+                return <MenuFolder key={file.path} $isMenuExtended={isMenuExtended}>
+                    <MenuButton>
+                        <ToolTip message={file.name}>
+                            <FolderIcon/>
+                            {isMenuExtended && <span>{file.name}</span>}
+                        </ToolTip>
+                    </MenuButton>
+                    <ul>{file.children && file.children.map(child => createTreeStructure(child))}</ul>
+                </MenuFolder>
+            } else if (file.isFile) {
+                const isSelected = file.path === currentTabPath.replace(/\//g, '\\')
+
+                return <MenuItem
+                    key={file.path}
+                    id={isSelected ? 'active' : undefined}
+                    $isSelected={isSelected}
+                    $isMenuExtended={isMenuExtended}
+                >
+                    <MenuButton onClick={() => handleFilePathUpdate(file.path)}>
+                        <ToolTip message={file.name}>
+                            <FileIcon/>
+                            {isMenuExtended && <span>{file.name}</span>}
+                        </ToolTip>
+                    </MenuButton>
+                </MenuItem>
+            }
+        }
+    }
+
+    const downloadTab = async () => {
+        setSheetData(await doMe() ?? "")
+    }
+
+    const goToActiveTab = () => {
+        const activeElement = document.getElementById('active')
+
+        if (activeElement) {
+            activeElement.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            })
+        }
+    }
+
+    const shuffleSong = () => {
+        const randomSong = songList[Math.floor(Math.random() * songList.length)]
+        handleFilePathUpdate(randomSong?.path ?? '', true)
+    }
+
+    const HandleQueueUpdate = () => {
+        getQueue(streamerSongListUser)
+            .then(async (data) => setSongQueue(await data?.json()))
+    }
+
+    useEffect(() => {
+        if (streamerSongListEnabled) {
+            HandleQueueUpdate()
+
+            const intervalId = setInterval(() => {
+                HandleQueueUpdate()
+            }, 10000)
+
+            return () => clearInterval(intervalId)
+        }
+    }, [streamerSongListUser, streamerSongListEnabled])
+
+    return <MenuWrapper $isMenuExtended={isMenuExtended}>
+        <li>
+            <LogoIcon/>
+            {isMenuExtended && 'KLANK'}
+            <ToolTip message='Change theme'>
+                <Button iconButton={true} icon={<ThemeIcon/>}
+                        onClick={() => setActiveTheme(activeTheme === 'Light' ? 'Dark' : 'Light')}/>
             </ToolTip>
-          </MenuButton>
-          <ul>{file.children && file.children.map(child => createTreeStructure(child))}</ul>
-        </MenuFolder>
-      } else if (file.isFile) {
-        const isSelected = file.path === currentTabPath.replace(/\//g, '\\')
-        
-        return <MenuItem
-          key={file.path}
-          id={isSelected ? 'active' : undefined}
-          $isSelected={isSelected}
-          $isMenuExtended={isMenuExtended}
-        >
-          <MenuButton onClick={() => handleFilePathUpdate(file.path)}>
-            <ToolTip message={file.name}>
-              <FileIcon/>
-              {isMenuExtended && <span>{file.name}</span>}
+        </li>
+        <MenuToolbarItem $isMenuExtended={isMenuExtended}>
+            <ToolTip message='Refresh'>
+                <Button iconButton={true} icon={<RefreshIcon/>} disabled={isLoading}
+                        onClick={() => window.location.reload()}/>
             </ToolTip>
-          </MenuButton>
-        </MenuItem>
-      }
-    }
-  }
+            <ToolTip message='Settings'>
+                <Link href='/settings'>
+                    <Button iconButton={true} icon={<SettingsIcon/>} disabled={isLoading}/>
+                </Link>
+            </ToolTip>
+            {
+                streamerSongListEnabled
+                && streamerSongListUser !== undefined
+                && streamerSongListUser !== ""
+                && isMenuExtended
+                &&
+                <ToolTip message='Update Queue'>
+                    <Button iconButton={true} icon={<QueueIcon/>} disabled={isLoading}
+                            onClick={() => HandleQueueUpdate()}/>
+                </ToolTip>
+            }
+            <ToolTip message='Go to File'>
+                <Button iconButton={true} icon={<TargetIcon/>} disabled={isLoading} onClick={goToActiveTab}/>
+            </ToolTip>
+            <ToolTip message='Shuffle Song'>
+                <Button iconButton={true} icon={<ShuffleIcon/>} disabled={isLoading} onClick={shuffleSong}/>
+            </ToolTip>
+            <ToolTip message='Download Tab'>
+                <Button iconButton={true} icon={<DownloadIcon/>} disabled={isLoading} onClick={downloadTab}/>
+            </ToolTip>
+        </MenuToolbarItem>
+        {
+            !isMobile && <MenuDirectoryItem $isMenuExtended={isMenuExtended}>
+                {
+                    isMenuExtended && <ToolTip message={baseDirectory ?? ''}><span>{baseDirectory}</span></ToolTip>
+                }
+                <ToolTip message='Change Folder'>
+                    <Button iconButton={true} icon={<FolderOpenIcon/>} disabled={isLoading}
+                            onClick={() => handleFolderPathUpdate()}/>
+                </ToolTip>
+            </MenuDirectoryItem>
+        }
+        {
+            streamerSongListEnabled
+            && streamerSongListUser !== undefined
+            && streamerSongListUser !== ""
+            && isMenuExtended
+            &&
+            <SongQueue songQueue={songQueue} handleFilePathUpdate={handleQueuePathUpdate}/>
+        }
+        <MenuDirectoryContentListItem>
+            {
+                isLoading ? <LoadingIconContainer
+                    className='loading'><LoadingIcon/></LoadingIconContainer> : tree?.map(createTreeStructure)
+            }
+        </MenuDirectoryContentListItem>
+        <Footer $isMenuExtended={isMenuExtended}>
+            {
 
-  const downloadTab = async () => {
-    setSheetData(await doMe() ?? "")
-  }
-  
-  const goToActiveTab = () => {
-    const activeElement = document.getElementById('active')
-    
-    if (activeElement) {
-      activeElement.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-      })
-    }
-  }
-
-  const shuffleSong = () => {
-    const randomSong = songList[Math.floor(Math.random() * songList.length)]
-    handleFilePathUpdate(randomSong?.path ?? '', true)
-  }
-
-  const HandleQueueUpdate = () => {
-    getQueue(streamerSongListUser)
-      .then(async (data) => setSongQueue(await data?.json()))
-  }
-
-  useEffect(() => {
-    if (streamerSongListEnabled) {
-      HandleQueueUpdate()
-
-      const intervalId = setInterval(() => {
-        HandleQueueUpdate()
-      }, 10000)
-
-      return () => clearInterval(intervalId)
-    }
-  }, [streamerSongListUser, streamerSongListEnabled])
-
-  return <MenuWrapper $isMenuExtended={isMenuExtended}>
-    <li>
-      <LogoIcon/>
-      {isMenuExtended && 'KLANK'}
-      <ToolTip message='Change theme'>
-        <Button iconButton={true} icon={<ThemeIcon/>}
-                onClick={() => setActiveTheme(activeTheme === 'Light' ? 'Dark' : 'Light')}/>
-      </ToolTip>
-    </li>
-    <MenuToolbarItem $isMenuExtended={isMenuExtended}>
-      <ToolTip message='Refresh'>
-        <Button iconButton={true} icon={<RefreshIcon/>} disabled={isLoading}
-                onClick={() => window.location.reload()}/>
-      </ToolTip>
-      <ToolTip message='Settings'>
-        <Link href='/settings'>
-          <Button iconButton={true} icon={<SettingsIcon/>} disabled={isLoading}/>
-        </Link>
-      </ToolTip>
-      {
-        streamerSongListEnabled
-        && streamerSongListUser !== undefined
-        && streamerSongListUser !== ""
-        && isMenuExtended
-        &&
-        <ToolTip message='Update Queue'>
-          <Button iconButton={true} icon={<QueueIcon/>} disabled={isLoading} onClick={() => HandleQueueUpdate()}/>
-        </ToolTip>
-      }
-      <ToolTip message='Go to File'>
-        <Button iconButton={true} icon={<TargetIcon/>} disabled={isLoading} onClick={goToActiveTab}/>
-      </ToolTip>
-      <ToolTip message='Shuffle Song'>
-        <Button iconButton={true} icon={<ShuffleIcon/>} disabled={isLoading} onClick={shuffleSong}/>
-      </ToolTip>
-      <ToolTip message='Download Tab'>
-        <Button iconButton={true} icon={<DownloadIcon/>} disabled={isLoading} onClick={downloadTab}/>
-      </ToolTip>
-    </MenuToolbarItem>
-    <MenuDirectoryItem $isMenuExtended={isMenuExtended}>
-      {
-        isMenuExtended && <ToolTip message={baseDirectory ?? ''}><span>{baseDirectory}</span></ToolTip>
-      }
-      <ToolTip message='Change Folder'>
-        <Button iconButton={true} icon={<FolderOpenIcon/>} disabled={isLoading}
-                onClick={() => handleFolderPathUpdate()}/>
-      </ToolTip>
-    </MenuDirectoryItem>
-    {
-      streamerSongListEnabled
-      && streamerSongListUser !== undefined
-      && streamerSongListUser !== ""
-      && isMenuExtended
-      &&
-      <SongQueue songQueue={songQueue} handleFilePathUpdate={handleQueuePathUpdate}/>
-    }
-    <MenuDirectoryContentListItem>
-      {
-        isLoading ? <LoadingIconContainer className='loading'><LoadingIcon/></LoadingIconContainer> : tree?.map(createTreeStructure)
-      }
-    </MenuDirectoryContentListItem>
-    <Footer $isMenuExtended={isMenuExtended}>
-      {
-
-        isMenuExtended &&
-        <Input
-          value={searchFilter}
-          onInput={(input) =>
-            setSearchFilter(input.toString())}
-          iconLeft={searchFilter.length > 0
-            ? <CloseIcon onClick={() => setSearchFilter('')}/>
-            : <SearchIcon/>}
-        />
-      }
-      <Button
-        iconButton={true}
-        icon={<MenuToggleIcon isMenuExtended={isMenuExtended}/>}
-        onClick={() => setIsMenuExtended(prevState => !prevState)}
-      />
-    </Footer>
-  </MenuWrapper>
+                isMenuExtended &&
+                <Input
+                    value={searchFilter}
+                    onInput={(input) =>
+                        setSearchFilter(input.toString())}
+                    iconLeft={searchFilter.length > 0
+                        ? <CloseIcon onClick={() => setSearchFilter('')}/>
+                        : <SearchIcon/>}
+                />
+            }
+            <Button
+                iconButton={true}
+                icon={<MenuToggleIcon isMenuExtended={isMenuExtended}/>}
+                onClick={() => setIsMenuExtended(prevState => !prevState)}
+            />
+        </Footer>
+    </MenuWrapper>
 }
 
 export default Menu

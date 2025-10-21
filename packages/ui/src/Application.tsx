@@ -145,6 +145,10 @@ const readDirectoryRecursively = async (dir: string, filter: (name: File) => boo
   return await processEntriesRecursively(dir, entries, filter)
 }
 
+const isMobile = () => {
+  return window.navigator.maxTouchPoints > 0
+}
+
 const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props}) => {
   const baseDirectory = useKlankStore().baseDirectory
   const setBaseDirectory = useKlankStore().setBaseDirectory
@@ -241,12 +245,23 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
   }
 
   const handleFolderPathUpdate = async () => {
-    const path = await open({
-      multiple: false,
-      directory: true,
-    })
-    if (path) {
-      setBaseDirectory(path)
+    if (isMobile()) {
+      // On mobile, use a default directory
+      try {
+        const defaultPath = await appLocalDataDir()
+        setBaseDirectory(defaultPath)
+      } catch (error) {
+        console.error('Failed to get app directory:', error)
+      }
+    } else {
+      // Desktop - use the existing dialog
+      const path = await open({
+        multiple: false,
+        directory: true,
+      })
+      if (path) {
+        setBaseDirectory(path)
+      }
     }
   }
 
@@ -413,6 +428,7 @@ const Application: React.FC<React.ComponentPropsWithoutRef<'main'>> = ({...props
       doMe={doMe}
       setIsMenuExtended={setIsMenuExtended}
       isMenuExtended={isMenuExtended}
+      isMobile={isMobile()}
     />
     <ScrollContainer>
       <TabDetails/>
