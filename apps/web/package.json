@@ -13,6 +13,7 @@
     "@redux-devtools/extension": "^3.3.0",
     "@repo/sdk": "*",
     "@repo/ui": "*",
+    "@tauri-apps/api": "^2.8.5",
     "@tauri-apps/plugin-dialog": "^2.2.1",
     "@tauri-apps/plugin-fs": "^2.2.1",
     "@tauri-apps/plugin-http": "^2.4.3",
@@ -26,7 +27,7 @@
   "devDependencies": {
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
-    "@tauri-apps/cli": "^2.8.4",
+    "@tauri-apps/cli": "^2.8.5",
     "@types/minimatch": "^5.1.2",
     "@types/node": "^22.15.3",
     "@types/react": "^19.1.2",

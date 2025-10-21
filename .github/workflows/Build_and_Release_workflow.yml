@@ -158,7 +158,7 @@ jobs:
           ls -la src-tauri/
           
           # Initialize Android if not already done
-          yarn tauri android init
+          npx @tauri-apps/cli android init
           
           # Debug: Show Android project structure after init
           echo "Android project structure after init:"
@@ -166,8 +166,8 @@ jobs:
           echo "Keystore file check:"
           ls -la src-tauri/my-release-key.keystore || echo "Keystore not found in expected location"
           
-          # Build the Android app
-          yarn tauri android build --release --target universal
+          # Build the Android app (no --release flag needed, it builds release by default)
+          npx @tauri-apps/cli android build
           
           # Debug: Show build outputs
           echo "Build completed. Checking outputs:"
