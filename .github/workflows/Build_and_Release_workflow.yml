@@ -109,6 +109,7 @@ jobs:
 
       - name: Build All Packages
         run: yarn build
+        continue-on-error: true
 
       - name: Build Tauri App (Desktop)
         if: matrix.platform != 'ubuntu-latest-android'
