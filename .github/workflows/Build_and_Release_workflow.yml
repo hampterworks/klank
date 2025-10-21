@@ -111,7 +111,9 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20'
-          cache: 'yarn'
+
+      - name: Enable Corepack
+        run: corepack enable
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -124,9 +126,7 @@ jobs:
           cache-on-failure: true
 
       - name: Install Dependencies
-        run: |
-          corepack enable
-          yarn install
+        run: yarn install
         env:
           YARN_ENABLE_IMMUTABLE_INSTALLS: false
 
@@ -196,7 +196,7 @@ jobs:
         with:
           name: android-artifacts
           path: |
-            apps/web/src-tauri/gen/android/**/build/outputs/apk/**/*.apk
+            apps/web/src-tauri/gen/android/**/build/outputs/apk/**/*.aab
             apps/web/src-tauri/gen/android/**/build/outputs/bundle/**/*.aab
           if-no-files-found: warn
           compression-level: 0
