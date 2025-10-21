@@ -25,7 +25,9 @@ fun resolveProperty(value: String?): String? {
         val parts = matchResult.groupValues[1].split(":-", limit = 2)
         val envVarName = parts[0]
         val defaultValue = if (parts.size > 1) parts[1] else ""
-        System.getenv(envVarName) ?: if (defaultValue.isEmpty()) null else defaultValue    }
+        val envValue = System.getenv(envVarName)
+        envValue ?: if (defaultValue.isEmpty()) "" else defaultValue
+    }
 }
 
 if (keystorePropertiesFile.exists()) {
@@ -52,8 +54,9 @@ android {
             val storeFile = resolveProperty(keystoreProperties["storeFile"] as String?)
             val storePassword = resolveProperty(keystoreProperties["storePassword"] as String?)
             
-            // Only create release config if all required values are present
-            if (keyAlias != null && keyPassword != null && storeFile != null && storePassword != null) {
+            // Only create release config if all required values are present and non-empty
+            if (!keyAlias.isNullOrEmpty() && !keyPassword.isNullOrEmpty() && 
+                !storeFile.isNullOrEmpty() && !storePassword.isNullOrEmpty()) {
                 create("release") {
                     this.keyAlias = keyAlias
                     this.keyPassword = keyPassword
