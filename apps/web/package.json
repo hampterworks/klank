@@ -19,10 +19,12 @@
     "next": "15.3.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-is": "19.1.0",
     "styled-components": "5.3.11",
     "zustand": "5.0.3"
   },
   "devDependencies": {
+    "@redux-devtools/extension": "^3.3.0",
     "@types/node": "22.10.2",
     "@types/react": "19.1.2",
     "@types/react-dom": "19.1.3",
