@@ -25,8 +25,7 @@ fun resolveProperty(value: String?): String? {
         val parts = matchResult.groupValues[1].split(":-", limit = 2)
         val envVarName = parts[0]
         val defaultValue = if (parts.size > 1) parts[1] else ""
-        System.getenv(envVarName) ?: defaultValue.ifEmpty { null }
-    }
+        System.getenv(envVarName) ?: if (defaultValue.isEmpty()) null else defaultValue    }
 }
 
 if (keystorePropertiesFile.exists()) {
