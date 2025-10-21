@@ -10,13 +10,13 @@ jobs:
   build:
     strategy:
       matrix:
-        platform: [windows-latest]
+        platform: [windows-latest, ubuntu-latest-android]
         # Uncomment the lines below when you want to build for other platforms
-        # platform: [windows-latest, ubuntu-latest, macos-latest]
+        # platform: [windows-latest, ubuntu-latest, macos-latest, ubuntu-latest-android]
 
       fail-fast: false
 
-    runs-on: ${{ matrix.platform }}
+    runs-on: ${{ startsWith(matrix.platform, 'ubuntu-latest') && 'ubuntu-latest' || matrix.platform }}
     name: Build (${{ matrix.platform }})
 
     steps:
@@ -43,6 +43,70 @@ jobs:
             libssl-dev \
             libayatana-appindicator3-dev
 
+      # Android Build Steps
+      - name: Setup Android Environment
+        if: matrix.platform == 'ubuntu-latest-android'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            openjdk-17-jdk \
+            build-essential \
+            libssl-dev
+          # Debug: Show Java version
+          java -version
+          javac -version
+
+      - name: Setup Android SDK
+        if: matrix.platform == 'ubuntu-latest-android'
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          build-tools: 34.0.0
+          ndk: 26.1.10909125
+
+      - name: Setup Android NDK
+        if: matrix.platform == 'ubuntu-latest-android'
+        run: |
+          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> $GITHUB_ENV
+          echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> $GITHUB_ENV
+          # Debug: Show Android environment
+          echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+          echo "ANDROID_NDK_ROOT: $ANDROID_SDK_ROOT/ndk/26.1.10909125"
+
+      - name: Create Keystore from Secret
+        if: matrix.platform == 'ubuntu-latest-android'
+        run: |
+          cd apps/web/src-tauri
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > my-release-key.keystore
+          # Debug: Verify keystore was created
+          ls -la my-release-key.keystore
+          echo "Keystore created successfully"
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+
+      - name: Create Keystore Properties File
+        if: matrix.platform == 'ubuntu-latest-android'
+        run: |
+          cd apps/web/src-tauri
+          # Debug: Show current structure before creating properties
+          echo "Current directory: $(pwd)"
+          echo "Checking for gen/android directory:"
+          ls -la gen/ || echo "gen directory not found yet"
+          
+          # Create gen/android directory if it doesn't exist
+          mkdir -p gen/android
+          
+          # Create keystore.properties file for Android build
+          cat > gen/android/keystore.properties << EOF
+          storeFile=../../../my-release-key.keystore
+          keyAlias=${{ secrets.KEYSTORE_KEY_ALIAS || 'my-app' }}
+          storePassword=${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          keyPassword=${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          EOF
+          # Debug: Show the properties file content (without passwords)
+          echo "Keystore properties file created:"
+          sed 's/Password=.*/Password=***HIDDEN***/g' gen/android/keystore.properties
+
       - name: Setup Node and Yarn
         uses: actions/setup-node@v3
         with:
@@ -52,7 +116,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'windows-latest' && 'x86_64-pc-windows-msvc' || matrix.platform == 'macos-latest' && 'aarch64-apple-darwin x86_64-apple-darwin' || 'x86_64-unknown-linux-gnu' }}
+          targets: ${{ matrix.platform == 'windows-latest' && 'x86_64-pc-windows-msvc' || matrix.platform == 'macos-latest' && 'aarch64-apple-darwin x86_64-apple-darwin' || matrix.platform == 'ubuntu-latest-android' && 'aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android' || 'x86_64-unknown-linux-gnu' }}
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -70,7 +134,8 @@ jobs:
         run: yarn build
         continue-on-error: true
 
-      - name: Build Tauri App
+      - name: Build Tauri App (Desktop)
+        if: matrix.platform != 'ubuntu-latest-android'
         run: yarn tauri build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -81,7 +146,39 @@ jobs:
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE != '' }}
 
-      - name: Upload Build Artifacts
+      - name: Build Tauri Android App
+        if: matrix.platform == 'ubuntu-latest-android'
+        run: |
+          cd apps/web
+          # Debug: Show current directory and structure
+          echo "Current directory: $(pwd)"
+          echo "Directory structure:"
+          ls -la
+          echo "src-tauri directory:"
+          ls -la src-tauri/
+          
+          # Initialize Android if not already done
+          yarn tauri android init
+          
+          # Debug: Show Android project structure after init
+          echo "Android project structure after init:"
+          ls -la src-tauri/gen/android/
+          echo "Keystore file check:"
+          ls -la src-tauri/my-release-key.keystore || echo "Keystore not found in expected location"
+          
+          # Build the Android app
+          yarn tauri android build --release --target universal
+          
+          # Debug: Show build outputs
+          echo "Build completed. Checking outputs:"
+          find src-tauri/gen/android -name "*.apk" -o -name "*.aab" | head -10
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CARGO_INCREMENTAL: 0
+          RUST_BACKTRACE: 1
+
+      - name: Upload Build Artifacts (Desktop)
+        if: matrix.platform != 'ubuntu-latest-android'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}-artifacts
@@ -90,6 +187,17 @@ jobs:
             **/apps/web/src-tauri/target/release/bundle/nsis/*.exe
             **/apps/web/src-tauri/target/release/bundle/dmg/*.dmg
             **/apps/web/src-tauri/target/release/bundle/deb/*.deb
+          if-no-files-found: warn
+          compression-level: 0
+
+      - name: Upload Android Artifacts
+        if: matrix.platform == 'ubuntu-latest-android'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-artifacts
+          path: |
+            apps/web/src-tauri/gen/android/**/build/outputs/apk/**/*.apk
+            apps/web/src-tauri/gen/android/**/build/outputs/bundle/**/*.aab
           if-no-files-found: warn
           compression-level: 0
 
@@ -135,6 +243,7 @@ jobs:
             artifacts/**/*.deb
             artifacts/**/*.AppImage
             artifacts/**/*.dmg
+            artifacts/**/*.apk
+            artifacts/**/*.aab
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
