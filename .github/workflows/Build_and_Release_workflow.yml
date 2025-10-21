@@ -1,3 +1,4 @@
+
 name: Build and Release
 
 on:
@@ -52,9 +53,6 @@ jobs:
             openjdk-17-jdk \
             build-essential \
             libssl-dev
-          # Debug: Show Java version
-          java -version
-          javac -version
 
       - name: Setup Android SDK
         if: matrix.platform == 'ubuntu-latest-android'
@@ -69,18 +67,12 @@ jobs:
         run: |
           echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> $GITHUB_ENV
           echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> $GITHUB_ENV
-          # Debug: Show Android environment
-          echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
-          echo "ANDROID_NDK_ROOT: $ANDROID_SDK_ROOT/ndk/26.1.10909125"
 
       - name: Create Keystore from Secret
         if: matrix.platform == 'ubuntu-latest-android'
         run: |
           cd apps/web/src-tauri
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > my-release-key.keystore
-          # Debug: Verify keystore was created
-          ls -la my-release-key.keystore
-          echo "Keystore created successfully"
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
@@ -88,32 +80,19 @@ jobs:
         if: matrix.platform == 'ubuntu-latest-android'
         run: |
           cd apps/web/src-tauri
-          # Debug: Show current structure before creating properties
-          echo "Current directory: $(pwd)"
-          echo "Checking for gen/android directory:"
-          ls -la gen/ || echo "gen directory not found yet"
-          
-          # Create gen/android directory if it doesn't exist
           mkdir -p gen/android
-          
-          # Create keystore.properties file for Android build
           cat > gen/android/keystore.properties << EOF
           storeFile=../../../my-release-key.keystore
           keyAlias=${{ secrets.KEYSTORE_KEY_ALIAS || 'my-app' }}
           storePassword=${{ secrets.KEYSTORE_STORE_PASSWORD }}
           keyPassword=${{ secrets.KEYSTORE_KEY_PASSWORD }}
           EOF
-          # Debug: Show the properties file content (without passwords)
-          echo "Keystore properties file created:"
-          sed 's/Password=.*/Password=***HIDDEN***/g' gen/android/keystore.properties
 
       - name: Setup Node and Yarn
         uses: actions/setup-node@v3
         with:
           node-version: '20'
-
-      - name: Enable Corepack
-        run: corepack enable
+          cache: 'yarn'
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -126,7 +105,9 @@ jobs:
           cache-on-failure: true
 
       - name: Install Dependencies
-        run: yarn install
+        run: |
+          corepack enable
+          yarn install
         env:
           YARN_ENABLE_IMMUTABLE_INSTALLS: false
 
@@ -149,29 +130,8 @@ jobs:
       - name: Build Tauri Android App
         if: matrix.platform == 'ubuntu-latest-android'
         run: |
-          cd apps/web
-          # Debug: Show current directory and structure
-          echo "Current directory: $(pwd)"
-          echo "Directory structure:"
-          ls -la
-          echo "src-tauri directory:"
-          ls -la src-tauri/
-          
-          # Initialize Android if not already done
-          npx @tauri-apps/cli android init
-          
-          # Debug: Show Android project structure after init
-          echo "Android project structure after init:"
-          ls -la src-tauri/gen/android/
-          echo "Keystore file check:"
-          ls -la src-tauri/my-release-key.keystore || echo "Keystore not found in expected location"
-          
-          # Build the Android app (no --release flag needed, it builds release by default)
-          npx @tauri-apps/cli android build
-          
-          # Debug: Show build outputs
-          echo "Build completed. Checking outputs:"
-          find src-tauri/gen/android -name "*.apk" -o -name "*.aab" | head -10
+          yarn tauri android init
+          yarn tauri android build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CARGO_INCREMENTAL: 0
@@ -196,7 +156,7 @@ jobs:
         with:
           name: android-artifacts
           path: |
-            apps/web/src-tauri/gen/android/**/build/outputs/apk/**/*.aab
+            apps/web/src-tauri/gen/android/**/build/outputs/apk/**/*.apk
             apps/web/src-tauri/gen/android/**/build/outputs/bundle/**/*.aab
           if-no-files-found: warn
           compression-level: 0
@@ -236,7 +196,7 @@ jobs:
           name: Release from main (${{ steps.date.outputs.date }})
           draft: false
           prerelease: false
-          fail_on_unmatched_files: false
+          fail_on-unmatched_files: false
           files: |
             artifacts/**/*.msi
             artifacts/**/*.exe
