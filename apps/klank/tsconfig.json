@@ -3,6 +3,15 @@
   "include": [],
   "references": [
     {
+      "path": "../../libs/platform-api"
+    },
+    {
+      "path": "../../libs/ui"
+    },
+    {
+      "path": "../../libs/store"
+    },
+    {
       "path": "./tsconfig.app.json"
     },
     {

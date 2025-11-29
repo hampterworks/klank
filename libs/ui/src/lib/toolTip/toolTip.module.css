@@ -1,0 +1,16 @@
+.container {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip {
+  position: fixed;
+  border: 1px solid var(--klank-color-border);
+  background: var(--klank-color-background);
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 400;
+  z-index: 2;
+  pointer-events: none;
+}

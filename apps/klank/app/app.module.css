@@ -1,1 +1,14 @@
-/* Your styles goes here. */
+.container {
+  display: grid;
+  transition: 100ms;
+  overflow: hidden;
+  width: 100%;
+  height: 100vh;
+  position: relative;
+  background: var(--klank-color-background);
+  grid-template-columns: 400px 1fr;
+}
+
+.container[style*="--menu-extended: false"] {
+  grid-template-columns: 52px 1fr;
+}

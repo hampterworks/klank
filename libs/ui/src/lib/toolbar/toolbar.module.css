@@ -1,0 +1,10 @@
+.container {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 16px;
+  border-bottom: 1px solid var(--klank-color-border);
+  svg {
+    width: 20px;
+  }
+}

@@ -1,0 +1,48 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+
+  div {
+    display: flex;
+    align-items: center;
+
+    background: #e3e3e3;
+    border-radius: 4px;
+
+    button, span {
+      padding: 4px 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    button {
+      min-width: 28px;
+      min-height: 28px;
+      cursor: pointer;
+      svg {
+        height: 8px;
+        width: 8px;
+        path {
+          fill: #040404;
+        }
+      }
+      &:disabled {
+        cursor: not-allowed;
+        svg {
+          path {
+            fill: #ccc;
+          }
+        }
+      }
+
+    }
+    span {
+      cursor: default;
+      width: 32px;
+      border-left: 1px solid var(--klank-color-border);
+      border-right: 1px solid var(--klank-color-border);
+    }
+  }
+}

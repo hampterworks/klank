@@ -16,6 +16,12 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@klank/source"]
+    "customConditions": ["@klank/source"],
+    "baseUrl": ".",
+    "paths": {
+      "@klank/ui": ["libs/ui/src/index.ts"],
+      "@klank/store": ["libs/store/src/index.ts"],
+      "@klank/platform-api": ["libs/platform-api/src/index.ts"],
+    }
   }
 }

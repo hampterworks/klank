@@ -4,10 +4,16 @@
   "files": [],
   "references": [
     {
-      "path": "./apps/klank-e2e"
+      "path": "./apps/klank"
     },
     {
-      "path": "./apps/klank"
-    }
+      "path": "./libs/ui"
+    },
+    {
+      "path": "./libs/store"
+    },
+    {
+      "path": "./libs/platform-api"
+    },
   ]
 }

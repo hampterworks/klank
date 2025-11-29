@@ -1,0 +1,42 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--klank-color-border);
+  overflow: hidden;
+  font-size: 14px;
+  color: var(--klank-color-text);
+  height: 100%;
+
+  > li:first-of-type {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    padding: 8px;
+    border-bottom: 1px solid var(--klank-color-border);
+  }
+
+  > ul {
+    overflow-y: auto;
+    height: calc(100vh - 130px);
+  }
+}
+
+.tabMenu {
+  display: flex;
+  gap: 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--klank-color-border);
+  button {
+    width: 100%;
+    padding: 2px;
+    &:nth-child(even) {
+      border-left: 1px solid var(--klank-color-border);
+      border-right: 1px solid var(--klank-color-border);
+    }
+  }
+
+}
+
+
+

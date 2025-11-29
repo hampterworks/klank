@@ -1,0 +1,31 @@
+.container {
+  background: var(--klank-color-background);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 2px 16px;
+  border-bottom: 2px solid var(--klank-color-border);
+  span {
+    font-size: 16px;
+  }
+  > div:first-of-type {
+    margin-left: auto;
+  }
+}
+
+.controlWrapper {
+  display: flex;
+  gap: 16px;
+  button {
+    height: 29px;
+    line-height: 29px;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant: all-small-caps;
+    padding: 0 8px;
+    svg {
+      height: 16px;
+      width: 16px;
+    }
+  }
+}

@@ -8,7 +8,9 @@ import {
   type LinksFunction,
 } from 'react-router';
 
-import { AppNav } from './app-nav';
+import '../styles.css';
+import { ThemeProvider } from '@klank/ui';
+import { useKlankStore } from '@klank/store';
 
 export const meta: MetaFunction = () => [
   {
@@ -25,11 +27,28 @@ export const links: LinksFunction = () => [
   },
   {
     rel: 'stylesheet',
-    href: 'https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap',
+    href: 'https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap',
   },
 ];
 
+// Export HydrateFallback for SPA mode loading
+export function HydrateFallback() {
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100vh',
+      fontFamily: 'Roboto Mono, monospace'
+    }}>
+      Loading...
+    </div>
+  );
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
+  const activeTheme = useKlankStore().theme
+
   return (
     <html lang="en">
       <head>
@@ -38,12 +57,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body>
-        <AppNav />
+      <ThemeProvider theme={activeTheme}>
         {children}
         <ScrollRestoration />
         <Scripts />
-      </body>
+      </ThemeProvider>
     </html>
   );
 }

@@ -1,0 +1,60 @@
+.container {
+
+}
+.menuItem {
+  background: #f8f8f8;
+
+  button {
+    cursor: pointer;
+    width: 100%;
+  }
+
+}
+
+.artistName {
+  display: flex;
+  align-items: center;
+  text-transform: capitalize;
+  font-weight: 700;
+  padding: 4px 8px;
+  svg {
+    margin-left: auto;
+  }
+  &:hover {
+    background: #eaeaea;
+  }
+
+}
+
+.songList {
+  display: flex;
+  flex-direction: column;
+  background: var(--klank-color-background);
+
+  li {
+    padding: 8px;
+
+    &:hover {
+      background: var(--klank-color-highlight);
+    }
+
+    &:nth-child(even) {
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+}
+
+.active {
+  background: var(--klank-color-selected);
+}
+
+.rotated{
+  transform: rotate(180deg);
+}

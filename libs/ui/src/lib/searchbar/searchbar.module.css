@@ -1,0 +1,20 @@
+.container {
+  display: flex;
+  padding: 8px;
+  height: 56px;
+  gap: 8px;
+  box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.1);
+  > div {
+    flex: 1;
+  }
+  button {
+    margin-left: auto;
+    svg {
+      transition: transform 100ms;
+      transform: rotate(0deg);
+    }
+    &.rotated svg {
+      transform: rotate(180deg);
+    }
+  }
+}

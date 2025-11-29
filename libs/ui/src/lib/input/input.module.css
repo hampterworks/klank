@@ -1,0 +1,14 @@
+.container {
+  padding: 2px;
+}
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  gap: 8px;
+  border: 1px solid var(--klank-color-border);
+  border-radius: 4px;
+  input {
+    flex: 1;
+  }
+}
