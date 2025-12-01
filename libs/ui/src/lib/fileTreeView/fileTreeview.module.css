@@ -8,7 +8,13 @@
     cursor: pointer;
     width: 100%;
   }
+}
 
+.noItems {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
 }
 
 .artistName {

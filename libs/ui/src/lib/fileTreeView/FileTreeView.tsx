@@ -14,7 +14,13 @@ const renderTreeStructure = (
   setCollapsedArtists: React.Dispatch<React.SetStateAction<string[]>>
 ) => {
   const currentTree = sortByArtist(files, searchFilter)
+  const treeKeys = Object.keys(currentTree)
 
+  if (treeKeys.length === 0) return (
+    <li className={styles.noItems}>
+      {searchFilter.length > 0 ? 'No results found' : 'No files found'}
+    </li>
+  )
   return Object.keys(currentTree).map((artist) => {
     return (
       <li className={styles.menuItem} key={artist}>
