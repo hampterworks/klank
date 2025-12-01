@@ -1,6 +1,5 @@
 import { create, DirEntry } from '@tauri-apps/plugin-fs'
-import path from "path";
-
+import path from 'path'
 
 export type RecursiveDirEntry =
   | {
@@ -37,7 +36,11 @@ export type FileService = {
   ) => Promise<FileTree>
   readTabFile: (path: string) => Promise<string>
   getBaseDirectoryPath: () => Promise<string>
-  writeTabFile: (filename: string, target: string, data: string) => Promise<string>
+  writeTabFile: (
+    filename: string,
+    target: string,
+    data: string
+  ) => Promise<string>
 }
 
 export const mapTreeStructure = (
@@ -63,35 +66,6 @@ export const mapTreeStructure = (
       return undefined
     })
     .filter(Boolean) as FileEntry[]
-}
-
-export type SortedFileEntry = Record<string, FileEntry[]>
-
-export const mapTreeByArtist = (files: FileEntry[]): SortedFileEntry => {
-  const unsortedResult = files.reduce((previousValue, currentValue) => {
-    const currentArtist = currentValue.artist.toLowerCase()
-    if (previousValue[currentArtist]) {
-      previousValue[currentArtist].push(currentValue)
-    } else {
-      if (currentValue.song !== undefined) {
-        previousValue[currentArtist] = [currentValue]
-      } else {
-        previousValue['unknown'] = [
-          ...(previousValue['unknown'] ?? []),
-          currentValue,
-        ]
-      }
-    }
-    return previousValue
-  }, {} as SortedFileEntry)
-
-  return Object.fromEntries(
-    Object.entries(unsortedResult).sort(([a], [b]) => {
-      if (a === 'unknown') return 1
-      if (b === 'unknown') return -1
-      return a.localeCompare(b)
-    })
-  )
 }
 
 // const createServerFileService = async (): Promise<FileService> => {
@@ -150,9 +124,13 @@ const createTauriFileService = async (): Promise<FileService> => {
   }
 
   return {
-    async writeTabFile(filename: string, target: string, data: string): Promise<string> {
+    async writeTabFile(
+      filename: string,
+      target: string,
+      data: string
+    ): Promise<string> {
       try {
-        const localPath = path.join(target ?? "", filename)
+        const localPath = path.join(target ?? '', filename)
         const file = await create(localPath)
         await file.write(new TextEncoder().encode(data))
         await file.close()
@@ -175,7 +153,7 @@ const createTauriFileService = async (): Promise<FileService> => {
 
     async getBaseDirectoryPath(): Promise<string> {
       return await appLocalDataDir()
-    }
+    },
   }
 }
 

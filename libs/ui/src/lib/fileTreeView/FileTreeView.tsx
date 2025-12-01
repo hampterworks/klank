@@ -1,5 +1,5 @@
 import styles from './fileTreeView.module.css'
-import { FileEntry, mapTreeByArtist } from '@klank/platform-api'
+import { FileEntry, sortByArtist } from '@klank/platform-api'
 import { ChevronIcon } from '../icons/ChevronIcon'
 import { FileIcon } from '../icons/FileIcon'
 import * as React from 'react'
@@ -7,12 +7,13 @@ import { useState } from 'react'
 
 const renderTreeStructure = (
   files: FileEntry[],
+  searchFilter: string,
   currentTabPath: string,
   setTabPath: (path: string) => void,
   collapsedArtists: string[],
   setCollapsedArtists: React.Dispatch<React.SetStateAction<string[]>>
 ) => {
-  const currentTree = mapTreeByArtist(files)
+  const currentTree = sortByArtist(files, searchFilter)
 
   return Object.keys(currentTree).map((artist) => {
     return (
@@ -35,7 +36,10 @@ const renderTreeStructure = (
         {!collapsedArtists.includes(artist) && (
           <ul className={styles.songList}>
             {currentTree[artist].map((item, index) => (
-              <li className={currentTabPath === item.path ? styles.active : ''} key={index + item.artist + item.song}>
+              <li
+                className={currentTabPath === item.path ? styles.active : ''}
+                key={index + item.artist + item.song}
+              >
                 <button onClick={() => setTabPath(item.path)}>
                   <FileIcon />
                   <span>{item.song ?? item.artist}</span>
@@ -53,12 +57,14 @@ type FileTreeViewProps = {
   tree: FileEntry[]
   currentTabPath: string
   setTabPath: (path: string) => void
+  searchFilter: string
 } & React.ComponentPropsWithRef<'ul'>
 
-const FileTreeView: React.FC<FileTreeViewProps> = ({currentTabPath, setTabPath, ...props }) => {
+const FileTreeView: React.FC<FileTreeViewProps> = ({tree, currentTabPath, setTabPath, searchFilter, ...props }) => {
   const [collapsedArtists, setCollapsedArtists] = useState<string[]>([])
+
   return <ul className={styles.container} {...props}>
-    {renderTreeStructure(props.tree, currentTabPath, setTabPath, collapsedArtists, setCollapsedArtists)}
+    {renderTreeStructure(tree, searchFilter, currentTabPath, setTabPath, collapsedArtists, setCollapsedArtists)}
   </ul>
 }
 

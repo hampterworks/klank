@@ -1,8 +1,15 @@
 import styles from './menu.module.css'
 import * as React from 'react'
 import { useEffect, useState } from 'react'
-import { FileEntry, mapTreeByArtist } from '@klank/platform-api'
-import { ChevronIcon, FileIcon, FileTreeView, LogoIcon, Searchbar, Toolbar } from '@klank/ui'
+import { FileEntry } from '@klank/platform-api'
+import {
+  ChevronIcon,
+  FileIcon,
+  FileTreeView,
+  LogoIcon,
+  Searchbar,
+  Toolbar,
+} from '@klank/ui'
 import { useKlankStore } from '@klank/store'
 
 type MenuProps = {
@@ -29,8 +36,18 @@ const Menu: React.FC<MenuProps> = ({ tree, ...props }) => {
         <LogoIcon /> KLANK
       </li>
       <Toolbar />
-      <FileTreeView currentTabPath={currentTabPath} setTabPath={setTabPath} tree={tree}/>
-      <Searchbar toggleMenu={toggleMenu} isMenuExtended={isMenuExtended}/>
+      <FileTreeView
+        currentTabPath={currentTabPath}
+        setTabPath={setTabPath}
+        searchFilter={searchFilter}
+        tree={tree}
+      />
+      <Searchbar
+        toggleMenu={toggleMenu}
+        isMenuExtended={isMenuExtended}
+        searchFilter={searchFilter}
+        setSearchFilter={setSearchFilter}
+      />
     </ul>
   )
 }

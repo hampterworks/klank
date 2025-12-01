@@ -44,9 +44,7 @@ const Input = (props: InputProps) => {
         {...restProps}
       />
       {
-        iconRight !== undefined && <div className={'IconRight'}>
-          {iconRight}
-        </div>
+        iconRight !== undefined && iconRight
       }
     </div>
   </div>

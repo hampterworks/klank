@@ -29,4 +29,5 @@ export { MinIcon } from './lib/icons/MinIcon';
 export { TransposeIcon } from './lib/icons/TransposeIcon';
 export { StopIcon } from './lib/icons/StopIcon';
 export { EditIcon } from './lib/icons/EditIcon';
+export { CloseIcon } from './lib/icons/CloseIcon';
 

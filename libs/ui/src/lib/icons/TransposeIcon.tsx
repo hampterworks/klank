@@ -7,12 +7,12 @@ export const TransposeIcon: React.FC<React.ComponentPropsWithoutRef<'svg'>> = (p
     <g>
       <g id="Page-1">
         <g id="Icon-Set-Filled">
-          <path id="minus" d="M281.51,590H108.07c-16,0-28.91,11.48-28.91,25.66s13,25.66,28.91,25.66H281.51c16,0,28.9-11.49,28.9-25.66S297.47,590,281.51,590" transform="translate(-79.16 -33.95)" fill-rule="evenodd"/>
+          <path id="minus" d="M281.51,590H108.07c-16,0-28.91,11.48-28.91,25.66s13,25.66,28.91,25.66H281.51c16,0,28.9-11.49,28.9-25.66S297.47,590,281.51,590" transform="translate(-79.16 -33.95)" fillRule="evenodd"/>
         </g>
       </g>
       <g id="Page-1-2" data-name="Page-1">
         <g id="Icon-Set-Filled-2" data-name="Icon-Set-Filled">
-          <path id="plus" d="M281.51,158.45H223.69V100.64a28.91,28.91,0,1,0-57.81,0v57.81H108.07a28.91,28.91,0,1,0,0,57.81h57.81v57.81a28.91,28.91,0,1,0,57.81,0V216.26h57.82a28.91,28.91,0,0,0,0-57.81" transform="translate(-79.16 -33.95)" fill-rule="evenodd"/>
+          <path id="plus" d="M281.51,158.45H223.69V100.64a28.91,28.91,0,1,0-57.81,0v57.81H108.07a28.91,28.91,0,1,0,0,57.81h57.81v57.81a28.91,28.91,0,1,0,57.81,0V216.26h57.82a28.91,28.91,0,0,0,0-57.81" transform="translate(-79.16 -33.95)" fillRule="evenodd"/>
         </g>
       </g>
     </g>
