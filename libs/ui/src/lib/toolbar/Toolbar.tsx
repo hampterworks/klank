@@ -1,5 +1,5 @@
-import styles from './toolbar.module.css';
-import * as React from 'react';
+import styles from './toolbar.module.css'
+import * as React from 'react'
 import {
   Button,
   DownloadIcon,
@@ -10,19 +10,44 @@ import {
   TargetIcon,
   ThemeIcon,
   ToolTip,
-} from '../../index';
+} from '../../index'
 
 type ToolbarProps = {
-} & React.ComponentPropsWithRef<'li'>;
+  getDirectoryPath?: () => Promise<string | null>
+  setNeedsUpdate: React.Dispatch<React.SetStateAction<boolean>>
+  setBaseDirectory: (directory: string) => void
+} & React.ComponentPropsWithRef<'li'>
 
-const Toolbar: React.FC<ToolbarProps> = ({ ...props }) => {
+const Toolbar: React.FC<ToolbarProps> = ({
+  setBaseDirectory,
+  getDirectoryPath,
+  setNeedsUpdate,
+  ...props
+}) => {
+  const handleBaseDirectoryChange = () => {
+    if (getDirectoryPath)
+      getDirectoryPath().then((path) => path !== null && setBaseDirectory(path))
+  }
+
+  const handleRefresh = () => {
+    setNeedsUpdate(true)
+  }
+
   return (
     <li className={styles.container} {...props}>
-      <ToolTip message="something">
-        <Button iconButton={true} icon={<FolderIcon />} />
+      <ToolTip message="Change Folder">
+        <Button
+          onClick={() => handleBaseDirectoryChange()}
+          iconButton={true}
+          icon={<FolderIcon />}
+        />
       </ToolTip>
-      <ToolTip message="something">
-        <Button iconButton={true} icon={<RefreshIcon />} />
+      <ToolTip message="Refresh">
+        <Button
+          onClick={() => handleRefresh()}
+          iconButton={true}
+          icon={<RefreshIcon />}
+        />
       </ToolTip>
       <ToolTip message="something">
         <Button iconButton={true} icon={<ThemeIcon />} />
@@ -40,7 +65,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ ...props }) => {
         <Button iconButton={true} icon={<DownloadIcon />} />
       </ToolTip>
     </li>
-  );
-};
+  )
+}
 
-export default Toolbar;
+export default Toolbar

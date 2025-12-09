@@ -1,5 +1,6 @@
 import { create, DirEntry } from '@tauri-apps/plugin-fs'
 import path from 'path'
+import { open } from '@tauri-apps/plugin-dialog'
 
 export type RecursiveDirEntry =
   | {
@@ -39,8 +40,9 @@ export type FileService = {
   writeTabFile: (
     filename: string,
     target: string,
-    data: string
-  ) => Promise<string>
+    data: string,
+  ) => Promise<string>,
+  getDirectoryPath: () => Promise<string | null>
 }
 
 export const mapTreeStructure = (
@@ -147,12 +149,19 @@ const createTauriFileService = async (): Promise<FileService> => {
       return await processEntriesRecursively(dir, entries, filter)
     },
 
-    async readTabFile(path: string): Promise<string> {
+    async readTabFile(path: string) {
       return await readTextFile(path)
     },
 
-    async getBaseDirectoryPath(): Promise<string> {
+    async getBaseDirectoryPath() {
       return await appLocalDataDir()
+    },
+
+    async getDirectoryPath(){
+      return await open({
+        multiple: false,
+        directory: true,
+      })
     },
   }
 }

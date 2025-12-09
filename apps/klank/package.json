@@ -15,6 +15,7 @@
     "@react-router/node": "^7.2.0",
     "@react-router/serve": "^7.2.0",
     "@tauri-apps/api": "^2.9.0",
+    "@tauri-apps/plugin-dialog": "^2.4.2",
     "@tauri-apps/plugin-fs": "^2.4.4",
     "isbot": "^4.4.0",
     "react": "^19.0.0",

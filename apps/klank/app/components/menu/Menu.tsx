@@ -14,15 +14,18 @@ import { useKlankStore } from '@klank/store'
 
 type MenuProps = {
   tree: FileEntry[]
+  setNeedsUpdate: React.Dispatch<React.SetStateAction<boolean>>
 } & React.ComponentPropsWithRef<'ul'>
 
-const Menu: React.FC<MenuProps> = ({ tree, ...props }) => {
+const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) => {
   const isMenuExtended = useKlankStore().ui.isMenuExtended
   const toggleMenu = useKlankStore().toggleMenu
   const currentTabPath = useKlankStore().tab.path
   const setTabPath = useKlankStore().setTabPath
+  const baseDirectory = useKlankStore().baseDirectory
+  const setBaseDirectory = useKlankStore().setBaseDirectory
+  const fileService = useKlankStore().fileService
   const [searchFilter, setSearchFilter] = useState<string>('')
-
   const [treeSortOption, setTreeSortOption] = useState<'default' | 'artist'>(
     'artist'
   )
@@ -35,7 +38,11 @@ const Menu: React.FC<MenuProps> = ({ tree, ...props }) => {
       <li key="logo">
         <LogoIcon /> KLANK
       </li>
-      <Toolbar />
+      <Toolbar
+        getDirectoryPath={fileService?.getDirectoryPath}
+        setNeedsUpdate={setNeedsUpdate}
+        setBaseDirectory={setBaseDirectory}
+      />
       <FileTreeView
         currentTabPath={currentTabPath}
         setTabPath={setTabPath}

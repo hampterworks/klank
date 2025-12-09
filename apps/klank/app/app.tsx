@@ -18,8 +18,10 @@ export function App() {
   const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
   const baseDirectory = useKlankStore().baseDirectory
   const setBaseDirectory = useKlankStore().setBaseDirectory
+  const fileService = useKlankStore().fileService
   const setFileService = useKlankStore().setFileService
   const [tree, setTree] = useState<FileEntry[]>()
+  const [needsUpdate, setNeedsUpdate] = useState(false)
 
 
   useEffect(() => {
@@ -56,7 +58,19 @@ export function App() {
     initializeApp()
   }, [baseDirectory, serverMode, setBaseDirectory, setFileService])
 
-
+  useEffect(() => {
+    if (needsUpdate && baseDirectory) {
+      fileService
+        ?.readDirectoryRecursively(
+          baseDirectory,
+          (file) => file.isDirectory || file.name.endsWith('.tab.txt')
+        )
+        .then((data) => {
+          setTree(mapTreeStructure(data ?? []))
+          setNeedsUpdate(false)
+        })
+    }
+  }, [needsUpdate, baseDirectory, fileService])
 
   return (
     <main
@@ -66,7 +80,7 @@ export function App() {
       } as React.CSSProperties}
     >
       <nav>
-        <Menu tree={tree ?? []}/>
+        <Menu tree={tree ?? []} setNeedsUpdate={setNeedsUpdate}/>
       </nav>
       <Player/>
     </main>

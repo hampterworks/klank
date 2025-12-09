@@ -168,6 +168,9 @@ importers:
       '@tauri-apps/api':
         specifier: ^2.9.0
         version: 2.9.0
+      '@tauri-apps/plugin-dialog':
+        specifier: ^2.4.2
+        version: 2.4.2
       '@tauri-apps/plugin-fs':
         specifier: ^2.4.4
         version: 2.4.4
@@ -205,6 +208,9 @@ importers:
       '@tauri-apps/api':
         specifier: ^2.9.0
         version: 2.9.0
+      '@tauri-apps/plugin-dialog':
+        specifier: ^2.4.2
+        version: 2.4.2
       '@tauri-apps/plugin-fs':
         specifier: ^2.4.4
         version: 2.4.4
@@ -2310,6 +2316,9 @@ packages:
     resolution: {integrity: sha512-aGzdVgxQW6WQ7e5nydPZ/30u8HvltHjO3Ytzf1wOxX1N5Yj2TsjKWRb/AWJlB95Huml3k3c/b6s0ijAvlSo9xw==}
     engines: {node: '>= 10'}
     hasBin: true
+
+  '@tauri-apps/plugin-dialog@2.4.2':
+    resolution: {integrity: sha512-lNIn5CZuw8WZOn8zHzmFmDSzg5zfohWoa3mdULP0YFh/VogVdMVWZPcWSHlydsiJhRQYaTNSYKN7RmZKE2lCYQ==}
 
   '@tauri-apps/plugin-fs@2.4.4':
     resolution: {integrity: sha512-MTorXxIRmOnOPT1jZ3w96vjSuScER38ryXY88vl5F0uiKdnvTKKTtaEjTEo8uPbl4e3gnUtfsDVwC7h77GQLvQ==}
@@ -9218,6 +9227,10 @@ snapshots:
       '@tauri-apps/cli-win32-arm64-msvc': 2.9.2
       '@tauri-apps/cli-win32-ia32-msvc': 2.9.2
       '@tauri-apps/cli-win32-x64-msvc': 2.9.2
+
+  '@tauri-apps/plugin-dialog@2.4.2':
+    dependencies:
+      '@tauri-apps/api': 2.9.0
 
   '@tauri-apps/plugin-fs@2.4.4':
     dependencies:
