@@ -43,6 +43,7 @@ const renderTreeStructure = (
           <ul className={styles.songList}>
             {currentTree[artist].map((item, index) => (
               <li
+                id={currentTabPath === item.path ? 'active' : ''}
                 className={currentTabPath === item.path ? styles.active : ''}
                 key={index + item.artist + item.song}
               >
