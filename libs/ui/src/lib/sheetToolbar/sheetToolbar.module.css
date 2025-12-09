@@ -2,7 +2,7 @@
   background: var(--klank-color-background);
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
   padding: 2px 16px;
   border-bottom: 2px solid var(--klank-color-border);
   span {
@@ -15,9 +15,9 @@
 
 .controlWrapper {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   button {
-    height: 29px;
+    height: 24px;
     line-height: 29px;
     font-size: 12px;
     font-weight: 700;

@@ -3,7 +3,10 @@
   align-items: center;
   gap: 8px;
   padding: 8px;
-
+  svg {
+    height: 16px;
+    width: 16px;
+  }
   div {
     display: flex;
     align-items: center;
@@ -13,13 +16,14 @@
 
     button, span {
       padding: 4px 6px;
+      font-size: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
     button {
-      min-width: 28px;
-      min-height: 28px;
+      min-width: 18px;
+      min-height: 18px;
       cursor: pointer;
       svg {
         height: 8px;
