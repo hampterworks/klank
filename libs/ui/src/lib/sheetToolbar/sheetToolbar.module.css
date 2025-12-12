@@ -4,9 +4,10 @@
   align-items: center;
   gap: 8px;
   padding: 2px 16px;
-  border-bottom: 2px solid var(--klank-color-border);
+  border-bottom: 1px solid var(--klank-color-border);
   span {
-    font-size: 16px;
+    font-size: 14px;
+    font-weight: 700;
   }
   > div:first-of-type {
     margin-left: auto;
@@ -26,6 +27,9 @@
     svg {
       height: 16px;
       width: 16px;
+    }
+    &:first-of-type {
+      margin-left: 4px;
     }
   }
 }
