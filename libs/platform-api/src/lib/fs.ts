@@ -1,4 +1,4 @@
-import { create, DirEntry } from '@tauri-apps/plugin-fs'
+import { create, DirEntry, exists } from '@tauri-apps/plugin-fs'
 import path from 'path'
 import { open } from '@tauri-apps/plugin-dialog'
 
@@ -41,8 +41,9 @@ export type FileService = {
     filename: string,
     target: string,
     data: string,
-  ) => Promise<string>,
+  ) => Promise<string>
   getDirectoryPath: () => Promise<string | null>
+  pathExists: (path: string) => Promise<boolean>
 }
 
 export const mapTreeStructure = (
@@ -141,6 +142,11 @@ const createTauriFileService = async (): Promise<FileService> => {
         return error instanceof Error ? error.message : 'Unknown error occurred'
       }
     },
+
+    async pathExists(path) {
+      return await exists(path)
+    },
+
     async readDirectoryRecursively(
       dir: string,
       filter: (name: File) => boolean
@@ -149,7 +155,7 @@ const createTauriFileService = async (): Promise<FileService> => {
       return await processEntriesRecursively(dir, entries, filter)
     },
 
-    async readTabFile(path: string) {
+    async readTabFile(path) {
       return await readTextFile(path)
     },
 
