@@ -42,6 +42,7 @@ const Player: React.FC<SheetProps> = ({ ...props }) => {
       <Sheet
         tabScrollSpeed={tabScrollSpeed}
         isScrolling={isScrolling}
+        setTabIsScrolling={setTabIsScrolling}
         tabData={tabData ?? ''}
         transpose={transpose}
         style={{ fontSize: `${fontSize}px` }}

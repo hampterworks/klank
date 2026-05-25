@@ -1,6 +1,4 @@
-import { create, DirEntry, exists } from '@tauri-apps/plugin-fs'
-import path from 'path'
-import { open } from '@tauri-apps/plugin-dialog'
+import { DirEntry } from '@tauri-apps/plugin-fs'
 
 export type RecursiveDirEntry =
   | {
@@ -92,11 +90,12 @@ export const mapTreeStructure = (
 // }
 
 const createTauriFileService = async (): Promise<FileService> => {
-  const { BaseDirectory, readDir, readTextFile } = await import(
+  const { BaseDirectory, readDir, readTextFile, create, exists } = await import(
     '@tauri-apps/plugin-fs'
   )
   const { appLocalDataDir, join } = await import('@tauri-apps/api/path')
-
+  const { open } = await import('@tauri-apps/plugin-dialog')
+  const path = await import('path')
   const processEntriesRecursively = async (
     parent: string,
     entries: FileTree,
