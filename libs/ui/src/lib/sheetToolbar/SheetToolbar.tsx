@@ -1,6 +1,6 @@
 import styles from './sheetToolbar.module.css'
 import * as React from 'react'
-import { Button, IncrementButton } from '../../index'
+import { Button, IncrementButton, SpeedIcon } from '../../index'
 import { FontSizeIcon } from '../icons/FontSizeIcon'
 import { TransposeIcon } from '../icons/TransposeIcon'
 import { PlayIcon } from '../icons/PlayIcon'
@@ -76,7 +76,7 @@ const SheetToolbar: React.FC<SheetToolbarProps> = ({
       <IncrementButton
         value={tabScrollSpeed}
         setValue={setTabScrollSpeed}
-        icon={<PlayIcon />}
+        icon={<SpeedIcon />}
         min={1}
         max={10}
       />
