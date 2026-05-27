@@ -42,6 +42,9 @@ const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) => {
         getDirectoryPath={fileService?.getDirectoryPath}
         setNeedsUpdate={setNeedsUpdate}
         setBaseDirectory={setBaseDirectory}
+        baseDirectory={baseDirectory}
+        fileService={fileService}
+        setTabPath={setTabPath}
       />
       <FileTreeView
         currentTabPath={currentTabPath}

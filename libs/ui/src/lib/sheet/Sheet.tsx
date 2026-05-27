@@ -38,7 +38,7 @@ const lineMatcher = (
           const isStringIndicator = isTablature && i === 0
           //isTablature={isTablature}
           return (
-            <span className={styles.chord} key={currentValue + index + i}>
+            <span className={styles.chord} key={`${index}-${i}-${currentValue}`}>
               {isStringIndicator
                 ? currentValue
                 : transposeChord(chordToTranspose, transpose)}
@@ -46,7 +46,7 @@ const lineMatcher = (
           )
         }
         return (
-          <React.Fragment key={currentValue + index + i}>
+          <React.Fragment key={`${index}-${i}-${currentValue}`}>
             {currentValue}
           </React.Fragment>
         )

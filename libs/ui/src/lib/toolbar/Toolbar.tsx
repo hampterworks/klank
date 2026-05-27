@@ -11,7 +11,7 @@ import {
   ThemeIcon,
   ToolTip,
 } from '../../index'
-import { getSheetFromUG } from '@klank/platform-api'
+import { FileService, getSheetFromUG } from '@klank/platform-api'
 
 const goToActiveTab = () => {
   const activeElement = document.getElementById('active')
@@ -28,12 +28,18 @@ type ToolbarProps = {
   getDirectoryPath?: () => Promise<string | null>
   setNeedsUpdate: React.Dispatch<React.SetStateAction<boolean>>
   setBaseDirectory: (directory: string) => void
+  baseDirectory?: string
+  fileService?: FileService
+  setTabPath: (path: string) => void
 } & React.ComponentPropsWithRef<'li'>
 
 const Toolbar: React.FC<ToolbarProps> = ({
   setBaseDirectory,
   getDirectoryPath,
   setNeedsUpdate,
+  baseDirectory,
+  fileService,
+  setTabPath,
   ...props
 }) => {
   const handleBaseDirectoryChange = () => {
@@ -43,6 +49,20 @@ const Toolbar: React.FC<ToolbarProps> = ({
 
   const handleRefresh = () => {
     setNeedsUpdate(true)
+  }
+
+  const handleDownloadTab = async () => {
+    const tabUrl = window.prompt('Enter Ultimate Guitar URL')
+    if (!tabUrl) return
+    const sheet = await getSheetFromUG(tabUrl)
+
+    const writtenPath = await fileService?.writeTabFile(
+      sheet?.filename ?? '',
+      baseDirectory ?? '',
+      sheet?.data ?? ''
+    )
+    if (writtenPath) setTabPath(writtenPath)
+    handleRefresh()
   }
 
   return (
@@ -68,13 +88,21 @@ const Toolbar: React.FC<ToolbarProps> = ({
         <Button iconButton={true} icon={<SettingsIcon />} />
       </ToolTip>
       <ToolTip message="Go to Tab">
-        <Button onClick={() => goToActiveTab()} iconButton={true} icon={<TargetIcon />} />
+        <Button
+          onClick={() => goToActiveTab()}
+          iconButton={true}
+          icon={<TargetIcon />}
+        />
       </ToolTip>
       <ToolTip message="something">
         <Button iconButton={true} icon={<ShuffleIcon />} />
       </ToolTip>
       <ToolTip message="Download Tab">
-        <Button onClick={() => getSheetFromUG('https://tabs.ultimate-guitar.com/tab/goo-goo-dolls/iris-chords-54512')} iconButton={true} icon={<DownloadIcon />} />
+        <Button
+          onClick={() => handleDownloadTab()}
+          iconButton={true}
+          icon={<DownloadIcon />}
+        />
       </ToolTip>
     </li>
   )

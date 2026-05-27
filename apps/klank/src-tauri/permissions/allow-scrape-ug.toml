@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-scrape-ug"
+description = "Allows the main window to invoke the scrape_ug command."
+commands.allow = ["scrape_ug"]
