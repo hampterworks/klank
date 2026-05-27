@@ -1,6 +1,4 @@
-import { create, DirEntry, exists } from '@tauri-apps/plugin-fs'
-import path from 'path'
-import { open } from '@tauri-apps/plugin-dialog'
+import { DirEntry } from '@tauri-apps/plugin-fs'
 
 export type RecursiveDirEntry =
   | {
@@ -92,11 +90,11 @@ export const mapTreeStructure = (
 // }
 
 const createTauriFileService = async (): Promise<FileService> => {
-  const { BaseDirectory, readDir, readTextFile } = await import(
+  const { BaseDirectory, readDir, readTextFile, create, exists } = await import(
     '@tauri-apps/plugin-fs'
   )
   const { appLocalDataDir, join } = await import('@tauri-apps/api/path')
-
+  const { open } = await import('@tauri-apps/plugin-dialog')
   const processEntriesRecursively = async (
     parent: string,
     entries: FileTree,
@@ -133,12 +131,15 @@ const createTauriFileService = async (): Promise<FileService> => {
       data: string
     ): Promise<string> {
       try {
-        const localPath = path.join(target ?? '', filename)
+        console.log(target, filename)
+        const localPath = await join(target ?? '', filename)
         const file = await create(localPath)
         await file.write(new TextEncoder().encode(data))
         await file.close()
+        console.log(`File written to ${localPath}`)
         return localPath
       } catch (error) {
+        console.log(error)
         return error instanceof Error ? error.message : 'Unknown error occurred'
       }
     },

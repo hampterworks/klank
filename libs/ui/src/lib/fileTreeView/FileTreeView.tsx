@@ -3,7 +3,7 @@ import { FileEntry, sortByArtist } from '@klank/platform-api'
 import { ChevronIcon } from '../icons/ChevronIcon'
 import { FileIcon } from '../icons/FileIcon'
 import * as React from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const renderTreeStructure = (
   files: FileEntry[],
@@ -45,7 +45,7 @@ const renderTreeStructure = (
               <li
                 id={currentTabPath === item.path ? 'active' : ''}
                 className={currentTabPath === item.path ? styles.active : ''}
-                key={index + item.artist + item.song}
+                key={item.path}
               >
                 <button onClick={() => setTabPath(item.path)}>
                   <FileIcon />
@@ -69,6 +69,23 @@ type FileTreeViewProps = {
 
 const FileTreeView: React.FC<FileTreeViewProps> = ({tree, currentTabPath, setTabPath, searchFilter, ...props }) => {
   const [collapsedArtists, setCollapsedArtists] = useState<string[]>([])
+
+  useEffect(() => {
+    const activeItem = tree.find((item) => item.path === currentTabPath)
+    if (activeItem) {
+      setCollapsedArtists((prev) => prev.filter((a) => a !== activeItem.artist))
+    }
+  }, [currentTabPath, tree])
+
+  useEffect(() => {
+    const activeElement = document.getElementById('active')
+    if (activeElement) {
+      activeElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      })
+    }
+  }, [currentTabPath, tree, collapsedArtists])
 
   return <ul className={styles.container} {...props}>
     {renderTreeStructure(tree, searchFilter, currentTabPath, setTabPath, collapsedArtists, setCollapsedArtists)}

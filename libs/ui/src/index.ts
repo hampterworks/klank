@@ -30,4 +30,5 @@ export { TransposeIcon } from './lib/icons/TransposeIcon';
 export { StopIcon } from './lib/icons/StopIcon';
 export { EditIcon } from './lib/icons/EditIcon';
 export { CloseIcon } from './lib/icons/CloseIcon';
+export { SpeedIcon } from './lib/icons/SpeedIcon';
 

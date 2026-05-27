@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-deliver-ug-html"
+description = "Allows the hidden UG scraper window to call the deliver_ug_html command."
+commands.allow = ["deliver_ug_html"]

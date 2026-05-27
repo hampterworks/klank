@@ -9,6 +9,7 @@
     "core:default",
     "fs:default",
     "dialog:default",
+    "allow-scrape-ug",
     {
       "identifier": "fs:read-all",
       "allow": [
@@ -23,6 +24,18 @@
         {
           "path": "**"
         }
+      ]
+    },
+    "http:default",
+    "http:allow-fetch",
+    "http:allow-fetch-send",
+    "http:allow-fetch-read-body",
+    "http:allow-fetch-cancel",
+    {
+      "identifier": "http:allow-fetch",
+      "allow": [
+        { "url": "https://tabs.ultimate-guitar.com/*" },
+        { "url": "https://www.ultimate-guitar.com/*" }
       ]
     }
   ]
