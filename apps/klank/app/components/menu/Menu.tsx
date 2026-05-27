@@ -29,9 +29,6 @@ const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) => {
   const [treeSortOption, setTreeSortOption] = useState<'default' | 'artist'>(
     'artist'
   )
-  const handleFilePathUpdate = (path: string) => {
-    console.log(tree)
-  }
 
   return (
     <ul className={styles.container} {...props}>
@@ -45,6 +42,7 @@ const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) => {
         baseDirectory={baseDirectory}
         fileService={fileService}
         setTabPath={setTabPath}
+        tree={tree}
       />
       <FileTreeView
         currentTabPath={currentTabPath}

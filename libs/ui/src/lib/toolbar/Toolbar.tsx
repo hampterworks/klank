@@ -11,7 +11,7 @@ import {
   ThemeIcon,
   ToolTip,
 } from '../../index'
-import { FileService, getSheetFromUG } from '@klank/platform-api'
+import { FileEntry, FileService, getSheetFromUG } from '@klank/platform-api'
 
 const goToActiveTab = () => {
   const activeElement = document.getElementById('active')
@@ -31,6 +31,8 @@ type ToolbarProps = {
   baseDirectory?: string
   fileService?: FileService
   setTabPath: (path: string) => void
+  handleRandomPathUpdate?: () => void
+  tree: FileEntry[]
 } & React.ComponentPropsWithRef<'li'>
 
 const Toolbar: React.FC<ToolbarProps> = ({
@@ -40,6 +42,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   baseDirectory,
   fileService,
   setTabPath,
+  tree,
   ...props
 }) => {
   const handleBaseDirectoryChange = () => {
@@ -65,6 +68,12 @@ const Toolbar: React.FC<ToolbarProps> = ({
     handleRefresh()
   }
 
+  const handleRandomPathUpdate = () => {
+    if (!tree.length) return
+    const randomItem = tree[Math.floor(Math.random() * tree.length)]
+    setTabPath(randomItem.path)
+  }
+
   return (
     <li className={styles.container} {...props}>
       <ToolTip message="Change Folder">
@@ -82,9 +91,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
         />
       </ToolTip>
       <ToolTip message="something">
-        <Button iconButton={true} icon={<ThemeIcon />} />
-      </ToolTip>
-      <ToolTip message="something">
         <Button iconButton={true} icon={<SettingsIcon />} />
       </ToolTip>
       <ToolTip message="Go to Tab">
@@ -94,8 +100,11 @@ const Toolbar: React.FC<ToolbarProps> = ({
           icon={<TargetIcon />}
         />
       </ToolTip>
-      <ToolTip message="something">
-        <Button iconButton={true} icon={<ShuffleIcon />} />
+      <ToolTip message="Go to Random Tab">
+        <Button
+          onClick={() => handleRandomPathUpdate()}
+          iconButton={true}
+          icon={<ShuffleIcon />} />
       </ToolTip>
       <ToolTip message="Download Tab">
         <Button
