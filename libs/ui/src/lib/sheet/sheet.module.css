@@ -1,5 +1,6 @@
 .container {
   font-family: 'Roboto Mono', monospace;
+  white-space: pre;
   position: relative;
   margin: 0;
   padding: 16px;
@@ -13,14 +14,29 @@
   will-change: transform;
 }
 
+/* Chord pill styling — no block-level margins; spacing lives on .chordLine */
 .chord {
   display: inline-block;
   font-weight: bold;
-  padding: 1px 4px;
-  margin-right: 8px;
+  padding: 0 3px;
   border-radius: 2px;
-  margin-top: 32px;
-  margin-bottom: 8px;
   background: var(--klank-color-secondary-background);
   cursor: pointer;
+}
+
+/* Space above a chord line separates it from the lyric line that preceded it */
+.chordLine {
+  margin-top: 1em;
+}
+
+/* Section headers like [Verse 1] or [Chorus] */
+.header {
+  font-weight: bold;
+  margin-top: 0.5em;
+  opacity: 0.6;
+}
+
+/* Blank lines keep their line-height so sections breathe */
+.blankLine {
+  user-select: none;
 }

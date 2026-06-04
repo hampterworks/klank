@@ -2,8 +2,8 @@ import styles from './searchbar.module.css'
 import * as React from 'react'
 import { MoveLeftIcon } from '../icons/MoveLeftIcon'
 import { SearchIcon } from '../icons/SearchIcon'
-import Input from '../input/Input'
-import Button from '../button/Button'
+import { Input } from '../input/Input'
+import { Button } from '../button/Button'
 import { CloseIcon } from '../icons/CloseIcon'
 
 type SearchbarProps = {
@@ -13,7 +13,7 @@ type SearchbarProps = {
   setSearchFilter: (filter: string) => void
 } & React.ComponentPropsWithRef<'li'>
 
-const Searchbar: React.FC<SearchbarProps> = ({
+export const Searchbar: React.FC<SearchbarProps> = ({
   isMenuExtended,
   toggleMenu,
   searchFilter,
@@ -21,12 +21,12 @@ const Searchbar: React.FC<SearchbarProps> = ({
   ...props
 }) => {
   return (
-    <li className={styles.container} {...props}>
+    <li className={`${styles.container}${!isMenuExtended ? ' ' + styles.collapsed : ''}`} {...props}>
       {isMenuExtended && (
         <Input
           value={searchFilter}
-          onInput={(event: React.ChangeEvent<HTMLInputElement>) =>
-            setSearchFilter(event.target.value)
+          onInput={(event: React.FormEvent<HTMLInputElement>) =>
+            setSearchFilter((event.target as HTMLInputElement).value)
           }
           iconLeft={<SearchIcon />}
           iconRight={searchFilter.length > 0 && <CloseIcon onClick={() => setSearchFilter('')}/>}
@@ -41,5 +41,3 @@ const Searchbar: React.FC<SearchbarProps> = ({
     </li>
   )
 }
-
-export default Searchbar

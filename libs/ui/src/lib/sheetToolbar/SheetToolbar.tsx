@@ -13,13 +13,15 @@ type SheetToolbarProps = {
   transpose: number
   tabScrollSpeed: number
   isScrolling: boolean
+  mode: 'Read' | 'Edit'
   setTabFontSize: (fontSize: number) => void
   setTabTranspose: (transpose: number) => void
   setTabScrollSpeed: (speed: number) => void
   setTabIsScrolling: (isScrolling: boolean) => void
+  onEditToggle: () => void
 } & React.ComponentPropsWithRef<'div'>
 
-const SheetToolbar: React.FC<SheetToolbarProps> = ({
+export const SheetToolbar: React.FC<SheetToolbarProps> = ({
   songName,
   fontSize,
   setTabFontSize,
@@ -29,6 +31,8 @@ const SheetToolbar: React.FC<SheetToolbarProps> = ({
   setTabScrollSpeed,
   isScrolling,
   setTabIsScrolling,
+  mode,
+  onEditToggle,
   ...props
 }) => {
   React.useEffect(() => {
@@ -86,10 +90,14 @@ const SheetToolbar: React.FC<SheetToolbarProps> = ({
           icon={isScrolling ? <StopIcon /> : <PlayIcon />}
           onClick={() => setTabIsScrolling(!isScrolling)}
         />
-        <Button label="edit" icon={<EditIcon />} />
+        <Button
+          label={mode === 'Edit' ? 'save' : 'edit'}
+          icon={<EditIcon />}
+          onClick={onEditToggle}
+          className={mode === 'Edit' ? styles.activeButton : undefined}
+        />
       </div>
     </div>
   )
 }
 
-export default SheetToolbar

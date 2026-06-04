@@ -1,5 +1,6 @@
 import { DirEntry } from '@tauri-apps/plugin-fs'
 
+/** A directory entry that may recursively contain children. */
 export type RecursiveDirEntry =
   | {
       name: string
@@ -21,6 +22,10 @@ type File = RecursiveDirEntry | DirEntry
 
 export type FileTree = File[]
 
+/**
+ * A parsed tab file entry derived from the `Artist - Song.tab.txt` filename convention.
+ * `song` is undefined when the filename has no ` - ` separator.
+ */
 export type FileEntry = {
   name: string
   path: string
@@ -28,22 +33,64 @@ export type FileEntry = {
   song?: string
 }
 
+/**
+ * The three user-adjustable settings saved per tab file.
+ * Stored in `tab-settings.json` in the app's local data directory.
+ */
+export type PerTabSettings = {
+  fontSize: number
+  transpose: number
+  scrollSpeed: number
+}
+
+/**
+ * Platform-agnostic interface for all file system operations used by klank.
+ * The Tauri implementation is created via `createFileService()`.
+ */
 export type FileService = {
+  /** Recursively reads `dir`, applying `filter` to each entry before descending. */
   readDirectoryRecursively: (
     dir: string,
     filter: (name: File) => boolean
   ) => Promise<FileTree>
+  /** Reads a `.tab.txt` file and returns its content as a UTF-8 string. */
   readTabFile: (path: string) => Promise<string>
+  /** Returns the app's local data directory — used as the default tab directory. */
   getBaseDirectoryPath: () => Promise<string>
+  /**
+   * Writes `data` to a new file named `filename` inside `target`.
+   * Returns the full path of the written file, or an error message string on failure.
+   */
   writeTabFile: (
     filename: string,
     target: string,
     data: string,
   ) => Promise<string>
+  /** Opens the OS native folder-picker dialog. Returns the selected path or null. */
   getDirectoryPath: () => Promise<string | null>
+  /** Returns true if `path` exists on the file system. */
   pathExists: (path: string) => Promise<boolean>
+  /**
+   * Reads `.klank-settings.json` from `baseDirectory`.
+   * Keys in the returned map are absolute paths (baseDirectory + separator + relative key).
+   * Returns an empty object when the file does not yet exist.
+   */
+  readTabSettings: (baseDirectory: string) => Promise<Record<string, PerTabSettings>>
+  /**
+   * Persists the settings for a single tab into `.klank-settings.json` in `baseDirectory`.
+   * Keys are stored as paths relative to `baseDirectory` (forward-slash separated, portable).
+   * The file is sorted by key on every write to produce minimal git diffs.
+   */
+  writeTabSetting: (tabPath: string, settings: PerTabSettings, baseDirectory: string) => Promise<void>
 }
 
+/**
+ * Flattens a recursive directory tree into a list of `FileEntry` objects.
+ *
+ * Only files with a `.tab.txt` extension are included. The filename (minus the
+ * extension) is split on ` - ` to derive `artist` and `song`:
+ * `"Radiohead - Creep.tab.txt"` → `{ artist: "Radiohead", song: "Creep" }`.
+ */
 export const mapTreeStructure = (
   files: (DirEntry | RecursiveDirEntry)[]
 ): FileEntry[] => {
@@ -69,31 +116,22 @@ export const mapTreeStructure = (
     .filter(Boolean) as FileEntry[]
 }
 
-// const createServerFileService = async (): Promise<FileService> => {
-//   return {
-//     getBaseDirectoryPath(): Promise<string> {
-//       return Promise.resolve('')
-//     },
-//     readDirectoryRecursively(
-//       dir: string,
-//       filter: (name: File) => boolean
-//     ): Promise<FileTree> {
-//       return Promise.resolve(undefined)
-//     },
-//     readTabFile(path: string): Promise<string> {
-//       return Promise.resolve('')
-//     },
-//     writeTabFile(path: string, data: string): Promise<void> {
-//       return Promise.resolve(undefined)
-//     },
-//   }
-// }
+const SETTINGS_FILE = '.klank-settings.json'
 
 const createTauriFileService = async (): Promise<FileService> => {
-  const { BaseDirectory, readDir, readTextFile, create, exists } = await import(
+  const { BaseDirectory, readDir, readTextFile, writeTextFile, create, exists } = await import(
     '@tauri-apps/plugin-fs'
   )
   const { appLocalDataDir, join } = await import('@tauri-apps/api/path')
+
+  const toRelativeKey = (absPath: string, baseDir: string) => {
+    const norm = absPath.replace(/\\/g, '/')
+    const normBase = baseDir.replace(/\\/g, '/').replace(/\/$/, '')
+    return norm.startsWith(normBase + '/') ? norm.slice(normBase.length + 1) : norm
+  }
+
+  const toAbsPath = (relKey: string, baseDir: string) =>
+    `${baseDir.replace(/\/$/, '')}/${relKey}`
   const { open } = await import('@tauri-apps/plugin-dialog')
   const processEntriesRecursively = async (
     parent: string,
@@ -170,9 +208,49 @@ const createTauriFileService = async (): Promise<FileService> => {
         directory: true,
       })
     },
+
+    async readTabSettings(baseDirectory) {
+      try {
+        const settingsPath = await join(baseDirectory, SETTINGS_FILE)
+        const content = await readTextFile(settingsPath)
+        const raw = JSON.parse(content) as Record<string, PerTabSettings>
+        // Convert relative keys back to absolute paths
+        return Object.fromEntries(
+          Object.entries(raw).map(([rel, val]) => [toAbsPath(rel, baseDirectory), val])
+        )
+      } catch {
+        return {}
+      }
+    },
+
+    async writeTabSetting(tabPath, settings, baseDirectory) {
+      try {
+        const settingsPath = await join(baseDirectory, SETTINGS_FILE)
+        // Read current file, merge, sort keys, write back
+        let current: Record<string, PerTabSettings> = {}
+        try {
+          const content = await readTextFile(settingsPath)
+          current = JSON.parse(content) as Record<string, PerTabSettings>
+        } catch { /* file doesn't exist yet */ }
+
+        const relKey = toRelativeKey(tabPath, baseDirectory)
+        current[relKey] = settings
+
+        const sorted = Object.fromEntries(
+          Object.entries(current).sort(([a], [b]) => a.localeCompare(b))
+        )
+        await writeTextFile(settingsPath, JSON.stringify(sorted, null, 2))
+      } catch (error) {
+        console.error('Failed to write tab setting:', error)
+      }
+    },
   }
 }
 
+/**
+ * Creates and returns a `FileService` backed by Tauri's FS and dialog plugins.
+ * Must be called from within a Tauri webview context (`__TAURI_INTERNALS__` must exist).
+ */
 export const createFileService = async (
   mode: 'tauri' | 'server' = 'tauri'
 ): Promise<FileService> => {

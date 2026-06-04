@@ -67,7 +67,7 @@ type FileTreeViewProps = {
   searchFilter: string
 } & React.ComponentPropsWithRef<'ul'>
 
-const FileTreeView: React.FC<FileTreeViewProps> = ({tree, currentTabPath, setTabPath, searchFilter, ...props }) => {
+export const FileTreeView: React.FC<FileTreeViewProps> = ({tree, currentTabPath, setTabPath, searchFilter, ...props }) => {
   const [collapsedArtists, setCollapsedArtists] = useState<string[]>([])
 
   useEffect(() => {
@@ -91,5 +91,3 @@ const FileTreeView: React.FC<FileTreeViewProps> = ({tree, currentTabPath, setTab
     {renderTreeStructure(tree, searchFilter, currentTabPath, setTabPath, collapsedArtists, setCollapsedArtists)}
   </ul>
 }
-
-export default FileTreeView

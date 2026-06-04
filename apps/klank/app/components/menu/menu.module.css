@@ -22,6 +22,16 @@
   }
 }
 
+.container[data-collapsed="true"] .logoText {
+  display: none;
+}
+
+.container[data-collapsed="true"] > li:first-of-type {
+  justify-content: center;
+}
+
+.logoText {}
+
 .tabMenu {
   display: flex;
   gap: 8px;

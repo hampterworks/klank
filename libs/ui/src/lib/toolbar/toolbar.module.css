@@ -8,3 +8,38 @@
     width: 20px;
   }
 }
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  display: inline-flex;
+  animation: spin 1s linear infinite;
+}
+
+.downloadError {
+  font-size: 0.7rem;
+  color: var(--klank-color-text);
+  opacity: 0.8;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+.collapsed {
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 8px 4px;
+  gap: 6px;
+  border-bottom: none;
+}
+
+.collapsed .downloadError {
+  display: none;
+}

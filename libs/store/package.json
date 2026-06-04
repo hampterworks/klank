@@ -16,7 +16,8 @@
     }
   },
   "dependencies": {
+    "@klank/platform-api": "workspace:*",
     "@redux-devtools/extension": "^3.3.0",
-    "zustand": "^5.0.8"
+    "zustand": "^5.0.14"
   }
 }

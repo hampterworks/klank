@@ -15,7 +15,7 @@ type ButtonProps = ({
   iconButton: true
 }) & React.ComponentPropsWithRef<'button'>
 
-const Button: React.FC<ButtonProps> = ({label, size, icon, iconDirection, iconButton, className
+export const Button: React.FC<ButtonProps> = ({label, size, icon, iconDirection, iconButton, className
 ,                                         ...props}) => {
   const direction = iconDirection === undefined || iconDirection === 'left' ? 'left' : 'right'
 
@@ -37,5 +37,3 @@ const Button: React.FC<ButtonProps> = ({label, size, icon, iconDirection, iconBu
     {(icon !== undefined && direction === 'right') && icon}
   </button>
 }
-
-export default Button

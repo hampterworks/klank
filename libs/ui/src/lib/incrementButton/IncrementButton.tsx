@@ -11,7 +11,7 @@ type IncrementButtonProps = {
   max?: number
 } & React.ComponentPropsWithRef<'div'>
 
-const IncrementButton: React.FC<IncrementButtonProps> = ({icon, value, setValue, min, max, ...props}) => {
+export const IncrementButton: React.FC<IncrementButtonProps> = ({icon, value, setValue, min, max, ...props}) => {
   const handleDecrement = () => {
     const newValue = value - 1
     if (min !== undefined && newValue < min) return
@@ -39,5 +39,3 @@ const IncrementButton: React.FC<IncrementButtonProps> = ({icon, value, setValue,
     </div>
   )
 }
-
-export default IncrementButton

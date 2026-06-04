@@ -5,7 +5,7 @@ import { useKlankStore } from '@klank/store'
 
 type SheetProps = {} & React.ComponentPropsWithRef<'section'>
 
-const Player: React.FC<SheetProps> = ({ ...props }) => {
+export const Player: React.FC<SheetProps> = ({ ...props }) => {
   const setTabFontSize = useKlankStore().setTabFontSize
   const fontSize = useKlankStore().tab.fontSize
   const transpose = useKlankStore().tab.transpose
@@ -15,40 +15,71 @@ const Player: React.FC<SheetProps> = ({ ...props }) => {
   const isScrolling = useKlankStore().tab.isScrolling
   const setTabIsScrolling = useKlankStore().setTabIsScrolling
   const tabPath = useKlankStore().tab.path
-  const readTabFile = useKlankStore().fileService?.readTabFile
+  const fileService = useKlankStore().fileService
+  const mode = useKlankStore().mode
+  const setMode = useKlankStore().setMode
   const [tabData, setTabData] = useState<string | undefined>()
+  const [editedContent, setEditedContent] = useState<string>('')
 
   useEffect(() => {
-    if (!readTabFile) return
-    readTabFile(tabPath).then((data) => setTabData(data))
-  }, [tabPath, readTabFile])
+    if (!fileService?.readTabFile) return
+    fileService.readTabFile(tabPath).then((data) => {
+      setTabData(data)
+      setEditedContent(data)
+    })
+  }, [tabPath, fileService])
+
+  const handleEditToggle = async () => {
+    if (mode === 'Edit') {
+      if (fileService?.writeTabFile && tabPath) {
+        const segments = tabPath.split(/[/\\]/)
+        const filename = segments[segments.length - 1]
+        const target = segments.slice(0, -1).join('/')
+        await fileService.writeTabFile(filename, target, editedContent)
+        setTabData(editedContent)
+      }
+      setMode('Read')
+    } else {
+      setMode('Edit')
+    }
+  }
 
   return (
     <section className={styles.container} {...props}>
       <SheetToolbar
         fontSize={fontSize}
         songName={tabPath
-          ?.split(/[\/\\]/)
+          ?.split(/[/\\]/)
           ?.slice(-1)[0]
           ?.slice(0, -8)}
         transpose={transpose}
         tabScrollSpeed={tabScrollSpeed}
         isScrolling={isScrolling}
+        mode={mode}
         setTabFontSize={setTabFontSize}
         setTabTranspose={setTabTranspose}
         setTabScrollSpeed={setTabScrollSpeed}
         setTabIsScrolling={setTabIsScrolling}
+        onEditToggle={handleEditToggle}
       />
-      <Sheet
-        tabScrollSpeed={tabScrollSpeed}
-        isScrolling={isScrolling}
-        setTabIsScrolling={setTabIsScrolling}
-        tabData={tabData ?? ''}
-        transpose={transpose}
-        style={{ fontSize: `${fontSize}px` }}
-      />
+      {mode === 'Edit' ? (
+        <textarea
+          className={styles.editTextarea}
+          value={editedContent}
+          onChange={(e) => setEditedContent(e.target.value)}
+          style={{ fontSize: `${fontSize}px` }}
+        />
+      ) : (
+        <Sheet
+          tabScrollSpeed={tabScrollSpeed}
+          isScrolling={isScrolling}
+          setTabIsScrolling={setTabIsScrolling}
+          tabData={tabData ?? ''}
+          transpose={transpose}
+          style={{ fontSize: `${fontSize}px` }}
+        />
+      )}
     </section>
   )
 }
 
-export default Player
