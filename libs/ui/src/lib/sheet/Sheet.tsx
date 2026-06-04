@@ -15,13 +15,15 @@ const lineMatcher = (
   index: number,
   transpose: number
 ): React.ReactNode => {
+  if (!line.trim()) {
+    return <div key={index} className={styles.blankLine}>&nbsp;</div>
+  }
+
   const tokens = line.split(delimiterMatcher).filter((token) => token !== '')
   const sanitizedTokens = tokens.filter((token) => !testSpaces(token))
 
-  // Check if this is a tablature line
   const isTablature = isTablatureLine(line)
 
-  // Check for chords, including lowercase 'e' for tablature
   const hasValidChords = tokens.some(
     (token) => testChords(token.replace('|', '')) || token === 'e'
   )
@@ -33,12 +35,9 @@ const lineMatcher = (
       .map((currentValue, i) => {
         if (testChords(currentValue) || currentValue === 'e') {
           const chordToTranspose = currentValue === 'e' ? 'E' : currentValue
-
-          // Check if this is a string indicator (first token in a tablature line)
           const isStringIndicator = isTablature && i === 0
-          //isTablature={isTablature}
           return (
-            <span className={styles.chord} key={`${index}-${i}-${currentValue}`}>
+            <span className={styles.chord} key={`${index}-${i}`}>
               {isStringIndicator
                 ? currentValue
                 : transposeChord(chordToTranspose, transpose)}
@@ -46,18 +45,19 @@ const lineMatcher = (
           )
         }
         return (
-          <React.Fragment key={`${index}-${i}-${currentValue}`}>
+          <React.Fragment key={`${index}-${i}`}>
             {currentValue}
           </React.Fragment>
         )
       })
-    return <div key={line + index}>{processedChords}</div>
+    return <div key={index} className={styles.chordLine}>{processedChords}</div>
   }
 
   if (testHeader(line)) {
-    return <div key={line + index}>{line}</div>
+    return <div key={index} className={styles.header}>{line}</div>
   }
-  return <div key={line + index}>{line}</div>
+
+  return <div key={index}>{line}</div>
 }
 
 type SheetProps = {
@@ -167,7 +167,6 @@ export const Sheet: React.FC<SheetProps> = ({
     }
 
     rafId = requestAnimationFrame(step)
-    console.log('hello')
     return () => {
       cancelAnimationFrame(rafId)
       container.removeEventListener('wheel', onWheel)
@@ -178,9 +177,7 @@ export const Sheet: React.FC<SheetProps> = ({
     }
   }, [isScrolling, tabScrollSpeed])
 
-  const lines: string[] = tabData
-    .split(/\r?\n|\r|\n/g)
-    .filter((line) => !testSpaces(line))
+  const lines: string[] = tabData.split(/\r?\n|\r|\n/g)
 
   return (
     <pre ref={containerRef} className={styles.container} {...props}>

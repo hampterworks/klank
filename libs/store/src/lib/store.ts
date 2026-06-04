@@ -105,10 +105,43 @@ export const useKlankStore = create<KlankState>()(
         setMode: (mode) => set((state) => ({...state, mode})),
         toggleMenu: (isMenuExtended) => set((state) => ({...state, ui: {...state.ui, isMenuExtended}})),
         setTheme: (theme) => set((state) => ({...state, theme})),
-        setTabPath: (path) => set((state) => ({...state, tab: {...state.tab, path}})),
-        setTabFontSize: (fontSize) => set((state) => ({...state, tab: {...state.tab, fontSize: clampFontSize(fontSize)}})),
-        setTabTranspose: (transpose) => set((state) => ({...state, tab: {...state.tab, transpose}})),
-        setTabScrollSpeed: (scrollSpeed) => set((state) => ({...state, tab: {...state.tab, scrollSpeed: scrollSpeed}})),
+        setTabPath: (path) => set((state) => {
+          const saved = state.tabSettingByPath[path]
+          const tab: TabSetting = {
+            ...state.tab,
+            path,
+            isScrolling: false,
+            fontSize: saved?.fontSize ?? state.tab.fontSize,
+            transpose: saved?.transpose ?? 0,
+            scrollSpeed: saved?.scrollSpeed ?? state.tab.scrollSpeed,
+          }
+          // Snapshot current tab's settings before leaving it
+          const tabSettingByPath = state.tab.path
+            ? { ...state.tabSettingByPath, [state.tab.path]: state.tab }
+            : state.tabSettingByPath
+          return { ...state, tab, tabSettingByPath }
+        }),
+        setTabFontSize: (fontSize) => set((state) => {
+          const tab = { ...state.tab, fontSize: clampFontSize(fontSize) }
+          const tabSettingByPath = state.tab.path
+            ? { ...state.tabSettingByPath, [state.tab.path]: tab }
+            : state.tabSettingByPath
+          return { ...state, tab, tabSettingByPath }
+        }),
+        setTabTranspose: (transpose) => set((state) => {
+          const tab = { ...state.tab, transpose }
+          const tabSettingByPath = state.tab.path
+            ? { ...state.tabSettingByPath, [state.tab.path]: tab }
+            : state.tabSettingByPath
+          return { ...state, tab, tabSettingByPath }
+        }),
+        setTabScrollSpeed: (scrollSpeed) => set((state) => {
+          const tab = { ...state.tab, scrollSpeed }
+          const tabSettingByPath = state.tab.path
+            ? { ...state.tabSettingByPath, [state.tab.path]: tab }
+            : state.tabSettingByPath
+          return { ...state, tab, tabSettingByPath }
+        }),
         setTabIsScrolling: (isScrolling) => set((state) => ({...state, tab: {...state.tab, isScrolling}})),
         setTabSettingByPath: (path, tabSetting) => set((state) => ({...state, tabSettingByPath: {...state.tabSettingByPath, [path]: tabSetting}})),
         setTabSettings: (tabSettingByPath) => set((state) => ({...state, tabSettingByPath})),
