@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "io.github.hampterworks.klank",
   "build": {
-    "frontendDist": "../dist",
+    "frontendDist": "../build/client",
     "devUrl": "http://localhost:4200",
     "beforeDevCommand": "pnpm nx dev klank",
     "beforeBuildCommand": "pnpm nx build klank"

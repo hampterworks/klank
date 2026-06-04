@@ -5,7 +5,7 @@
   "sideEffects": false,
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "react-router build",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
