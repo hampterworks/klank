@@ -19,6 +19,7 @@ export function App() {
   const setBaseDirectory = useKlankStore().setBaseDirectory
   const fileService = useKlankStore().fileService
   const setFileService = useKlankStore().setFileService
+  const setTabSettings = useKlankStore().setTabSettings
   const [tree, setTree] = useState<FileEntry[]>()
   const [needsUpdate, setNeedsUpdate] = useState(false)
 
@@ -33,21 +34,23 @@ export function App() {
         const fileService = await createFileService(serverMode ? 'server' : 'tauri')
         setFileService(fileService)
 
-        // Get base directory if not set
-        if (!baseDirectory && fileService?.getBaseDirectoryPath) {
-          const folder = await fileService.getBaseDirectoryPath()
-          setBaseDirectory(folder)
-          return
+        // Get base directory if not set yet
+        let dir = baseDirectory
+        if (!dir) {
+          dir = await fileService.getBaseDirectoryPath()
+          setBaseDirectory(dir)
+          return // re-triggers effect once baseDirectory is in state
         }
 
-        // Load directory contents
-        if (baseDirectory && fileService?.readDirectoryRecursively) {
-          const data = await fileService.readDirectoryRecursively(
-            baseDirectory,
-            file => file.isDirectory || file.name.endsWith(".tab.txt")
-          )
-          setTree(mapTreeStructure(data ?? []))
-        }
+        // Load per-tab settings from the tab directory, then load the tree
+        const savedSettings = await fileService.readTabSettings(dir)
+        setTabSettings(savedSettings)
+
+        const data = await fileService.readDirectoryRecursively(
+          dir,
+          file => file.isDirectory || file.name.endsWith('.tab.txt')
+        )
+        setTree(mapTreeStructure(data ?? []))
 
       } catch (error) {
         console.error('Failed to initialize app:', error)
@@ -55,7 +58,7 @@ export function App() {
     }
 
     initializeApp()
-  }, [baseDirectory, serverMode, setBaseDirectory, setFileService])
+  }, [baseDirectory, serverMode, setBaseDirectory, setFileService, setTabSettings])
 
   useEffect(() => {
     if (needsUpdate && baseDirectory) {

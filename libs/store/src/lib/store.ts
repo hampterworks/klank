@@ -1,7 +1,7 @@
 import {create} from 'zustand'
 import {devtools, persist} from 'zustand/middleware'
 import type {} from '@redux-devtools/extension'
-import { FileService } from '@klank/platform-api'
+import { FileService, PerTabSettings } from '@klank/platform-api'
 
 export type Mode = "Read" | "Edit"
 export type Theme = "Light" | "Dark"
@@ -42,8 +42,8 @@ type KlankState = {
   theme: Theme
   ui: Ui
   toggleMenu: (isMenuExtended: boolean) => void
-  /** Per-file saved settings keyed by full file path. Prepared; not yet wired to UI. */
-  tabSettingByPath: Record<string, TabSetting>
+  /** Per-file saved settings keyed by full file path. Loaded from and written to tab-settings.json. */
+  tabSettingByPath: Record<string, PerTabSettings>
   setBaseDirectory: (directory: string) => void
   setFileService: (service: FileService) => void
   setMode: (mode: Mode) => void
@@ -53,8 +53,8 @@ type KlankState = {
   setTabTranspose: (transpose: number) => void
   setTabScrollSpeed: (speed: number) => void
   setTabIsScrolling: (isScrolling: boolean) => void
-  setTabSettingByPath: (path: string, tabSetting: TabSetting) => void
-  setTabSettings: (tabSettingByPath: Record<string, TabSetting>) => void
+  setTabSettingByPath: (path: string, settings: PerTabSettings) => void
+  setTabSettings: (tabSettingByPath: Record<string, PerTabSettings>) => void
   setTabDetails: (details: string) => void
   setTabLink: (link: string) => void
   setServerMode: (serverMode: boolean) => void
@@ -115,31 +115,55 @@ export const useKlankStore = create<KlankState>()(
             transpose: saved?.transpose ?? 0,
             scrollSpeed: saved?.scrollSpeed ?? state.tab.scrollSpeed,
           }
-          // Snapshot current tab's settings before leaving it
+          // Snapshot current tab's settings to file before leaving it
+          if (state.tab.path && state.baseDirectory) {
+            state.fileService?.writeTabSetting(state.tab.path, {
+              fontSize: state.tab.fontSize,
+              transpose: state.tab.transpose,
+              scrollSpeed: state.tab.scrollSpeed,
+            }, state.baseDirectory)
+          }
           const tabSettingByPath = state.tab.path
-            ? { ...state.tabSettingByPath, [state.tab.path]: state.tab }
+            ? {
+                ...state.tabSettingByPath,
+                [state.tab.path]: {
+                  fontSize: state.tab.fontSize,
+                  transpose: state.tab.transpose,
+                  scrollSpeed: state.tab.scrollSpeed,
+                },
+              }
             : state.tabSettingByPath
           return { ...state, tab, tabSettingByPath }
         }),
         setTabFontSize: (fontSize) => set((state) => {
-          const tab = { ...state.tab, fontSize: clampFontSize(fontSize) }
+          const clamped = clampFontSize(fontSize)
+          const tab = { ...state.tab, fontSize: clamped }
+          const entry: PerTabSettings = { fontSize: clamped, transpose: state.tab.transpose, scrollSpeed: state.tab.scrollSpeed }
           const tabSettingByPath = state.tab.path
-            ? { ...state.tabSettingByPath, [state.tab.path]: tab }
+            ? { ...state.tabSettingByPath, [state.tab.path]: entry }
             : state.tabSettingByPath
+          if (state.tab.path && state.baseDirectory)
+            state.fileService?.writeTabSetting(state.tab.path, entry, state.baseDirectory)
           return { ...state, tab, tabSettingByPath }
         }),
         setTabTranspose: (transpose) => set((state) => {
           const tab = { ...state.tab, transpose }
+          const entry: PerTabSettings = { fontSize: state.tab.fontSize, transpose, scrollSpeed: state.tab.scrollSpeed }
           const tabSettingByPath = state.tab.path
-            ? { ...state.tabSettingByPath, [state.tab.path]: tab }
+            ? { ...state.tabSettingByPath, [state.tab.path]: entry }
             : state.tabSettingByPath
+          if (state.tab.path && state.baseDirectory)
+            state.fileService?.writeTabSetting(state.tab.path, entry, state.baseDirectory)
           return { ...state, tab, tabSettingByPath }
         }),
         setTabScrollSpeed: (scrollSpeed) => set((state) => {
           const tab = { ...state.tab, scrollSpeed }
+          const entry: PerTabSettings = { fontSize: state.tab.fontSize, transpose: state.tab.transpose, scrollSpeed }
           const tabSettingByPath = state.tab.path
-            ? { ...state.tabSettingByPath, [state.tab.path]: tab }
+            ? { ...state.tabSettingByPath, [state.tab.path]: entry }
             : state.tabSettingByPath
+          if (state.tab.path && state.baseDirectory)
+            state.fileService?.writeTabSetting(state.tab.path, entry, state.baseDirectory)
           return { ...state, tab, tabSettingByPath }
         }),
         setTabIsScrolling: (isScrolling) => set((state) => ({...state, tab: {...state.tab, isScrolling}})),
@@ -151,6 +175,11 @@ export const useKlankStore = create<KlankState>()(
       }),
       {
         name: 'klank-storage',
+        partialize: (state) => ({
+          tab: { ...state.tab, isScrolling: false },
+          theme: state.theme,
+          ui: state.ui,
+        }),
       }
     )
   )
