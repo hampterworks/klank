@@ -50,3 +50,10 @@ test-output
 .claude/worktrees
 .nx/polygraph
 .nx/self-healing
+
+# AI assistant tooling
+.junie/
+
+# TypeScript declaration files emitted in-place by tsc project references
+libs/*/src/**/*.d.ts
+libs/*/src/**/*.d.ts.map
