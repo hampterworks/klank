@@ -10,6 +10,7 @@ import {
   Toolbar,
 } from '@klank/ui'
 import { useKlankStore } from '@klank/store'
+import { PlaylistSection } from './PlaylistSection'
 
 type MenuProps = {
   tree: FileEntry[]
@@ -22,10 +23,22 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
   const toggleMenu = useKlankStore().toggleMenu
   const currentTabPath = useKlankStore().tab.path
   const setTabPath = useKlankStore().setTabPath
+  const setActivePlaylist = useKlankStore().setActivePlaylist
   const baseDirectory = useKlankStore().baseDirectory
   const setBaseDirectory = useKlankStore().setBaseDirectory
   const fileService = useKlankStore().fileService
+  const activePlaylistId = useKlankStore().activePlaylistId
+  const playlists = useKlankStore().playlists
+  const addTabToPlaylist = useKlankStore().addTabToPlaylist
   const [searchFilter, setSearchFilter] = useState<string>('')
+
+  const activePlaylist = playlists.find((p) => p.id === activePlaylistId) ?? null
+
+  // Navigating from the file tree / shuffle always exits playlist context.
+  const handleSelectSong = (path: string) => {
+    setActivePlaylist(null)
+    setTabPath(path)
+  }
 
   const handleDownloadTab = async (url: string) => {
     const sheet = await getSheetFromUG(url)
@@ -48,19 +61,26 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
         getDirectoryPath={fileService?.getDirectoryPath}
         setNeedsUpdate={setNeedsUpdate}
         setBaseDirectory={setBaseDirectory}
-        setTabPath={setTabPath}
+        setTabPath={handleSelectSong}
         tree={tree}
         onDownloadTab={handleDownloadTab}
         onSettingsClick={() => navigate('/settings')}
         isCollapsed={!isMenuExtended}
       />
       {isMenuExtended && (
-        <FileTreeView
-          currentTabPath={currentTabPath}
-          setTabPath={setTabPath}
-          searchFilter={searchFilter}
-          tree={tree}
-        />
+        <>
+          <PlaylistSection tree={tree} currentTabPath={currentTabPath} />
+          <div className={styles.treeWrapper}>
+            <FileTreeView
+              currentTabPath={currentTabPath}
+              setTabPath={handleSelectSong}
+              searchFilter={searchFilter}
+              tree={tree}
+              onAddToPlaylist={activePlaylist ? (path) => addTabToPlaylist(activePlaylist.id, path) : undefined}
+              activePlaylistPaths={activePlaylist?.paths}
+            />
+          </div>
+        </>
       )}
       <Searchbar
         toggleMenu={toggleMenu}

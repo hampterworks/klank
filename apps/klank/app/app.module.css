@@ -25,3 +25,9 @@
 .resizeHandle:hover {
   background: var(--klank-color-border);
 }
+
+@media (max-width: 599px) {
+  .resizeHandle {
+    display: none;
+  }
+}

@@ -68,6 +68,19 @@ export function App() {
   }, [baseDirectory, serverMode, setBaseDirectory, setFileService, setTabSettings])
 
   useEffect(() => {
+    const container = containerRef.current
+    if (!container || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width === 0) return
+      if (entry.contentRect.width < 600 && isMenuExtended) {
+        toggleMenu(false)
+      }
+    })
+    ro.observe(container)
+    return () => ro.disconnect()
+  }, [isMenuExtended, toggleMenu])
+
+  useEffect(() => {
     if (needsUpdate && baseDirectory) {
       fileService
         ?.readDirectoryRecursively(

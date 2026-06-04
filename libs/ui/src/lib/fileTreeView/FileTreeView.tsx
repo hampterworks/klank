@@ -11,7 +11,9 @@ const renderTreeStructure = (
   currentTabPath: string,
   setTabPath: (path: string) => void,
   collapsedArtists: string[],
-  setCollapsedArtists: React.Dispatch<React.SetStateAction<string[]>>
+  setCollapsedArtists: React.Dispatch<React.SetStateAction<string[]>>,
+  onAddToPlaylist?: (path: string) => void,
+  activePlaylistPaths?: string[]
 ) => {
   const currentTree = sortByArtist(files, searchFilter)
   const treeKeys = Object.keys(currentTree)
@@ -41,18 +43,31 @@ const renderTreeStructure = (
         </button>
         {!collapsedArtists.includes(artist) && (
           <ul className={styles.songList}>
-            {currentTree[artist].map((item, index) => (
-              <li
-                id={currentTabPath === item.path ? 'active' : ''}
-                className={currentTabPath === item.path ? styles.active : ''}
-                key={item.path}
-              >
-                <button onClick={() => setTabPath(item.path)}>
-                  <FileIcon />
-                  <span>{item.song ?? item.artist}</span>
-                </button>
-              </li>
-            ))}
+            {currentTree[artist].map((item) => {
+              const alreadyInPlaylist = activePlaylistPaths?.includes(item.path)
+              return (
+                <li
+                  id={currentTabPath === item.path ? 'active' : ''}
+                  className={currentTabPath === item.path ? styles.active : ''}
+                  key={item.path}
+                >
+                  <button onClick={() => setTabPath(item.path)}>
+                    <FileIcon />
+                    <span>{item.song ?? item.artist}</span>
+                  </button>
+                  {onAddToPlaylist && !alreadyInPlaylist && (
+                    <button
+                      className={styles.addToPlaylistButton}
+                      onClick={(e) => { e.stopPropagation(); onAddToPlaylist(item.path) }}
+                      title="Add to active playlist"
+                      aria-label="Add to active playlist"
+                    >
+                      +
+                    </button>
+                  )}
+                </li>
+              )
+            })}
           </ul>
         )}
       </li>
@@ -65,9 +80,11 @@ type FileTreeViewProps = {
   currentTabPath: string
   setTabPath: (path: string) => void
   searchFilter: string
+  onAddToPlaylist?: (path: string) => void
+  activePlaylistPaths?: string[]
 } & React.ComponentPropsWithRef<'ul'>
 
-export const FileTreeView: React.FC<FileTreeViewProps> = ({tree, currentTabPath, setTabPath, searchFilter, ...props }) => {
+export const FileTreeView: React.FC<FileTreeViewProps> = ({tree, currentTabPath, setTabPath, searchFilter, onAddToPlaylist, activePlaylistPaths, ...props }) => {
   const [collapsedArtists, setCollapsedArtists] = useState<string[]>([])
 
   useEffect(() => {
@@ -88,6 +105,6 @@ export const FileTreeView: React.FC<FileTreeViewProps> = ({tree, currentTabPath,
   }, [currentTabPath, tree, collapsedArtists])
 
   return <ul className={styles.container} {...props}>
-    {renderTreeStructure(tree, searchFilter, currentTabPath, setTabPath, collapsedArtists, setCollapsedArtists)}
+    {renderTreeStructure(tree, searchFilter, currentTabPath, setTabPath, collapsedArtists, setCollapsedArtists, onAddToPlaylist, activePlaylistPaths)}
   </ul>
 }

@@ -1,7 +1,7 @@
 .container {
   display: flex;
+  align-items: center;
   padding: 8px;
-  height: 56px;
   gap: 8px;
   box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.1);
   > div {
@@ -13,6 +13,7 @@
 
   button {
     margin-left: auto;
+    flex-shrink: 0;
     svg {
       transition: transform 100ms;
       transform: rotate(0deg);
