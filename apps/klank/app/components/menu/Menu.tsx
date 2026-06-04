@@ -1,6 +1,7 @@
 import styles from './menu.module.css'
 import * as React from 'react'
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
 import { FileEntry, getSheetFromUG } from '@klank/platform-api'
 import {
   FileTreeView,
@@ -16,6 +17,7 @@ type MenuProps = {
 } & React.ComponentPropsWithRef<'ul'>
 
 export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) => {
+  const navigate = useNavigate()
   const isMenuExtended = useKlankStore().ui.isMenuExtended
   const toggleMenu = useKlankStore().toggleMenu
   const currentTabPath = useKlankStore().tab.path
@@ -49,6 +51,7 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
         setTabPath={setTabPath}
         tree={tree}
         onDownloadTab={handleDownloadTab}
+        onSettingsClick={() => navigate('/settings')}
         isCollapsed={!isMenuExtended}
       />
       {isMenuExtended && (

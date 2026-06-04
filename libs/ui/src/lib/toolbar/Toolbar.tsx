@@ -32,6 +32,7 @@ type ToolbarProps = {
   setTabPath: (path: string) => void
   /** Called with the user-entered URL when a download is requested. Should resolve when done. */
   onDownloadTab?: (url: string) => Promise<void>
+  onSettingsClick?: () => void
   tree: TreeEntry[]
   isCollapsed?: boolean
 } & React.ComponentPropsWithRef<'li'>
@@ -42,6 +43,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   setNeedsUpdate,
   setTabPath,
   onDownloadTab,
+  onSettingsClick,
   tree,
   isCollapsed,
   ...props
@@ -97,7 +99,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         />
       </ToolTip>
       <ToolTip message="Settings">
-        <Button iconButton={true} icon={<SettingsIcon />} />
+        <Button iconButton={true} icon={<SettingsIcon />} onClick={onSettingsClick} />
       </ToolTip>
       <ToolTip message="Go to Tab">
         <Button
