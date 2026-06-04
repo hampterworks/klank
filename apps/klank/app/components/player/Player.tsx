@@ -16,10 +16,23 @@ export const Player: React.FC<SheetProps> = ({ ...props }) => {
   const setTabIsScrolling = useKlankStore().setTabIsScrolling
   const tabPath = useKlankStore().tab.path
   const fileService = useKlankStore().fileService
+  const playlists = useKlankStore().playlists
+  const activePlaylistId = useKlankStore().activePlaylistId
+  const activePlaylistIndex = useKlankStore().activePlaylistIndex
+  const nextInPlaylist = useKlankStore().nextInPlaylist
+  const prevInPlaylist = useKlankStore().prevInPlaylist
   const mode = useKlankStore().mode
   const setMode = useKlankStore().setMode
   const [tabData, setTabData] = useState<string | undefined>()
   const [editedContent, setEditedContent] = useState<string>('')
+
+  const activePlaylist = playlists.find((p) => p.id === activePlaylistId)
+  const playlistNav = activePlaylist && activePlaylistIndex !== null ? {
+    current: activePlaylistIndex + 1,
+    total: activePlaylist.paths.length,
+    onPrev: prevInPlaylist,
+    onNext: nextInPlaylist,
+  } : undefined
 
   useEffect(() => {
     if (!fileService?.readTabFile) return
@@ -61,6 +74,7 @@ export const Player: React.FC<SheetProps> = ({ ...props }) => {
         setTabScrollSpeed={setTabScrollSpeed}
         setTabIsScrolling={setTabIsScrolling}
         onEditToggle={handleEditToggle}
+        playlist={playlistNav}
       />
       {mode === 'Edit' ? (
         <textarea

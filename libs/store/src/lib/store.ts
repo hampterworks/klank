@@ -10,6 +10,14 @@ export type Ui = {
   menuWidth: number
 }
 
+export type Playlist = {
+  id: string
+  name: string
+  /** Ordered list of full file-system paths to .tab.txt files. */
+  paths: string[]
+  createdAt: number
+}
+
 /**
  * Settings for a single open tab. Fields marked with `@persisted` are saved to
  * `klank-storage` in localStorage — never rename them.
@@ -60,6 +68,21 @@ type KlankState = {
   setTabDetails: (details: string) => void
   setTabLink: (link: string) => void
   setServerMode: (serverMode: boolean) => void
+  /** Named playlists — persisted to localStorage. */
+  playlists: Playlist[]
+  /** ID of the currently active playlist, or null when none is active. Persisted. */
+  activePlaylistId: string | null
+  /** Index of the currently playing song within the active playlist. Persisted. */
+  activePlaylistIndex: number | null
+  createPlaylist: (name: string) => void
+  deletePlaylist: (id: string) => void
+  renamePlaylist: (id: string, name: string) => void
+  addTabToPlaylist: (id: string, path: string) => void
+  removeTabFromPlaylist: (id: string, path: string) => void
+  reorderPlaylist: (id: string, paths: string[]) => void
+  setActivePlaylist: (id: string | null) => void
+  nextInPlaylist: () => void
+  prevInPlaylist: () => void
 }
 
 /** All valid scroll speed levels (0–9, displayed as 1–10). */
@@ -103,6 +126,9 @@ export const useKlankStore = create<KlankState>()(
         tabSettingByPath: {},
         mode: "Read",
         theme: "Light",
+        playlists: [],
+        activePlaylistId: null,
+        activePlaylistIndex: null,
         setBaseDirectory: (baseDirectory) => set((state) => ({...state, baseDirectory})),
         setFileService: (fileService) => set((state) => ({...state, fileService})),
         setMode: (mode) => set((state) => ({...state, mode})),
@@ -176,6 +202,112 @@ export const useKlankStore = create<KlankState>()(
         setTabDetails: (details) => set((state) => ({...state,tab: {...state.tab, details}})),
         setTabLink: (link) => set( state => ({...state, tab: {...state.tab, link}})),
         setServerMode: (serverMode) => set((state) => ({...state, serverMode})),
+        createPlaylist: (name) => set((state) => ({
+          ...state,
+          playlists: [
+            ...state.playlists,
+            { id: crypto.randomUUID(), name, paths: [], createdAt: Date.now() },
+          ],
+        })),
+        deletePlaylist: (id) => set((state) => ({
+          ...state,
+          playlists: state.playlists.filter((p) => p.id !== id),
+          activePlaylistId: state.activePlaylistId === id ? null : state.activePlaylistId,
+          activePlaylistIndex: state.activePlaylistId === id ? null : state.activePlaylistIndex,
+        })),
+        renamePlaylist: (id, name) => set((state) => ({
+          ...state,
+          playlists: state.playlists.map((p) => p.id === id ? { ...p, name } : p),
+        })),
+        addTabToPlaylist: (id, path) => set((state) => ({
+          ...state,
+          playlists: state.playlists.map((p) =>
+            p.id === id && !p.paths.includes(path)
+              ? { ...p, paths: [...p.paths, path] }
+              : p
+          ),
+        })),
+        removeTabFromPlaylist: (id, path) => set((state) => {
+          const playlist = state.playlists.find((p) => p.id === id)
+          const newPaths = playlist?.paths.filter((p) => p !== path) ?? []
+          const removedIndex = playlist?.paths.indexOf(path) ?? -1
+          let newIndex = state.activePlaylistIndex
+          if (state.activePlaylistId === id && newIndex !== null) {
+            if (removedIndex < newIndex) newIndex = newIndex - 1
+            if (newIndex >= newPaths.length) newIndex = Math.max(0, newPaths.length - 1)
+          }
+          return {
+            ...state,
+            playlists: state.playlists.map((p) => p.id === id ? { ...p, paths: newPaths } : p),
+            activePlaylistIndex: newIndex,
+          }
+        }),
+        reorderPlaylist: (id, paths) => set((state) => ({
+          ...state,
+          playlists: state.playlists.map((p) => p.id === id ? { ...p, paths } : p),
+        })),
+        setActivePlaylist: (id) => set((state) => {
+          if (id === null) return { ...state, activePlaylistId: null, activePlaylistIndex: null }
+          const playlist = state.playlists.find((p) => p.id === id)
+          if (!playlist || playlist.paths.length === 0) return { ...state, activePlaylistId: id, activePlaylistIndex: null }
+          const firstPath = playlist.paths[0]
+          const saved = state.tabSettingByPath[firstPath]
+          return {
+            ...state,
+            activePlaylistId: id,
+            activePlaylistIndex: 0,
+            tab: {
+              ...state.tab,
+              path: firstPath,
+              isScrolling: false,
+              fontSize: saved?.fontSize ?? state.tab.fontSize,
+              transpose: saved?.transpose ?? 0,
+              scrollSpeed: saved?.scrollSpeed ?? state.tab.scrollSpeed,
+            },
+          }
+        }),
+        nextInPlaylist: () => set((state) => {
+          const { activePlaylistId, activePlaylistIndex, playlists } = state
+          if (activePlaylistId === null || activePlaylistIndex === null) return state
+          const playlist = playlists.find((p) => p.id === activePlaylistId)
+          if (!playlist || playlist.paths.length === 0) return state
+          const nextIndex = (activePlaylistIndex + 1) % playlist.paths.length
+          const path = playlist.paths[nextIndex]
+          const saved = state.tabSettingByPath[path]
+          return {
+            ...state,
+            activePlaylistIndex: nextIndex,
+            tab: {
+              ...state.tab,
+              path,
+              isScrolling: false,
+              fontSize: saved?.fontSize ?? state.tab.fontSize,
+              transpose: saved?.transpose ?? 0,
+              scrollSpeed: saved?.scrollSpeed ?? state.tab.scrollSpeed,
+            },
+          }
+        }),
+        prevInPlaylist: () => set((state) => {
+          const { activePlaylistId, activePlaylistIndex, playlists } = state
+          if (activePlaylistId === null || activePlaylistIndex === null) return state
+          const playlist = playlists.find((p) => p.id === activePlaylistId)
+          if (!playlist || playlist.paths.length === 0) return state
+          const prevIndex = (activePlaylistIndex - 1 + playlist.paths.length) % playlist.paths.length
+          const path = playlist.paths[prevIndex]
+          const saved = state.tabSettingByPath[path]
+          return {
+            ...state,
+            activePlaylistIndex: prevIndex,
+            tab: {
+              ...state.tab,
+              path,
+              isScrolling: false,
+              fontSize: saved?.fontSize ?? state.tab.fontSize,
+              transpose: saved?.transpose ?? 0,
+              scrollSpeed: saved?.scrollSpeed ?? state.tab.scrollSpeed,
+            },
+          }
+        }),
       }),
       {
         name: 'klank-storage',
@@ -184,6 +316,9 @@ export const useKlankStore = create<KlankState>()(
           theme: state.theme,
           ui: state.ui,
           baseDirectory: state.baseDirectory,
+          playlists: state.playlists,
+          activePlaylistId: state.activePlaylistId,
+          activePlaylistIndex: state.activePlaylistIndex,
         }),
       }
     )

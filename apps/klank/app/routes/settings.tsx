@@ -1,5 +1,4 @@
 import styles from './settings.module.css'
-import * as React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { createGitService, type GitChangedFile, type GitResult, type GitService } from '@klank/platform-api'

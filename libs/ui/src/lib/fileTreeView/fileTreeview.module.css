@@ -1,12 +1,10 @@
-.container {
+.container {}
 
-}
 .menuItem {
-  background: #f8f8f8;
+  background: var(--klank-color-highlight);
 
   button {
     cursor: pointer;
-    width: 100%;
   }
 }
 
@@ -22,14 +20,16 @@
   align-items: center;
   text-transform: capitalize;
   font-weight: 700;
-  padding: 4px 8px;
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+
   svg {
     margin-left: auto;
   }
-  &:hover {
-    background: #eaeaea;
-  }
 
+  &:hover {
+    background: var(--klank-color-selected);
+  }
 }
 
 .songList {
@@ -38,7 +38,8 @@
   background: var(--klank-color-background);
 
   li {
-    padding: 8px;
+    display: flex;
+    align-items: center;
 
     &:hover {
       background: var(--klank-color-highlight);
@@ -49,11 +50,41 @@
       border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     }
 
-    button {
+    > button:first-child {
+      flex: 1;
+      min-width: 0;
       display: flex;
       align-items: center;
       gap: 4px;
+      padding: 8px;
+      overflow: hidden;
+
+      span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
     }
+  }
+}
+
+.addToPlaylistButton {
+  flex-shrink: 0;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  line-height: 1;
+  color: var(--klank-color-text);
+  opacity: 0;
+  transition: opacity 100ms;
+
+  .songList li:hover & {
+    opacity: 0.5;
+  }
+
+  &:hover {
+    opacity: 1 !important;
+    color: var(--klank-color-success);
   }
 }
 
@@ -61,6 +92,6 @@
   background: var(--klank-color-selected);
 }
 
-.rotated{
+.rotated {
   transform: rotate(180deg);
 }

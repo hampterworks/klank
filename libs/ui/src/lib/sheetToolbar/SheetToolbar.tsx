@@ -6,6 +6,14 @@ import { TransposeIcon } from '../icons/TransposeIcon'
 import { PlayIcon } from '../icons/PlayIcon'
 import { StopIcon } from '../icons/StopIcon'
 import { EditIcon } from '../icons/EditIcon'
+import { ChevronIcon } from '../icons/ChevronIcon'
+
+type PlaylistNav = {
+  current: number
+  total: number
+  onPrev: () => void
+  onNext: () => void
+}
 
 type SheetToolbarProps = {
   songName: string
@@ -19,6 +27,7 @@ type SheetToolbarProps = {
   setTabScrollSpeed: (speed: number) => void
   setTabIsScrolling: (isScrolling: boolean) => void
   onEditToggle: () => void
+  playlist?: PlaylistNav
 } & React.ComponentPropsWithRef<'div'>
 
 export const SheetToolbar: React.FC<SheetToolbarProps> = ({
@@ -33,6 +42,7 @@ export const SheetToolbar: React.FC<SheetToolbarProps> = ({
   setTabIsScrolling,
   mode,
   onEditToggle,
+  playlist,
   ...props
 }) => {
   React.useEffect(() => {
@@ -56,48 +66,68 @@ export const SheetToolbar: React.FC<SheetToolbarProps> = ({
       } else if (e.key === '-' || e.key === '_') {
         e.preventDefault()
         setTabScrollSpeed(Math.max(1, tabScrollSpeed - 1))
+      } else if (e.key === 'ArrowLeft' && playlist) {
+        e.preventDefault()
+        playlist.onPrev()
+      } else if (e.key === 'ArrowRight' && playlist) {
+        e.preventDefault()
+        playlist.onNext()
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isScrolling, setTabIsScrolling, tabScrollSpeed, setTabScrollSpeed])
+  }, [isScrolling, setTabIsScrolling, tabScrollSpeed, setTabScrollSpeed, playlist])
 
   return (
     <div className={styles.container} {...props}>
-      <span>{songName}</span>
-      <IncrementButton
-        value={fontSize}
-        setValue={setTabFontSize}
-        icon={<FontSizeIcon />}
-        min={8}
-      />
-      <IncrementButton
-        value={transpose}
-        setValue={setTabTranspose}
-        icon={<TransposeIcon />}
-      />
-      <IncrementButton
-        value={tabScrollSpeed}
-        setValue={setTabScrollSpeed}
-        icon={<SpeedIcon />}
-        min={1}
-        max={10}
-      />
-      <div className={styles.controlWrapper}>
-        <Button
-          label={isScrolling ? 'stop' : 'play'}
-          icon={isScrolling ? <StopIcon /> : <PlayIcon />}
-          onClick={() => setTabIsScrolling(!isScrolling)}
+      {playlist && (
+        <div className={styles.playlistNav}>
+          <button onClick={playlist.onPrev} aria-label="Previous song">
+            <ChevronIcon style={{ transform: 'rotate(90deg)' }} />
+          </button>
+          <span className={styles.playlistCounter}>{playlist.current}/{playlist.total}</span>
+          <button onClick={playlist.onNext} aria-label="Next song">
+            <ChevronIcon style={{ transform: 'rotate(-90deg)' }} />
+          </button>
+        </div>
+      )}
+
+      <span className={styles.songName}>{songName}</span>
+
+      <div className={styles.controls}>
+        <IncrementButton
+          value={fontSize}
+          setValue={setTabFontSize}
+          icon={<FontSizeIcon />}
+          min={8}
         />
-        <Button
-          label={mode === 'Edit' ? 'save' : 'edit'}
-          icon={<EditIcon />}
-          onClick={onEditToggle}
-          className={mode === 'Edit' ? styles.activeButton : undefined}
+        <IncrementButton
+          value={transpose}
+          setValue={setTabTranspose}
+          icon={<TransposeIcon />}
         />
+        <IncrementButton
+          value={tabScrollSpeed}
+          setValue={setTabScrollSpeed}
+          icon={<SpeedIcon />}
+          min={1}
+          max={10}
+        />
+        <div className={styles.actionButtons}>
+          <Button
+            label={isScrolling ? 'stop' : 'play'}
+            icon={isScrolling ? <StopIcon /> : <PlayIcon />}
+            onClick={() => setTabIsScrolling(!isScrolling)}
+          />
+          <Button
+            label={mode === 'Edit' ? 'save' : 'edit'}
+            icon={<EditIcon />}
+            onClick={onEditToggle}
+            className={mode === 'Edit' ? styles.activeButton : undefined}
+          />
+        </div>
       </div>
     </div>
   )
 }
-

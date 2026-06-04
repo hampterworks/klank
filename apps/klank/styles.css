@@ -98,9 +98,15 @@ meter {
 :where(dialog:modal) {
   all: revert;
 }
-html,
+html {
+  height: 100%;
+  width: 100%;
+  font-size: clamp(13px, 1.1vw, 18px);
+}
+
 body {
   height: 100%;
   width: 100%;
   font-family: 'Roboto Mono', monospace;
+  font-size: 1rem;
 }
