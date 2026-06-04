@@ -117,6 +117,14 @@ export const mapTreeStructure = (
 }
 
 const SETTINGS_FILE = '.klank-settings.json'
+const LEGACY_RC_FILE = '.klankrc.json'
+
+type LegacyKlankEntry = {
+  fontSize: number
+  transpose: number
+  scrollSpeed: number
+  [key: string]: unknown
+}
 
 const createTauriFileService = async (): Promise<FileService> => {
   const { BaseDirectory, readDir, readTextFile, writeTextFile, create, exists } = await import(
@@ -212,6 +220,37 @@ const createTauriFileService = async (): Promise<FileService> => {
     async readTabSettings(baseDirectory) {
       try {
         const settingsPath = await join(baseDirectory, SETTINGS_FILE)
+
+        // Migrate from legacy .klankrc.json if the new file doesn't exist yet
+        if (!await exists(settingsPath)) {
+          const legacyPath = await join(baseDirectory, LEGACY_RC_FILE)
+          if (await exists(legacyPath)) {
+            try {
+              const legacyContent = await readTextFile(legacyPath)
+              const legacy = JSON.parse(legacyContent) as Record<string, LegacyKlankEntry>
+              const normBase = baseDirectory.replace(/\\/g, '/').replace(/\/$/, '')
+              const migrated: Record<string, PerTabSettings> = {}
+              for (const [absPath, entry] of Object.entries(legacy)) {
+                const normPath = absPath.replace(/\\/g, '/')
+                const relKey = normPath.startsWith(normBase + '/')
+                  ? normPath.slice(normBase.length + 1)
+                  : normPath
+                migrated[relKey] = {
+                  fontSize: entry.fontSize,
+                  transpose: entry.transpose,
+                  scrollSpeed: entry.scrollSpeed,
+                }
+              }
+              const sorted = Object.fromEntries(
+                Object.entries(migrated).sort(([a], [b]) => a.localeCompare(b))
+              )
+              await writeTextFile(settingsPath, JSON.stringify(sorted, null, 2))
+            } catch (err) {
+              console.error('Failed to migrate .klankrc.json:', err)
+            }
+          }
+        }
+
         const content = await readTextFile(settingsPath)
         const raw = JSON.parse(content) as Record<string, PerTabSettings>
         // Convert relative keys back to absolute paths
