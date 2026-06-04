@@ -38,7 +38,7 @@ export function App() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        const fileService = await createFileService(serverMode ? 'server' : 'tauri')
+        const fileService = await createFileService()
         setFileService(fileService)
 
         // Get base directory if not set yet

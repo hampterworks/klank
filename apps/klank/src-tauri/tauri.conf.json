@@ -2,9 +2,9 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "klank",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "io.github.hampterworks.klank",
   "build": {
-    "frontendDist": "../dist",
+    "frontendDist": "../build/client",
     "devUrl": "http://localhost:4200",
     "beforeDevCommand": "pnpm nx dev klank",
     "beforeBuildCommand": "pnpm nx build klank"

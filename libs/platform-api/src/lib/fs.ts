@@ -117,6 +117,14 @@ export const mapTreeStructure = (
 }
 
 const SETTINGS_FILE = '.klank-settings.json'
+const LEGACY_RC_FILE = '.klankrc.json'
+
+type LegacyKlankEntry = {
+  fontSize: number
+  transpose: number
+  scrollSpeed: number
+  [key: string]: unknown
+}
 
 const createTauriFileService = async (): Promise<FileService> => {
   const { BaseDirectory, readDir, readTextFile, writeTextFile, create, exists } = await import(
@@ -130,8 +138,15 @@ const createTauriFileService = async (): Promise<FileService> => {
     return norm.startsWith(normBase + '/') ? norm.slice(normBase.length + 1) : norm
   }
 
-  const toAbsPath = (relKey: string, baseDir: string) =>
-    `${baseDir.replace(/\/$/, '')}/${relKey}`
+  const toAbsPath = (relKey: string, baseDir: string) => {
+    const sep = baseDir.includes('\\') ? '\\' : '/'
+    // Already an absolute path (Windows drive letter or Unix root) — just normalise separator
+    if (/^[A-Za-z]:/.test(relKey) || relKey.startsWith('/')) {
+      return relKey.replace(/\//g, sep)
+    }
+    const osRelKey = relKey.replace(/\//g, sep)
+    return `${baseDir.replace(/[/\\]$/, '')}${sep}${osRelKey}`
+  }
   const { open } = await import('@tauri-apps/plugin-dialog')
   const processEntriesRecursively = async (
     parent: string,
@@ -212,6 +227,81 @@ const createTauriFileService = async (): Promise<FileService> => {
     async readTabSettings(baseDirectory) {
       try {
         const settingsPath = await join(baseDirectory, SETTINGS_FILE)
+
+        // Migrate from legacy .klankrc.json when it still has entries.
+        // The old app may have stored .klankrc.json in a different directory than
+        // the tab files themselves, so we detect the actual tab directory from the
+        // paths inside the file rather than assuming they share baseDirectory.
+        // Writes .klank-settings.json into the detected tab directory with relative
+        // keys, then blanks .klankrc.json so migration only runs once.
+        const legacyPath = await join(baseDirectory, LEGACY_RC_FILE)
+        if (await exists(legacyPath)) {
+          try {
+            const legacyContent = await readTextFile(legacyPath)
+            const legacy = JSON.parse(legacyContent) as Record<string, LegacyKlankEntry>
+            const rawKeys = Object.keys(legacy).filter(k => k.endsWith('.tab.txt'))
+
+            if (rawKeys.length > 0) {
+              // Normalise all paths to forward slashes for processing
+              const normKeys = rawKeys.map(k => k.replace(/\\/g, '/'))
+
+              // Find the longest common directory prefix across all tab paths
+              const dirs = normKeys.map(k => k.substring(0, k.lastIndexOf('/')))
+              let tabDir = dirs[0]
+              for (const dir of dirs.slice(1)) {
+                while (tabDir && dir !== tabDir && !dir.startsWith(tabDir + '/')) {
+                  tabDir = tabDir.substring(0, tabDir.lastIndexOf('/'))
+                }
+              }
+
+              // Build relative-keyed settings. Keys are relative to tabDir (the
+              // common prefix detected from the old paths), which preserves any
+              // subdirectory structure even if the repo has moved to a new machine.
+              // Filenames that were already relative, or whose old prefix can't be
+              // stripped, fall back to just the basename.
+              const migrated: Record<string, PerTabSettings> = {}
+              for (const [rawKey, entry] of Object.entries(legacy)) {
+                if (!rawKey.endsWith('.tab.txt')) continue
+                const normKey = rawKey.replace(/\\/g, '/')
+                let relKey = normKey
+                if (tabDir && normKey.startsWith(tabDir + '/')) {
+                  relKey = normKey.slice(tabDir.length + 1)
+                } else {
+                  // Path is from a different machine or location — use just the filename
+                  relKey = normKey.slice(normKey.lastIndexOf('/') + 1)
+                }
+                migrated[relKey] = {
+                  fontSize: entry.fontSize,
+                  transpose: entry.transpose,
+                  scrollSpeed: entry.scrollSpeed,
+                }
+              }
+
+              // Always write to settingsPath (baseDirectory/.klank-settings.json).
+              // Writing to the detected osTabDir was wrong when the repo has moved
+              // machines, because the old absolute paths no longer match baseDirectory.
+              let existing: Record<string, PerTabSettings> = {}
+              try {
+                const existingContent = await readTextFile(settingsPath)
+                const existingRaw = JSON.parse(existingContent) as Record<string, PerTabSettings>
+                // Skip stale absolute-path keys left by an earlier buggy migration
+                existing = Object.fromEntries(
+                  Object.entries(existingRaw).filter(([k]) => !/^[A-Za-z]:/.test(k) && !k.startsWith('/'))
+                )
+              } catch { /* file doesn't exist yet */ }
+
+              const merged = { ...migrated, ...existing }
+              const sorted = Object.fromEntries(
+                Object.entries(merged).sort(([a], [b]) => a.localeCompare(b))
+              )
+              await writeTextFile(settingsPath, JSON.stringify(sorted, null, 2))
+              await writeTextFile(legacyPath, '{}')
+            }
+          } catch (err) {
+            console.error('Failed to migrate .klankrc.json:', err)
+          }
+        }
+
         const content = await readTextFile(settingsPath)
         const raw = JSON.parse(content) as Record<string, PerTabSettings>
         // Convert relative keys back to absolute paths
@@ -251,9 +341,7 @@ const createTauriFileService = async (): Promise<FileService> => {
  * Creates and returns a `FileService` backed by Tauri's FS and dialog plugins.
  * Must be called from within a Tauri webview context (`__TAURI_INTERNALS__` must exist).
  */
-export const createFileService = async (
-  mode: 'tauri' | 'server' = 'tauri'
-): Promise<FileService> => {
+export const createFileService = async (): Promise<FileService> => {
   const serviceFactory = createTauriFileService
   const service = await serviceFactory()
 

@@ -46,4 +46,15 @@ pnpm tauri:dev
 | `pnpm lint` | ESLint across workspace |
 | `pnpm nx run-many -t typecheck` | TypeScript type-check across all projects |
 
+## Building for Release
+
+| Command | Description |
+|---------|-------------|
+| `pnpm tauri:build` | Release build for the current platform (all configured bundle targets) |
+| `pnpm tauri:build:windows` | Windows-specific release build — produces NSIS installer (`.exe`) and MSI package (`.msi`) |
+
+> **Windows prerequisites**: The NSIS and MSI bundlers require [NSIS](https://nsis.sourceforge.io/) and the [WiX Toolset](https://wixtoolset.org/) to be installed and available on `PATH`. Tauri will prompt with install instructions if they are missing.
+>
+> Output artifacts land in `apps/klank/src-tauri/target/release/bundle/`.
+
 For monorepo structure, lib boundaries, naming conventions, and code-style constraints, see `AGENTS.md`.

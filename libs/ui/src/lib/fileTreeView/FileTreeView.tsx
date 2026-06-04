@@ -1,4 +1,4 @@
-import styles from './fileTreeView.module.css'
+import styles from './fileTreeview.module.css'
 import { FileEntry, sortByArtist } from '@klank/platform-api'
 import { ChevronIcon } from '../icons/ChevronIcon'
 import { FileIcon } from '../icons/FileIcon'

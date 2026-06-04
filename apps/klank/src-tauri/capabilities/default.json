@@ -33,6 +33,11 @@
         { "url": "https://tabs.ultimate-guitar.com/*" },
         { "url": "https://www.ultimate-guitar.com/*" }
       ]
+    },
+    "shell:allow-execute",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [{ "name": "git", "cmd": "git", "args": true }]
     }
   ]
 }

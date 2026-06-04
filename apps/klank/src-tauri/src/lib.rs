@@ -288,6 +288,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_shell::init())
         .manage(UgScrapeState(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![scrape_ug, deliver_ug_html, report_ug_error])
         .setup(|app| {
