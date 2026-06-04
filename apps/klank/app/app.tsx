@@ -7,14 +7,13 @@ import {
   FileEntry,
   mapTreeStructure,
 } from '@klank/platform-api'
-import Menu from './components/menu/Menu'
-import Player from './components/player/Player'
+import { Menu } from './components/menu/Menu'
+import { Player } from './components/player/Player'
 
 export function App() {
   const isMenuExtended = useKlankStore().ui.isMenuExtended
   const serverMode = useKlankStore().serverMode
   const setServerMode = useKlankStore().setServerMode
-  const toggleMenu = useKlankStore().toggleMenu
   const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
   const baseDirectory = useKlankStore().baseDirectory
   const setBaseDirectory = useKlankStore().setBaseDirectory

@@ -10,7 +10,8 @@ import {
 
 import '../styles.css';
 import { ThemeProvider } from '@klank/ui';
-import { useKlankStore } from '@klank/store';
+import { useKlankStore } from '@klank/store'
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export const meta: MetaFunction = () => [
   {
@@ -67,5 +68,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  return (
+    <ErrorBoundary>
+      <Outlet />
+    </ErrorBoundary>
+  );
 }

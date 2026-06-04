@@ -29,7 +29,7 @@ export default defineConfig(({ mode }) => ({
       formats: ['es' as const],
     },
     rollupOptions: {
-      external: ['react', 'react-dom', 'react/jsx-runtime'],
+      external: ['react', 'react-dom', 'react/jsx-runtime', '@klank/platform-api'],
     },
   },
   test: {
@@ -37,6 +37,7 @@ export default defineConfig(({ mode }) => ({
     watch: false,
     globals: true,
     environment: 'jsdom',
+    passWithNoTests: true,
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],
     coverage: {

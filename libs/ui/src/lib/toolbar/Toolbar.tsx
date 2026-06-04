@@ -1,5 +1,6 @@
 import styles from './toolbar.module.css'
 import * as React from 'react'
+import { useState } from 'react'
 import {
   Button,
   DownloadIcon,
@@ -8,10 +9,8 @@ import {
   SettingsIcon,
   ShuffleIcon,
   TargetIcon,
-  ThemeIcon,
   ToolTip,
 } from '../../index'
-import { FileEntry, FileService, getSheetFromUG } from '@klank/platform-api'
 
 const goToActiveTab = () => {
   const activeElement = document.getElementById('active')
@@ -24,27 +23,30 @@ const goToActiveTab = () => {
   }
 }
 
+type TreeEntry = { path: string }
+
 type ToolbarProps = {
   getDirectoryPath?: () => Promise<string | null>
   setNeedsUpdate: React.Dispatch<React.SetStateAction<boolean>>
   setBaseDirectory: (directory: string) => void
-  baseDirectory?: string
-  fileService?: FileService
   setTabPath: (path: string) => void
-  handleRandomPathUpdate?: () => void
-  tree: FileEntry[]
+  /** Called with the user-entered URL when a download is requested. Should resolve when done. */
+  onDownloadTab?: (url: string) => Promise<void>
+  tree: TreeEntry[]
 } & React.ComponentPropsWithRef<'li'>
 
-const Toolbar: React.FC<ToolbarProps> = ({
+export const Toolbar: React.FC<ToolbarProps> = ({
   setBaseDirectory,
   getDirectoryPath,
   setNeedsUpdate,
-  baseDirectory,
-  fileService,
   setTabPath,
+  onDownloadTab,
   tree,
   ...props
 }) => {
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
+
   const handleBaseDirectoryChange = () => {
     if (getDirectoryPath)
       getDirectoryPath().then((path) => path !== null && setBaseDirectory(path))
@@ -57,15 +59,17 @@ const Toolbar: React.FC<ToolbarProps> = ({
   const handleDownloadTab = async () => {
     const tabUrl = window.prompt('Enter Ultimate Guitar URL')
     if (!tabUrl) return
-    const sheet = await getSheetFromUG(tabUrl)
-
-    const writtenPath = await fileService?.writeTabFile(
-      sheet?.filename ?? '',
-      baseDirectory ?? '',
-      sheet?.data ?? ''
-    )
-    if (writtenPath) setTabPath(writtenPath)
-    handleRefresh()
+    setIsDownloading(true)
+    setDownloadError(null)
+    try {
+      await onDownloadTab?.(tabUrl)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Download failed'
+      setDownloadError(message)
+      setTimeout(() => setDownloadError(null), 4000)
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   const handleRandomPathUpdate = () => {
@@ -90,7 +94,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
           icon={<RefreshIcon />}
         />
       </ToolTip>
-      <ToolTip message="something">
+      <ToolTip message="Settings">
         <Button iconButton={true} icon={<SettingsIcon />} />
       </ToolTip>
       <ToolTip message="Go to Tab">
@@ -106,15 +110,23 @@ const Toolbar: React.FC<ToolbarProps> = ({
           iconButton={true}
           icon={<ShuffleIcon />} />
       </ToolTip>
-      <ToolTip message="Download Tab">
+      {downloadError && (
+        <span className={styles.downloadError} title={downloadError}>
+          Error
+        </span>
+      )}
+      <ToolTip message={isDownloading ? 'Downloading...' : 'Download Tab'}>
         <Button
           onClick={() => handleDownloadTab()}
           iconButton={true}
-          icon={<DownloadIcon />}
+          disabled={isDownloading}
+          icon={
+            isDownloading
+              ? <span className={styles.spinner}><RefreshIcon /></span>
+              : <DownloadIcon />
+          }
         />
       </ToolTip>
     </li>
   )
 }
-
-export default Toolbar

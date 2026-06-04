@@ -9,11 +9,11 @@
       "vite/client"
     ],
     "jsx": "react-jsx",
-    "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo",
+    "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo"
   },
   "references": [
     {
-      "path": "../platform-api"
+      "path": "../platform-api/tsconfig.lib.json"
     }
   ],
   "exclude": [

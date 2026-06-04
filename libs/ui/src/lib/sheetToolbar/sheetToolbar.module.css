@@ -33,3 +33,7 @@
     }
   }
 }
+
+.activeButton {
+  background: var(--klank-color-highlight);
+}

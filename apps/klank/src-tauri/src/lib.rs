@@ -1,3 +1,6 @@
+/// Tauri backend for klank. Exposes IPC commands for scraping Ultimate Guitar
+/// tab pages via an ephemeral hidden webview and delivers the raw page content
+/// back to the frontend through a oneshot channel.
 use std::sync::Mutex;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tokio::sync::oneshot;
@@ -5,6 +8,9 @@ use tokio::sync::oneshot;
 // Holds the oneshot sender that the JS side will fulfill via `deliver_ug_html`.
 struct UgScrapeState(Mutex<Option<oneshot::Sender<String>>>);
 
+/// IPC callback invoked by the injected JavaScript inside the scraper webview.
+/// Sends the HTML string through the oneshot channel to unblock the waiting
+/// `scrape_ug` call. Should not be called directly from the main window.
 #[tauri::command]
 fn deliver_ug_html(state: tauri::State<'_, UgScrapeState>, html: String) {
     eprintln!("[ug-scraper] received HTML, {} bytes", html.len());
@@ -13,11 +19,22 @@ fn deliver_ug_html(state: tauri::State<'_, UgScrapeState>, html: String) {
     }
 }
 
+/// IPC callback for diagnostic logging from the injected JavaScript.
+/// Writes messages to stderr with the `[ug-scraper]` prefix.
+/// Used for debugging Cloudflare challenges and page detection failures.
 #[tauri::command]
 fn report_ug_error(msg: String) {
     eprintln!("[ug-scraper] {msg}");
 }
 
+/// Scrapes a UG tab page and returns its raw content as `Ok(String)`.
+///
+/// Accepts a UG tab URL, opens a hidden webview (800×600, skip_taskbar) to load
+/// it, and injects JavaScript that detects the `.js-store` element or
+/// `window.UGAPP.store`, auto-accepts consent banners, and calls
+/// `deliver_ug_html` with the content. Enforces mutual exclusion — returns
+/// `Err` if a scrape is already in progress. Has a 35-second hard timeout;
+/// returns `Err` on timeout.
 #[tauri::command]
 async fn scrape_ug(app: tauri::AppHandle, url: String) -> Result<String, String> {
     let state = app.state::<UgScrapeState>();

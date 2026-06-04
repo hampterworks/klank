@@ -1,10 +1,8 @@
 import styles from './menu.module.css'
 import * as React from 'react'
-import { useEffect, useState } from 'react'
-import { FileEntry } from '@klank/platform-api'
+import { useState } from 'react'
+import { FileEntry, getSheetFromUG } from '@klank/platform-api'
 import {
-  ChevronIcon,
-  FileIcon,
   FileTreeView,
   LogoIcon,
   Searchbar,
@@ -17,7 +15,7 @@ type MenuProps = {
   setNeedsUpdate: React.Dispatch<React.SetStateAction<boolean>>
 } & React.ComponentPropsWithRef<'ul'>
 
-const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) => {
+export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) => {
   const isMenuExtended = useKlankStore().ui.isMenuExtended
   const toggleMenu = useKlankStore().toggleMenu
   const currentTabPath = useKlankStore().tab.path
@@ -26,9 +24,18 @@ const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) => {
   const setBaseDirectory = useKlankStore().setBaseDirectory
   const fileService = useKlankStore().fileService
   const [searchFilter, setSearchFilter] = useState<string>('')
-  const [treeSortOption, setTreeSortOption] = useState<'default' | 'artist'>(
-    'artist'
-  )
+
+  const handleDownloadTab = async (url: string) => {
+    const sheet = await getSheetFromUG(url)
+    if (!sheet || !fileService) return
+    const writtenPath = await fileService.writeTabFile(
+      sheet.filename,
+      baseDirectory ?? '',
+      sheet.data
+    )
+    if (writtenPath) setTabPath(writtenPath)
+    setNeedsUpdate(true)
+  }
 
   return (
     <ul className={styles.container} {...props}>
@@ -39,10 +46,9 @@ const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) => {
         getDirectoryPath={fileService?.getDirectoryPath}
         setNeedsUpdate={setNeedsUpdate}
         setBaseDirectory={setBaseDirectory}
-        baseDirectory={baseDirectory}
-        fileService={fileService}
         setTabPath={setTabPath}
         tree={tree}
+        onDownloadTab={handleDownloadTab}
       />
       <FileTreeView
         currentTabPath={currentTabPath}
@@ -59,5 +65,3 @@ const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) => {
     </ul>
   )
 }
-
-export default Menu

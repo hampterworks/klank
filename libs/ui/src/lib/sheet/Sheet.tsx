@@ -68,7 +68,7 @@ type SheetProps = {
   setTabIsScrolling: (isScrolling: boolean) => void
 } & React.ComponentPropsWithRef<'pre'>
 
-const Sheet: React.FC<SheetProps> = ({
+export const Sheet: React.FC<SheetProps> = ({
   tabData,
   transpose,
   tabScrollSpeed,
@@ -191,5 +191,3 @@ const Sheet: React.FC<SheetProps> = ({
     </pre>
   )
 }
-
-export default Sheet

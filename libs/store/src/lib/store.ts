@@ -8,39 +8,51 @@ export type Theme = "Light" | "Dark"
 export type Ui = {
   isMenuExtended: boolean
 }
+
+/**
+ * Settings for a single open tab. Fields marked with `@persisted` are saved to
+ * `klank-storage` in localStorage — never rename them.
+ */
 export type TabSetting = {
+  /** @persisted Full file-system path to the .tab.txt file. */
   path: string
+  /** @persisted Display font size in px. Clamped 0–22 by `setTabFontSize`. */
   fontSize: number
+  /** @persisted Transposition offset in semitones. Positive = up, negative = down. */
   transpose: number
+  /** @persisted Auto-scroll speed level. Range 1–10; maps to px/s via 8 * 1.5^(speed-1). */
   scrollSpeed: number
+  /** @persisted Metadata string (e.g. artist info). */
   details: string
+  /** Ephemeral — not persisted. True while auto-scroll is running. */
   isScrolling: boolean
+  /** @persisted Source URL (e.g. Ultimate Guitar link) if the tab was downloaded. */
   link?: string
 }
 
 type KlankState = {
+  /** Active tab directory chosen by the user. Not persisted. */
   baseDirectory?: string
+  /** True when running outside Tauri (browser/server). Not persisted. */
   serverMode?: boolean
+  /** Tauri FileService instance. Never persisted (runtime object). */
   fileService?: FileService
   tab: TabSetting
   mode: Mode
   theme: Theme
   ui: Ui
   toggleMenu: (isMenuExtended: boolean) => void
-  streamerSongListEnabled: boolean
-  streamerSongListUser: string
+  /** Per-file saved settings keyed by full file path. Prepared; not yet wired to UI. */
   tabSettingByPath: Record<string, TabSetting>
   setBaseDirectory: (directory: string) => void
   setFileService: (service: FileService) => void
   setMode: (mode: Mode) => void
   setTheme: (theme: Theme) => void
   setTabPath: (path: string) => void
-  setStreamerSongListUser: (user: string) => void
   setTabFontSize: (size: number) => void
   setTabTranspose: (transpose: number) => void
   setTabScrollSpeed: (speed: number) => void
   setTabIsScrolling: (isScrolling: boolean) => void
-  setStreamerSongListToggle: (streamerSongListEnabled: boolean) => void
   setTabSettingByPath: (path: string, tabSetting: TabSetting) => void
   setTabSettings: (tabSettingByPath: Record<string, TabSetting>) => void
   setTabDetails: (details: string) => void
@@ -48,6 +60,7 @@ type KlankState = {
   setServerMode: (serverMode: boolean) => void
 }
 
+/** All valid scroll speed levels (0–9, displayed as 1–10). */
 export const SCROLL_SPEEDS = [...new Array(10).keys()] as const
 export type ScrollSpeeds = typeof SCROLL_SPEEDS[number]
 
@@ -60,12 +73,18 @@ const clampFontSize = (size: number) => {
   return size
 }
 
-const useKlankStore = create<KlankState>()(
+/**
+ * Global Zustand store for klank.
+ *
+ * Persisted to `localStorage` under the key `klank-storage` via Zustand's
+ * `persist` middleware. Redux DevTools are enabled in development.
+ *
+ * Usage: `const { tab, setTabTranspose } = useKlankStore()`
+ */
+export const useKlankStore = create<KlankState>()(
   devtools(
     persist(
       (set) => ({
-        streamerSongListEnabled: false,
-        streamerSongListUser: "",
         ui: {
           isMenuExtended: true,
         },
@@ -85,10 +104,8 @@ const useKlankStore = create<KlankState>()(
         setFileService: (fileService) => set((state) => ({...state, fileService})),
         setMode: (mode) => set((state) => ({...state, mode})),
         toggleMenu: (isMenuExtended) => set((state) => ({...state, ui: {...state.ui, isMenuExtended}})),
-        setStreamerSongListToggle: (streamerSongListEnabled) => set((state) => ({...state, streamerSongListEnabled})),
         setTheme: (theme) => set((state) => ({...state, theme})),
         setTabPath: (path) => set((state) => ({...state, tab: {...state.tab, path}})),
-        setStreamerSongListUser: (user) => set((state) => ({...state, streamerSongListUser: user})),
         setTabFontSize: (fontSize) => set((state) => ({...state, tab: {...state.tab, fontSize: clampFontSize(fontSize)}})),
         setTabTranspose: (transpose) => set((state) => ({...state, tab: {...state.tab, transpose}})),
         setTabScrollSpeed: (scrollSpeed) => set((state) => ({...state, tab: {...state.tab, scrollSpeed: scrollSpeed}})),
@@ -101,10 +118,7 @@ const useKlankStore = create<KlankState>()(
       }),
       {
         name: 'klank-storage',
-
       }
     )
   )
 )
-
-export default useKlankStore

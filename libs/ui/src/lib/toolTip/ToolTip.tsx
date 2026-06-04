@@ -6,7 +6,7 @@ type ToolTipProps = {
   children: React.ReactNode
 } & React.ComponentPropsWithoutRef<'div'>
 
-const ToolTip: React.FC<ToolTipProps> = ({message, children, ...props}) => {
+export const ToolTip: React.FC<ToolTipProps> = ({message, children, ...props}) => {
   const [position, setPosition] = useState({left: '0px', top: '0px'})
   const [isVisible, setIsVisible] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -40,5 +40,3 @@ const ToolTip: React.FC<ToolTipProps> = ({message, children, ...props}) => {
     </div>
   )
 }
-
-export default ToolTip;

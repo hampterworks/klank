@@ -1,13 +1,13 @@
-export { default as Button } from './lib/button/Button';
-export { default as Toolbar } from './lib/toolbar/Toolbar';
-export { default as ThemeProvider } from './lib/theme/ThemeProvider';
-export { default as ToolTip } from './lib/toolTip/ToolTip';
-export { default as Input } from './lib/input/Input';
-export { default as Searchbar } from './lib/searchbar/Searchbar';
-export { default as FileTreeView } from './lib/fileTreeView/FileTreeView';
-export { default as IncrementButton } from './lib/incrementButton/IncrementButton';
-export { default as SheetToolbar } from './lib/sheetToolbar/SheetToolbar';
-export { default as Sheet } from './lib/sheet/Sheet';
+export { Button } from './lib/button/Button';
+export { Toolbar } from './lib/toolbar/Toolbar';
+export { ThemeProvider } from './lib/theme/ThemeProvider';
+export { ToolTip } from './lib/toolTip/ToolTip';
+export { Input } from './lib/input/Input';
+export { Searchbar } from './lib/searchbar/Searchbar';
+export { FileTreeView } from './lib/fileTreeView/FileTreeView';
+export { IncrementButton } from './lib/incrementButton/IncrementButton';
+export { SheetToolbar } from './lib/sheetToolbar/SheetToolbar';
+export { Sheet } from './lib/sheet/Sheet';
 
 export * from './lib/theme/theme'
 export { PlayIcon } from './lib/icons/PlayIcon';

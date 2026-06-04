@@ -7,7 +7,7 @@ type InputProps = {
   iconRight?: React.ReactNode,
 } & React.ComponentPropsWithRef<'input'>
 
-const Input = (props: InputProps) => {
+export const Input = (props: InputProps) => {
   const {
     id,
     type,
@@ -49,5 +49,3 @@ const Input = (props: InputProps) => {
     </div>
   </div>
 }
-
-export default Input
