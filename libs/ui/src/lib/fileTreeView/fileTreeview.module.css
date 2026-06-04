@@ -55,10 +55,6 @@
       align-items: center;
       gap: 4px;
     }
-
-    &:hover .addToPlaylistButton {
-      opacity: 0.5;
-    }
   }
 }
 
@@ -76,6 +72,10 @@
   color: var(--klank-color-text);
   opacity: 0;
   transition: opacity 100ms;
+
+  li:hover & {
+    opacity: 0.5;
+  }
 
   &:hover {
     opacity: 1 !important;

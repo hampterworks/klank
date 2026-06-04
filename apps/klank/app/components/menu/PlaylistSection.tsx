@@ -156,40 +156,40 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
                     </button>
                   )}
 
-                  {/* Context menu trigger */}
-                  <button
-                    className={styles.menuButton}
-                    onClick={(e) => handleContextMenu(e, playlist.id)}
-                    aria-label="Playlist options"
-                  >
-                    ⋮
-                  </button>
-                </div>
-
-                {/* Context menu — rename / delete */}
-                {contextMenuId === playlist.id && (
-                  <div className={styles.contextMenu} onClick={(e) => e.stopPropagation()}>
+                  {/* Context menu trigger + menu — both inside header so menu positions relative to header height */}
+                  <div className={styles.menuButtonWrapper}>
                     <button
-                      onClick={() => {
-                        setEditingId(playlist.id)
-                        setEditingName(playlist.name)
-                        setExpandedId(playlist.id)
-                        setContextMenuId(null)
-                      }}
+                      className={styles.menuButton}
+                      onClick={(e) => handleContextMenu(e, playlist.id)}
+                      aria-label="Playlist options"
                     >
-                      Rename
+                      ⋮
                     </button>
-                    <button
-                      className={styles.dangerAction}
-                      onClick={() => {
-                        deletePlaylist(playlist.id)
-                        setContextMenuId(null)
-                      }}
-                    >
-                      Delete
-                    </button>
+                    {contextMenuId === playlist.id && (
+                      <div className={styles.contextMenu} onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => {
+                            setEditingId(playlist.id)
+                            setEditingName(playlist.name)
+                            setExpandedId(playlist.id)
+                            setContextMenuId(null)
+                          }}
+                        >
+                          Rename
+                        </button>
+                        <button
+                          className={styles.dangerAction}
+                          onClick={() => {
+                            deletePlaylist(playlist.id)
+                            setContextMenuId(null)
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
 
                 {/* Expanded song list */}
                 {isExpanded && (
