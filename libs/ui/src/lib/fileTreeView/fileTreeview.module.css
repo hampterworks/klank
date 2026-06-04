@@ -78,7 +78,7 @@
   opacity: 0;
   transition: opacity 100ms;
 
-  li:hover & {
+  .songList li:hover & {
     opacity: 0.5;
   }
 

@@ -130,11 +130,6 @@
   margin: 0.2rem 0.25rem;
 }
 
-.menuButtonWrapper {
-  position: relative;
-  flex-shrink: 0;
-}
-
 .menuButton {
   padding: 0.375rem 0.5rem;
   cursor: pointer;
@@ -150,10 +145,7 @@
 }
 
 .contextMenu {
-  position: absolute;
-  right: 0;
-  top: 100%;
-  z-index: 200;
+  z-index: 9999;
   background: var(--klank-color-background);
   border: 1px solid var(--klank-color-border);
   border-radius: 4px;

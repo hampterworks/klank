@@ -31,6 +31,7 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [contextMenuId, setContextMenuId] = useState<string | null>(null)
+  const [contextMenuPos, setContextMenuPos] = useState<{ top: number; right: number } | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
   const editInputRef = useRef<HTMLInputElement>(null)
@@ -44,7 +45,7 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
 
   useEffect(() => {
     if (contextMenuId === null) return
-    const close = () => setContextMenuId(null)
+    const close = () => { setContextMenuId(null); setContextMenuPos(null) }
     window.addEventListener('click', close)
     return () => window.removeEventListener('click', close)
   }, [contextMenuId])
@@ -59,6 +60,7 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
         setEditingId(newest.id)
         setEditingName(newest.name)
         setExpandedId(newest.id)
+        setActivePlaylist(newest.id)
       }
     }, 0)
   }
@@ -70,7 +72,14 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
 
   const handleContextMenu = (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
-    setContextMenuId((prev) => (prev === id ? null : id))
+    if (contextMenuId === id) {
+      setContextMenuId(null)
+      setContextMenuPos(null)
+    } else {
+      const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
+      setContextMenuPos({ top: rect.bottom, right: window.innerWidth - rect.right })
+      setContextMenuId(id)
+    }
   }
 
   const handleSongClick = (path: string, playlistId: string, index: number) => {
@@ -156,39 +165,14 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
                     </button>
                   )}
 
-                  {/* Context menu trigger + menu — both inside header so menu positions relative to header height */}
-                  <div className={styles.menuButtonWrapper}>
-                    <button
-                      className={styles.menuButton}
-                      onClick={(e) => handleContextMenu(e, playlist.id)}
-                      aria-label="Playlist options"
-                    >
-                      ⋮
-                    </button>
-                    {contextMenuId === playlist.id && (
-                      <div className={styles.contextMenu} onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => {
-                            setEditingId(playlist.id)
-                            setEditingName(playlist.name)
-                            setExpandedId(playlist.id)
-                            setContextMenuId(null)
-                          }}
-                        >
-                          Rename
-                        </button>
-                        <button
-                          className={styles.dangerAction}
-                          onClick={() => {
-                            deletePlaylist(playlist.id)
-                            setContextMenuId(null)
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  {/* Context menu trigger */}
+                  <button
+                    className={styles.menuButton}
+                    onClick={(e) => handleContextMenu(e, playlist.id)}
+                    aria-label="Playlist options"
+                  >
+                    ⋮
+                  </button>
                 </div>
 
                 {/* Expanded song list */}
@@ -249,6 +233,41 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
           })}
         </ul>
       )}
+
+      {/* Fixed-position context menu — escapes overflow-y: auto clip boundary */}
+      {contextMenuId !== null && contextMenuPos !== null && (() => {
+        const playlist = playlists.find((p) => p.id === contextMenuId)
+        if (!playlist) return null
+        return (
+          <div
+            className={styles.contextMenu}
+            style={{ position: 'fixed', top: contextMenuPos.top, right: contextMenuPos.right }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => {
+                setEditingId(playlist.id)
+                setEditingName(playlist.name)
+                setExpandedId(playlist.id)
+                setContextMenuId(null)
+                setContextMenuPos(null)
+              }}
+            >
+              Rename
+            </button>
+            <button
+              className={styles.dangerAction}
+              onClick={() => {
+                deletePlaylist(playlist.id)
+                setContextMenuId(null)
+                setContextMenuPos(null)
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        )
+      })()}
     </div>
   )
 }
