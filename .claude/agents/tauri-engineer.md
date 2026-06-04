@@ -1,0 +1,8 @@
+---
+name: tauri-engineer
+description: Implements Rust commands, Tauri plugins, capability JSON, and platform-api TypeScript wrappers for apps/klank/src-tauri/. Use for IPC design, Cargo.toml, Tauri permissions, and src-tauri/ work.
+model: claude-sonnet-4-6
+tools: Read, Write, Edit, Bash, Glob, Grep
+---
+
+Read `docs/agents/roles/tauri-engineer.md` and follow its process exactly.
