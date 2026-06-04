@@ -138,8 +138,11 @@ const createTauriFileService = async (): Promise<FileService> => {
     return norm.startsWith(normBase + '/') ? norm.slice(normBase.length + 1) : norm
   }
 
-  const toAbsPath = (relKey: string, baseDir: string) =>
-    `${baseDir.replace(/\/$/, '')}/${relKey}`
+  const toAbsPath = (relKey: string, baseDir: string) => {
+    const sep = baseDir.includes('\\') ? '\\' : '/'
+    const osRelKey = relKey.replace(/\//g, sep)
+    return `${baseDir.replace(/[/\\]$/, '')}${sep}${osRelKey}`
+  }
   const { open } = await import('@tauri-apps/plugin-dialog')
   const processEntriesRecursively = async (
     parent: string,
@@ -221,13 +224,16 @@ const createTauriFileService = async (): Promise<FileService> => {
       try {
         const settingsPath = await join(baseDirectory, SETTINGS_FILE)
 
-        // Migrate from legacy .klankrc.json if the new file doesn't exist yet
-        if (!await exists(settingsPath)) {
-          const legacyPath = await join(baseDirectory, LEGACY_RC_FILE)
-          if (await exists(legacyPath)) {
-            try {
-              const legacyContent = await readTextFile(legacyPath)
-              const legacy = JSON.parse(legacyContent) as Record<string, LegacyKlankEntry>
+        // Migrate from legacy .klankrc.json when it still has entries.
+        // Runs even if .klank-settings.json already exists — merges without
+        // overwriting newer settings. Blanks .klankrc.json on success so this
+        // only runs once.
+        const legacyPath = await join(baseDirectory, LEGACY_RC_FILE)
+        if (await exists(legacyPath)) {
+          try {
+            const legacyContent = await readTextFile(legacyPath)
+            const legacy = JSON.parse(legacyContent) as Record<string, LegacyKlankEntry>
+            if (Object.keys(legacy).length > 0) {
               const normBase = baseDirectory.replace(/\\/g, '/').replace(/\/$/, '')
               const migrated: Record<string, PerTabSettings> = {}
               for (const [absPath, entry] of Object.entries(legacy)) {
@@ -241,13 +247,21 @@ const createTauriFileService = async (): Promise<FileService> => {
                   scrollSpeed: entry.scrollSpeed,
                 }
               }
+              // Merge with existing settings — legacy entries fill gaps, newer ones win
+              let existing: Record<string, PerTabSettings> = {}
+              try {
+                const existingContent = await readTextFile(settingsPath)
+                existing = JSON.parse(existingContent) as Record<string, PerTabSettings>
+              } catch { /* file doesn't exist yet */ }
+              const merged = { ...migrated, ...existing }
               const sorted = Object.fromEntries(
-                Object.entries(migrated).sort(([a], [b]) => a.localeCompare(b))
+                Object.entries(merged).sort(([a], [b]) => a.localeCompare(b))
               )
               await writeTextFile(settingsPath, JSON.stringify(sorted, null, 2))
-            } catch (err) {
-              console.error('Failed to migrate .klankrc.json:', err)
+              await writeTextFile(legacyPath, '{}')
             }
+          } catch (err) {
+            console.error('Failed to migrate .klankrc.json:', err)
           }
         }
 
