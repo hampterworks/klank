@@ -242,9 +242,6 @@ const createTauriFileService = async (): Promise<FileService> => {
             const rawKeys = Object.keys(legacy).filter(k => k.endsWith('.tab.txt'))
 
             if (rawKeys.length > 0) {
-              // Detect the original OS separator from the first key
-              const origSep = rawKeys[0].includes('\\') ? '\\' : '/'
-
               // Normalise all paths to forward slashes for processing
               const normKeys = rawKeys.map(k => k.replace(/\\/g, '/'))
 
@@ -344,9 +341,7 @@ const createTauriFileService = async (): Promise<FileService> => {
  * Creates and returns a `FileService` backed by Tauri's FS and dialog plugins.
  * Must be called from within a Tauri webview context (`__TAURI_INTERNALS__` must exist).
  */
-export const createFileService = async (
-  mode: 'tauri' | 'server' = 'tauri'
-): Promise<FileService> => {
+export const createFileService = async (): Promise<FileService> => {
   const serviceFactory = createTauriFileService
   const service = await serviceFactory()
 
