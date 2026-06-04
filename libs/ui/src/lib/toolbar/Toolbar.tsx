@@ -33,6 +33,7 @@ type ToolbarProps = {
   /** Called with the user-entered URL when a download is requested. Should resolve when done. */
   onDownloadTab?: (url: string) => Promise<void>
   tree: TreeEntry[]
+  isCollapsed?: boolean
 } & React.ComponentPropsWithRef<'li'>
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -42,6 +43,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   setTabPath,
   onDownloadTab,
   tree,
+  isCollapsed,
   ...props
 }) => {
   const [isDownloading, setIsDownloading] = useState(false)
@@ -79,7 +81,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   }
 
   return (
-    <li className={styles.container} {...props}>
+    <li className={`${styles.container}${isCollapsed ? ' ' + styles.collapsed : ''}`} {...props}>
       <ToolTip message="Change Folder">
         <Button
           onClick={() => handleBaseDirectoryChange()}

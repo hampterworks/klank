@@ -38,9 +38,9 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
   }
 
   return (
-    <ul className={styles.container} {...props}>
+    <ul className={styles.container} data-collapsed={!isMenuExtended} {...props}>
       <li key="logo">
-        <LogoIcon /> KLANK
+        <LogoIcon /> <span className={styles.logoText}>KLANK</span>
       </li>
       <Toolbar
         getDirectoryPath={fileService?.getDirectoryPath}
@@ -49,13 +49,16 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
         setTabPath={setTabPath}
         tree={tree}
         onDownloadTab={handleDownloadTab}
+        isCollapsed={!isMenuExtended}
       />
-      <FileTreeView
-        currentTabPath={currentTabPath}
-        setTabPath={setTabPath}
-        searchFilter={searchFilter}
-        tree={tree}
-      />
+      {isMenuExtended && (
+        <FileTreeView
+          currentTabPath={currentTabPath}
+          setTabPath={setTabPath}
+          searchFilter={searchFilter}
+          tree={tree}
+        />
+      )}
       <Searchbar
         toggleMenu={toggleMenu}
         isMenuExtended={isMenuExtended}

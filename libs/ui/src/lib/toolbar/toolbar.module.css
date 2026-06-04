@@ -30,3 +30,16 @@
   padding: 0 4px;
   white-space: nowrap;
 }
+
+.collapsed {
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 8px 4px;
+  gap: 6px;
+  border-bottom: none;
+}
+
+.collapsed .downloadError {
+  display: none;
+}

@@ -1,7 +1,7 @@
 import styles from './app.module.css'
 import { useKlankStore } from '@klank/store'
 import * as React from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   createFileService,
   FileEntry,
@@ -10,8 +10,14 @@ import {
 import { Menu } from './components/menu/Menu'
 import { Player } from './components/player/Player'
 
+const MIN_WIDTH = 160
+const MAX_WIDTH = 800
+
 export function App() {
   const isMenuExtended = useKlankStore().ui.isMenuExtended
+  const menuWidth = useKlankStore().ui.menuWidth
+  const toggleMenu = useKlankStore().toggleMenu
+  const setMenuWidth = useKlankStore().setMenuWidth
   const serverMode = useKlankStore().serverMode
   const setServerMode = useKlankStore().setServerMode
   const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
@@ -22,7 +28,8 @@ export function App() {
   const setTabSettings = useKlankStore().setTabSettings
   const [tree, setTree] = useState<FileEntry[]>()
   const [needsUpdate, setNeedsUpdate] = useState(false)
-
+  const containerRef = useRef<HTMLElement>(null)
+  const handleRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setServerMode(!isTauri)
@@ -74,16 +81,57 @@ export function App() {
     }
   }, [needsUpdate, baseDirectory, fileService])
 
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const container = containerRef.current
+    const handle = handleRef.current
+    if (!container || !handle) return
+
+    container.classList.add(styles.resizing)
+
+    let finalWidth = isMenuExtended ? menuWidth : 52
+
+    const onMove = (e: MouseEvent) => {
+      const w = Math.min(MAX_WIDTH, Math.max(0, e.clientX))
+      finalWidth = w
+      const displayWidth = w < MIN_WIDTH ? 52 : w
+      container.style.gridTemplateColumns = `${displayWidth}px 1fr`
+      handle.style.left = `${displayWidth - 4}px`
+    }
+
+    const onUp = () => {
+      container.classList.remove(styles.resizing)
+      if (finalWidth < MIN_WIDTH) {
+        if (isMenuExtended) toggleMenu(false)
+      } else {
+        if (!isMenuExtended) toggleMenu(true)
+        setMenuWidth(finalWidth)
+      }
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  const currentWidth = isMenuExtended ? menuWidth : 52
+
   return (
     <main
+      ref={containerRef}
       className={styles.container}
-      style={{
-        '--menu-extended': isMenuExtended ? 'true' : 'false'
-      } as React.CSSProperties}
+      style={{ gridTemplateColumns: `${currentWidth}px 1fr` }}
     >
       <nav>
         <Menu tree={tree ?? []} setNeedsUpdate={setNeedsUpdate}/>
       </nav>
+      <div
+        ref={handleRef}
+        className={styles.resizeHandle}
+        style={{ left: currentWidth - 4 }}
+        onMouseDown={handleResizeStart}
+      />
       <Player/>
     </main>
   );

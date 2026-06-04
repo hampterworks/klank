@@ -7,6 +7,7 @@ export type Mode = "Read" | "Edit"
 export type Theme = "Light" | "Dark"
 export type Ui = {
   isMenuExtended: boolean
+  menuWidth: number
 }
 
 /**
@@ -42,6 +43,7 @@ type KlankState = {
   theme: Theme
   ui: Ui
   toggleMenu: (isMenuExtended: boolean) => void
+  setMenuWidth: (width: number) => void
   /** Per-file saved settings keyed by full file path. Loaded from and written to tab-settings.json. */
   tabSettingByPath: Record<string, PerTabSettings>
   setBaseDirectory: (directory: string) => void
@@ -87,6 +89,7 @@ export const useKlankStore = create<KlankState>()(
       (set) => ({
         ui: {
           isMenuExtended: true,
+          menuWidth: 400,
         },
         tab: {
           path: "",
@@ -104,6 +107,7 @@ export const useKlankStore = create<KlankState>()(
         setFileService: (fileService) => set((state) => ({...state, fileService})),
         setMode: (mode) => set((state) => ({...state, mode})),
         toggleMenu: (isMenuExtended) => set((state) => ({...state, ui: {...state.ui, isMenuExtended}})),
+        setMenuWidth: (menuWidth) => set((state) => ({...state, ui: {...state.ui, menuWidth}})),
         setTheme: (theme) => set((state) => ({...state, theme})),
         setTabPath: (path) => set((state) => {
           const saved = state.tabSettingByPath[path]

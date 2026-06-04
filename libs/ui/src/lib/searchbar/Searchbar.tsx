@@ -21,7 +21,7 @@ export const Searchbar: React.FC<SearchbarProps> = ({
   ...props
 }) => {
   return (
-    <li className={styles.container} {...props}>
+    <li className={`${styles.container}${!isMenuExtended ? ' ' + styles.collapsed : ''}`} {...props}>
       {isMenuExtended && (
         <Input
           value={searchFilter}
