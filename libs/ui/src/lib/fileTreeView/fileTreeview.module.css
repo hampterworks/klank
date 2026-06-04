@@ -1,12 +1,10 @@
-.container {
+.container {}
 
-}
 .menuItem {
   background: var(--klank-color-highlight);
 
   button {
     cursor: pointer;
-    width: 100%;
   }
 }
 
@@ -22,10 +20,13 @@
   align-items: center;
   text-transform: capitalize;
   font-weight: 700;
+  width: 100%;
   padding: 0.25rem 0.5rem;
+
   svg {
     margin-left: auto;
   }
+
   &:hover {
     background: var(--klank-color-selected);
   }
@@ -49,23 +50,26 @@
       border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     }
 
-    /* Song name button — flex: 1 pushes + to the right; width: auto overrides
-       the .menuItem button { width: 100% } rule above */
     > button:first-child {
       flex: 1;
       min-width: 0;
-      width: auto;
       display: flex;
       align-items: center;
       gap: 4px;
       padding: 8px;
+      overflow: hidden;
+
+      span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
     }
   }
 }
 
 .addToPlaylistButton {
   flex-shrink: 0;
-  width: auto;
   padding: 8px 10px;
   cursor: pointer;
   font-size: 0.875rem;
