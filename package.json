@@ -9,6 +9,8 @@
     "test": "nx test klank",
     "lint": "nx lint klank",
     "tauri:dev": "nx run klank:tauri:dev",
+    "tauri:build": "nx run klank:tauri:build",
+    "tauri:build:windows": "nx run klank:tauri:build:windows",
     "tauri:android:dev": "tauri android dev"
   },
   "dependencies": {
