@@ -257,14 +257,22 @@ const createTauriFileService = async (): Promise<FileService> => {
                 }
               }
 
-              // Build relative-keyed settings for the detected tab directory
+              // Build relative-keyed settings. Keys are relative to tabDir (the
+              // common prefix detected from the old paths), which preserves any
+              // subdirectory structure even if the repo has moved to a new machine.
+              // Filenames that were already relative, or whose old prefix can't be
+              // stripped, fall back to just the basename.
               const migrated: Record<string, PerTabSettings> = {}
               for (const [rawKey, entry] of Object.entries(legacy)) {
                 if (!rawKey.endsWith('.tab.txt')) continue
                 const normKey = rawKey.replace(/\\/g, '/')
-                const relKey = tabDir && normKey.startsWith(tabDir + '/')
-                  ? normKey.slice(tabDir.length + 1)
-                  : normKey
+                let relKey = normKey
+                if (tabDir && normKey.startsWith(tabDir + '/')) {
+                  relKey = normKey.slice(tabDir.length + 1)
+                } else {
+                  // Path is from a different machine or location — use just the filename
+                  relKey = normKey.slice(normKey.lastIndexOf('/') + 1)
+                }
                 migrated[relKey] = {
                   fontSize: entry.fontSize,
                   transpose: entry.transpose,
@@ -272,18 +280,16 @@ const createTauriFileService = async (): Promise<FileService> => {
                 }
               }
 
-              // Write .klank-settings.json into the actual tab directory
-              const osTabDir = tabDir.replace(/\//g, origSep)
-              const targetPath = `${osTabDir}${origSep}${SETTINGS_FILE}`
-
-              // Merge — existing newer settings win over migrated values
+              // Always write to settingsPath (baseDirectory/.klank-settings.json).
+              // Writing to the detected osTabDir was wrong when the repo has moved
+              // machines, because the old absolute paths no longer match baseDirectory.
               let existing: Record<string, PerTabSettings> = {}
               try {
-                const existingContent = await readTextFile(targetPath)
+                const existingContent = await readTextFile(settingsPath)
                 const existingRaw = JSON.parse(existingContent) as Record<string, PerTabSettings>
-                // Skip entries that look like old absolute-path keys (migration artefacts)
+                // Skip stale absolute-path keys left by an earlier buggy migration
                 existing = Object.fromEntries(
-                  Object.entries(existingRaw).filter(([k]) => !k.includes('/') && !k.includes('\\'))
+                  Object.entries(existingRaw).filter(([k]) => !/^[A-Za-z]:/.test(k) && !k.startsWith('/'))
                 )
               } catch { /* file doesn't exist yet */ }
 
@@ -291,7 +297,7 @@ const createTauriFileService = async (): Promise<FileService> => {
               const sorted = Object.fromEntries(
                 Object.entries(merged).sort(([a], [b]) => a.localeCompare(b))
               )
-              await writeTextFile(targetPath, JSON.stringify(sorted, null, 2))
+              await writeTextFile(settingsPath, JSON.stringify(sorted, null, 2))
               await writeTextFile(legacyPath, '{}')
             }
           } catch (err) {
