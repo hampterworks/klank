@@ -183,6 +183,7 @@ export const useKlankStore = create<KlankState>()(
           tab: { ...state.tab, isScrolling: false },
           theme: state.theme,
           ui: state.ui,
+          baseDirectory: state.baseDirectory,
         }),
       }
     )
