@@ -23,7 +23,6 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
   const toggleMenu = useKlankStore().toggleMenu
   const currentTabPath = useKlankStore().tab.path
   const setTabPath = useKlankStore().setTabPath
-  const setActivePlaylist = useKlankStore().setActivePlaylist
   const baseDirectory = useKlankStore().baseDirectory
   const setBaseDirectory = useKlankStore().setBaseDirectory
   const fileService = useKlankStore().fileService
@@ -34,9 +33,10 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
 
   const activePlaylist = playlists.find((p) => p.id === activePlaylistId) ?? null
 
-  // Navigating from the file tree / shuffle always exits playlist context.
+  // Navigating from the file tree / shuffle exits playlist navigation (hides ◁/▷)
+  // but keeps the selected playlist so + buttons remain visible.
   const handleSelectSong = (path: string) => {
-    setActivePlaylist(null)
+    useKlankStore.setState((s) => ({ ...s, activePlaylistIndex: null }))
     setTabPath(path)
   }
 

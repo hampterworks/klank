@@ -29,7 +29,6 @@
   &:hover {
     background: var(--klank-color-selected);
   }
-
 }
 
 .songList {
@@ -38,8 +37,8 @@
   background: var(--klank-color-background);
 
   li {
-    position: relative;
-    padding: 8px;
+    display: flex;
+    align-items: center;
 
     &:hover {
       background: var(--klank-color-highlight);
@@ -50,22 +49,24 @@
       border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     }
 
-    button {
+    /* Song name button — flex: 1 pushes + to the right; width: auto overrides
+       the .menuItem button { width: 100% } rule above */
+    > button:first-child {
+      flex: 1;
+      min-width: 0;
+      width: auto;
       display: flex;
       align-items: center;
       gap: 4px;
+      padding: 8px;
     }
   }
 }
 
 .addToPlaylistButton {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  padding: 0 10px;
-  display: flex;
-  align-items: center;
+  flex-shrink: 0;
+  width: auto;
+  padding: 8px 10px;
   cursor: pointer;
   font-size: 0.875rem;
   line-height: 1;
@@ -87,6 +88,6 @@
   background: var(--klank-color-selected);
 }
 
-.rotated{
+.rotated {
   transform: rotate(180deg);
 }
