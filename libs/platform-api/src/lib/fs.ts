@@ -140,6 +140,10 @@ const createTauriFileService = async (): Promise<FileService> => {
 
   const toAbsPath = (relKey: string, baseDir: string) => {
     const sep = baseDir.includes('\\') ? '\\' : '/'
+    // Already an absolute path (Windows drive letter or Unix root) — just normalise separator
+    if (/^[A-Za-z]:/.test(relKey) || relKey.startsWith('/')) {
+      return relKey.replace(/\//g, sep)
+    }
     const osRelKey = relKey.replace(/\//g, sep)
     return `${baseDir.replace(/[/\\]$/, '')}${sep}${osRelKey}`
   }
@@ -225,39 +229,69 @@ const createTauriFileService = async (): Promise<FileService> => {
         const settingsPath = await join(baseDirectory, SETTINGS_FILE)
 
         // Migrate from legacy .klankrc.json when it still has entries.
-        // Runs even if .klank-settings.json already exists — merges without
-        // overwriting newer settings. Blanks .klankrc.json on success so this
-        // only runs once.
+        // The old app may have stored .klankrc.json in a different directory than
+        // the tab files themselves, so we detect the actual tab directory from the
+        // paths inside the file rather than assuming they share baseDirectory.
+        // Writes .klank-settings.json into the detected tab directory with relative
+        // keys, then blanks .klankrc.json so migration only runs once.
         const legacyPath = await join(baseDirectory, LEGACY_RC_FILE)
         if (await exists(legacyPath)) {
           try {
             const legacyContent = await readTextFile(legacyPath)
             const legacy = JSON.parse(legacyContent) as Record<string, LegacyKlankEntry>
-            if (Object.keys(legacy).length > 0) {
-              const normBase = baseDirectory.replace(/\\/g, '/').replace(/\/$/, '')
+            const rawKeys = Object.keys(legacy).filter(k => k.endsWith('.tab.txt'))
+
+            if (rawKeys.length > 0) {
+              // Detect the original OS separator from the first key
+              const origSep = rawKeys[0].includes('\\') ? '\\' : '/'
+
+              // Normalise all paths to forward slashes for processing
+              const normKeys = rawKeys.map(k => k.replace(/\\/g, '/'))
+
+              // Find the longest common directory prefix across all tab paths
+              const dirs = normKeys.map(k => k.substring(0, k.lastIndexOf('/')))
+              let tabDir = dirs[0]
+              for (const dir of dirs.slice(1)) {
+                while (tabDir && dir !== tabDir && !dir.startsWith(tabDir + '/')) {
+                  tabDir = tabDir.substring(0, tabDir.lastIndexOf('/'))
+                }
+              }
+
+              // Build relative-keyed settings for the detected tab directory
               const migrated: Record<string, PerTabSettings> = {}
-              for (const [absPath, entry] of Object.entries(legacy)) {
-                const normPath = absPath.replace(/\\/g, '/')
-                const relKey = normPath.startsWith(normBase + '/')
-                  ? normPath.slice(normBase.length + 1)
-                  : normPath
+              for (const [rawKey, entry] of Object.entries(legacy)) {
+                if (!rawKey.endsWith('.tab.txt')) continue
+                const normKey = rawKey.replace(/\\/g, '/')
+                const relKey = tabDir && normKey.startsWith(tabDir + '/')
+                  ? normKey.slice(tabDir.length + 1)
+                  : normKey
                 migrated[relKey] = {
                   fontSize: entry.fontSize,
                   transpose: entry.transpose,
                   scrollSpeed: entry.scrollSpeed,
                 }
               }
-              // Merge with existing settings — legacy entries fill gaps, newer ones win
+
+              // Write .klank-settings.json into the actual tab directory
+              const osTabDir = tabDir.replace(/\//g, origSep)
+              const targetPath = `${osTabDir}${origSep}${SETTINGS_FILE}`
+
+              // Merge — existing newer settings win over migrated values
               let existing: Record<string, PerTabSettings> = {}
               try {
-                const existingContent = await readTextFile(settingsPath)
-                existing = JSON.parse(existingContent) as Record<string, PerTabSettings>
+                const existingContent = await readTextFile(targetPath)
+                const existingRaw = JSON.parse(existingContent) as Record<string, PerTabSettings>
+                // Skip entries that look like old absolute-path keys (migration artefacts)
+                existing = Object.fromEntries(
+                  Object.entries(existingRaw).filter(([k]) => !k.includes('/') && !k.includes('\\'))
+                )
               } catch { /* file doesn't exist yet */ }
+
               const merged = { ...migrated, ...existing }
               const sorted = Object.fromEntries(
                 Object.entries(merged).sort(([a], [b]) => a.localeCompare(b))
               )
-              await writeTextFile(settingsPath, JSON.stringify(sorted, null, 2))
+              await writeTextFile(targetPath, JSON.stringify(sorted, null, 2))
               await writeTextFile(legacyPath, '{}')
             }
           } catch (err) {
