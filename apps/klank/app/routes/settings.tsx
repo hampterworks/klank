@@ -1,7 +1,7 @@
 import styles from './settings.module.css'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { createGitService, type GitChangedFile, type GitResult, type GitService } from '@klank/platform-api'
+import { createGitService, getAppVersion, type GitChangedFile, type GitResult, type GitService } from '@klank/platform-api'
 import { useKlankStore } from '@klank/store'
 
 type Status = { ok: boolean; message: string } | null
@@ -21,6 +21,7 @@ export default function Settings() {
   const [commitMessage, setCommitMessage] = useState('Update tabs')
   const [status, setStatus] = useState<Status>(null)
   const [busy, setBusy] = useState(false)
+  const [version, setVersion] = useState<string>('')
 
   const refreshGitState = async (dir: string, git: GitService) => {
     const [files, commits] = await Promise.all([
@@ -49,6 +50,10 @@ export default function Settings() {
     init()
     return () => { cancelled = true }
   }, [baseDirectory])
+
+  useEffect(() => {
+    getAppVersion().then(setVersion)
+  }, [])
 
   const handleChangeFolder = async () => {
     if (!fileService) return
@@ -114,6 +119,11 @@ export default function Settings() {
             <button className={styles.button} onClick={handleChangeFolder} disabled={!fileService}>
               Change
             </button>
+          </div>
+
+          <div className={styles.row}>
+            <span className={styles.label}>Version</span>
+            <span className={styles.dirPath}>{version || '…'}</span>
           </div>
 
           <div className={styles.row}>
