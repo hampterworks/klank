@@ -34,6 +34,127 @@
 
 .logoText {}
 
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--klank-color-secondary-background);
+  border: 1px solid var(--klank-color-border);
+  border-radius: 6px;
+  width: min(400px, 90vw);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  svg {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+}
+
+.modalTitle {
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.modalBody {
+  padding: 0 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modalInput {
+  width: 100%;
+  box-sizing: border-box;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  background: var(--klank-color-background);
+  color: var(--klank-color-text);
+  border: 1px solid var(--klank-color-border);
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.modalInput:focus {
+  border-color: var(--klank-color-text);
+}
+
+.modalHint {
+  font-size: 0.6875rem;
+  opacity: 0.45;
+  padding: 0 2px;
+}
+
+.modalActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 12px 20px;
+  border-top: 1px solid var(--klank-color-border);
+}
+
+.btnCancel {
+  height: 30px;
+  padding: 0 16px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+  border: 1px solid var(--klank-color-border);
+  background: transparent;
+  color: var(--klank-color-text);
+  transition: background 0.15s;
+}
+
+.btnCancel:hover {
+  background: var(--klank-color-highlight);
+}
+
+.btnDownload {
+  height: 30px;
+  padding: 0 16px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+  border: none;
+  background: var(--klank-color-text);
+  color: var(--klank-color-background);
+  transition: opacity 0.15s;
+}
+
+.btnDownload:hover:not(:disabled) {
+  opacity: 0.8;
+}
+
+.btnDownload:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
 .tabMenu {
   display: flex;
   gap: 8px;

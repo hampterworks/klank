@@ -1,6 +1,5 @@
 import styles from './toolbar.module.css'
 import * as React from 'react'
-import { useState } from 'react'
 import {
   Button,
   DownloadIcon,
@@ -30,8 +29,9 @@ type ToolbarProps = {
   setNeedsUpdate: React.Dispatch<React.SetStateAction<boolean>>
   setBaseDirectory: (directory: string) => void
   setTabPath: (path: string) => void
-  /** Called with the user-entered URL when a download is requested. Should resolve when done. */
-  onDownloadTab?: (url: string) => Promise<void>
+  onRequestDownload?: () => void
+  isDownloading?: boolean
+  downloadError?: string | null
   onSettingsClick?: () => void
   tree: TreeEntry[]
   isCollapsed?: boolean
@@ -42,38 +42,17 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   getDirectoryPath,
   setNeedsUpdate,
   setTabPath,
-  onDownloadTab,
+  onRequestDownload,
+  isDownloading,
+  downloadError,
   onSettingsClick,
   tree,
   isCollapsed,
   ...props
 }) => {
-  const [isDownloading, setIsDownloading] = useState(false)
-  const [downloadError, setDownloadError] = useState<string | null>(null)
-
   const handleBaseDirectoryChange = () => {
     if (getDirectoryPath)
       getDirectoryPath().then((path) => path !== null && setBaseDirectory(path))
-  }
-
-  const handleRefresh = () => {
-    setNeedsUpdate(true)
-  }
-
-  const handleDownloadTab = async () => {
-    const tabUrl = window.prompt('Enter Ultimate Guitar URL')
-    if (!tabUrl) return
-    setIsDownloading(true)
-    setDownloadError(null)
-    try {
-      await onDownloadTab?.(tabUrl)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Download failed'
-      setDownloadError(message)
-      setTimeout(() => setDownloadError(null), 4000)
-    } finally {
-      setIsDownloading(false)
-    }
   }
 
   const handleRandomPathUpdate = () => {
@@ -93,7 +72,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       </ToolTip>
       <ToolTip message="Refresh">
         <Button
-          onClick={() => handleRefresh()}
+          onClick={() => setNeedsUpdate(true)}
           iconButton={true}
           icon={<RefreshIcon />}
         />
@@ -112,16 +91,17 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <Button
           onClick={() => handleRandomPathUpdate()}
           iconButton={true}
-          icon={<ShuffleIcon />} />
+          icon={<ShuffleIcon />}
+        />
       </ToolTip>
       {downloadError && (
         <span className={styles.downloadError} title={downloadError}>
           Error
         </span>
       )}
-      <ToolTip message={isDownloading ? 'Downloading...' : 'Download Tab'}>
+      <ToolTip message={isDownloading ? 'Downloading…' : 'Download Tab'}>
         <Button
-          onClick={() => handleDownloadTab()}
+          onClick={() => onRequestDownload?.()}
           iconButton={true}
           disabled={isDownloading}
           icon={

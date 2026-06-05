@@ -47,6 +47,17 @@ async fn scrape_ug(app: tauri::AppHandle, url: String) -> Result<String, String>
         *guard = Some(tx);
     }
 
+    // Run the scrape and always release the slot when done, even on early error.
+    let result = run_scrape(&app, url, rx).await;
+    if let Ok(mut guard) = state.0.lock() {
+        *guard = None;
+    }
+    result
+}
+
+/// Inner implementation for `scrape_ug`. Separated so that any early `?` return
+/// still reaches the cleanup code in the outer function above.
+async fn run_scrape(app: &tauri::AppHandle, url: String, rx: oneshot::Receiver<String>) -> Result<String, String> {
     // Polls the page until UG's `js-store` element is present (i.e. the real page,
     // not a Cloudflare interstitial), then ships outerHTML back to Rust via IPC.
     let init_script = r#"
@@ -261,10 +272,6 @@ async fn scrape_ug(app: tauri::AppHandle, url: String) -> Result<String, String>
     // Close the hidden window regardless of outcome.
     if let Some(w) = app.get_webview_window(&label) {
         let _ = w.close();
-    }
-    // Always clear the slot so the next call can start fresh.
-    if let Ok(mut guard) = state.0.lock() {
-        *guard = None;
     }
 
     match html_result {
