@@ -43,24 +43,6 @@
   transform: rotate(-90deg);
 }
 
-.addButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.3rem 0.5rem;
-  cursor: pointer;
-  color: var(--klank-color-text);
-  border-left: 1px solid var(--klank-color-border);
-
-  &:hover {
-    background: var(--klank-color-selected);
-  }
-
-  svg {
-    width: 0.75rem;
-    height: 0.75rem;
-  }
-}
 
 .list {
   display: flex;
@@ -191,6 +173,39 @@
 
   &.activeSong {
     background: var(--klank-color-selected);
+  }
+
+  &.dragging {
+    opacity: 0.4;
+  }
+
+  &.dragOver {
+    border-top: 2px solid var(--klank-color-text);
+  }
+}
+
+.dragHandle {
+  display: flex;
+  align-items: center;
+  padding: 0 0.25rem 0 0.5rem;
+  opacity: 0;
+  cursor: grab;
+  touch-action: none;
+  color: var(--klank-color-text);
+  flex-shrink: 0;
+  transition: opacity 100ms;
+
+  .songItem:hover & {
+    opacity: 0.4;
+  }
+
+  &:hover {
+    opacity: 0.8 !important;
+  }
+
+  svg {
+    width: 0.625rem;
+    height: 0.875rem;
   }
 }
 

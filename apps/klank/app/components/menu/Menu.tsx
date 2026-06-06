@@ -8,6 +8,7 @@ import {
   DownloadIcon,
   FileTreeView,
   LogoIcon,
+  NewPlaylistIcon,
   Searchbar,
   Toolbar,
 } from '@klank/ui'
@@ -31,17 +32,36 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
   const activePlaylistId = useKlankStore().activePlaylistId
   const playlists = useKlankStore().playlists
   const addTabToPlaylist = useKlankStore().addTabToPlaylist
+  const createPlaylist = useKlankStore().createPlaylist
   const [searchFilter, setSearchFilter] = useState<string>('')
   const [isEnteringUrl, setIsEnteringUrl] = useState(false)
   const [urlValue, setUrlValue] = useState('')
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState<string | null>(null)
+  const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false)
+  const [newPlaylistName, setNewPlaylistName] = useState('')
 
   const activePlaylist = playlists.find((p) => p.id === activePlaylistId) ?? null
 
   const handleSelectSong = (path: string) => {
     useKlankStore.setState((s) => ({ ...s, activePlaylistIndex: null }))
     setTabPath(path)
+  }
+
+  const handleRequestCreatePlaylist = () => {
+    setNewPlaylistName('')
+    setIsCreatingPlaylist(true)
+  }
+
+  const handleConfirmCreatePlaylist = () => {
+    const name = newPlaylistName.trim()
+    if (!name) return
+    createPlaylist(name)
+    setIsCreatingPlaylist(false)
+  }
+
+  const handleCancelCreatePlaylist = () => {
+    setIsCreatingPlaylist(false)
   }
 
   const handleRequestDownload = () => {
@@ -77,6 +97,40 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
       setIsDownloading(false)
     }
   }
+
+  const createPlaylistModal = isCreatingPlaylist && createPortal(
+    <div
+      className={styles.overlay}
+      onClick={(e) => { if (e.target === e.currentTarget) handleCancelCreatePlaylist() }}
+    >
+      <div className={styles.modal}>
+        <div className={styles.modalHeader}>
+          <NewPlaylistIcon />
+          <span className={styles.modalTitle}>New Playlist</span>
+        </div>
+        <div className={styles.modalBody}>
+          <input
+            className={styles.modalInput}
+            type="text"
+            placeholder="Playlist name"
+            value={newPlaylistName}
+            onChange={(e) => setNewPlaylistName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleConfirmCreatePlaylist()
+              if (e.key === 'Escape') handleCancelCreatePlaylist()
+            }}
+            autoFocus
+          />
+          <span className={styles.modalHint}>Enter a name for your new playlist</span>
+        </div>
+        <div className={styles.modalActions}>
+          <button className={styles.btnCancel} onClick={handleCancelCreatePlaylist}>Cancel</button>
+          <button className={styles.btnCreate} onClick={handleConfirmCreatePlaylist} disabled={!newPlaylistName.trim()}>Create</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
 
   const downloadModal = isEnteringUrl && createPortal(
     <div
@@ -124,6 +178,7 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
           setBaseDirectory={setBaseDirectory}
           setTabPath={handleSelectSong}
           tree={tree}
+          onRequestCreatePlaylist={handleRequestCreatePlaylist}
           onRequestDownload={handleRequestDownload}
           isDownloading={isDownloading}
           downloadError={downloadError}
@@ -152,6 +207,7 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
           setSearchFilter={setSearchFilter}
         />
       </ul>
+      {createPlaylistModal}
       {downloadModal}
     </>
   )

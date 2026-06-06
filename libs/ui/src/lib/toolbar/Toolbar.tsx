@@ -4,6 +4,7 @@ import {
   Button,
   DownloadIcon,
   FolderIcon,
+  NewPlaylistIcon,
   RefreshIcon,
   SettingsIcon,
   ShuffleIcon,
@@ -30,6 +31,7 @@ type ToolbarProps = {
   setBaseDirectory: (directory: string) => void
   setTabPath: (path: string) => void
   onRequestDownload?: () => void
+  onRequestCreatePlaylist?: () => void
   isDownloading?: boolean
   downloadError?: string | null
   onSettingsClick?: () => void
@@ -43,6 +45,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   setNeedsUpdate,
   setTabPath,
   onRequestDownload,
+  onRequestCreatePlaylist,
   isDownloading,
   downloadError,
   onSettingsClick,
@@ -92,6 +95,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           onClick={() => handleRandomPathUpdate()}
           iconButton={true}
           icon={<ShuffleIcon />}
+        />
+      </ToolTip>
+      <ToolTip message="New Playlist">
+        <Button
+          onClick={() => onRequestCreatePlaylist?.()}
+          iconButton={true}
+          icon={<NewPlaylistIcon />}
         />
       </ToolTip>
       {downloadError && (

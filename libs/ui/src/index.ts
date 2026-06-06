@@ -31,4 +31,6 @@ export { StopIcon } from './lib/icons/StopIcon';
 export { EditIcon } from './lib/icons/EditIcon';
 export { CloseIcon } from './lib/icons/CloseIcon';
 export { SpeedIcon } from './lib/icons/SpeedIcon';
+export { GripIcon } from './lib/icons/GripIcon';
+export { NewPlaylistIcon } from './lib/icons/NewPlaylistIcon';
 
