@@ -7,6 +7,9 @@ import styles from './chordDiagramTooltip.module.css'
 
 type TooltipPos = { bottom: number; left: number }
 
+// Custom event used so opening one tooltip closes all others.
+const TOOLTIP_OPEN_EVENT = 'klank-tooltip-open'
+
 type ChordDiagramTooltipProps = {
   chordName: string
   instrument: Instrument
@@ -27,6 +30,8 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
   const wrapperRef = useRef<HTMLSpanElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Unique object reference per instance — used to filter self-dispatched events
+  const instanceId = useRef<object>({})
 
   const clearCloseTimer = () => {
     if (closeTimerRef.current !== null) {
@@ -89,6 +94,21 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
     return () => document.removeEventListener('mousedown', handleOutsideClick)
   }, [tooltipPos])
 
+  // Close when another tooltip instance opens
+  useEffect(() => {
+    const handler = (e: Event) => {
+      if ((e as CustomEvent<object>).detail === instanceId.current) return
+      if (closeTimerRef.current !== null) {
+        clearTimeout(closeTimerRef.current)
+        closeTimerRef.current = null
+      }
+      setTooltipPos(null)
+      setIsPinned(false)
+    }
+    window.addEventListener(TOOLTIP_OPEN_EVENT, handler)
+    return () => window.removeEventListener(TOOLTIP_OPEN_EVENT, handler)
+  }, [])
+
   // Cleanup any pending close timer on unmount
   useEffect(() => {
     return () => {
@@ -105,11 +125,16 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
     }
   }
 
+  const openTooltipAt = (pos: TooltipPos) => {
+    window.dispatchEvent(new CustomEvent(TOOLTIP_OPEN_EVENT, { detail: instanceId.current }))
+    setTooltipPos(pos)
+  }
+
   const handleMouseEnter = () => {
     clearCloseTimer()
     if (isScrolling || variants.length === 0) return
     const pos = getChordPos()
-    if (pos) setTooltipPos(pos)
+    if (pos) openTooltipAt(pos)
   }
 
   const handleMouseLeave = () => {
@@ -122,7 +147,7 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
     setIsPinned(true)
     if (!tooltipPos) {
       const pos = getChordPos()
-      if (pos) setTooltipPos(pos)
+      if (pos) openTooltipAt(pos)
     }
   }
 

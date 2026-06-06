@@ -306,4 +306,35 @@ describe('ChordDiagramTooltip', () => {
       }
     })
   })
+
+  it('only one tooltip is open at a time — opening a second closes the first', async () => {
+    setupFetch(makeMap({ Am: 1, G: 1 }))
+
+    const { container: c1 } = render(
+      <ChordDiagramTooltip chordName="Am" instrument="guitar" isScrolling={false}>
+        <span>Am</span>
+      </ChordDiagramTooltip>,
+    )
+    const { container: c2 } = render(
+      <ChordDiagramTooltip chordName="G" instrument="guitar" isScrolling={false}>
+        <span>G</span>
+      </ChordDiagramTooltip>,
+    )
+    await act(async () => {})
+
+    const amWrapper = c1.querySelector('span')!
+    const gWrapper = c2.querySelector('span')!
+
+    // Open the Am tooltip
+    fireEvent.mouseEnter(amWrapper)
+    await waitFor(() => {
+      expect(document.body.querySelectorAll('[role="tooltip"]').length).toBe(1)
+    })
+
+    // Opening G must close Am, leaving exactly one tooltip open
+    fireEvent.mouseEnter(gWrapper)
+    await waitFor(() => {
+      expect(document.body.querySelectorAll('[role="tooltip"]').length).toBe(1)
+    })
+  })
 })
