@@ -2,7 +2,7 @@ import styles from './playlistSection.module.css'
 import * as React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useKlankStore } from '@klank/store'
-import { ChevronIcon, PlusIcon } from '@klank/ui'
+import { ChevronIcon, GripIcon, PlusIcon } from '@klank/ui'
 import { FileEntry } from '@klank/platform-api'
 
 type PlaylistSectionProps = {
@@ -17,15 +17,22 @@ const getSongDisplayName = (path: string): string => {
   return dashIndex !== -1 ? withoutExt.slice(dashIndex + 3) : withoutExt
 }
 
+export const reorder = <T,>(arr: T[], from: number, to: number): T[] => {
+  const result = [...arr]
+  const [item] = result.splice(from, 1)
+  result.splice(to, 0, item)
+  return result
+}
+
 export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath }) => {
   const playlists = useKlankStore().playlists
   const activePlaylistId = useKlankStore().activePlaylistId
   const activePlaylistIndex = useKlankStore().activePlaylistIndex
-  const createPlaylist = useKlankStore().createPlaylist
   const deletePlaylist = useKlankStore().deletePlaylist
   const renamePlaylist = useKlankStore().renamePlaylist
   const addTabToPlaylist = useKlankStore().addTabToPlaylist
   const removeTabFromPlaylist = useKlankStore().removeTabFromPlaylist
+  const reorderPlaylist = useKlankStore().reorderPlaylist
   const setActivePlaylist = useKlankStore().setActivePlaylist
 
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -34,7 +41,10 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
   const [contextMenuPos, setContextMenuPos] = useState<{ top: number; right: number } | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null)
   const editInputRef = useRef<HTMLInputElement>(null)
+  const prevLengthRef = useRef(playlists.length)
 
   useEffect(() => {
     if (editingId && editInputRef.current) {
@@ -50,20 +60,16 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
     return () => window.removeEventListener('click', close)
   }, [contextMenuId])
 
-  const handleCreate = () => {
-    createPlaylist('New Playlist')
-    setIsCollapsed(false)
-    setTimeout(() => {
-      const store = useKlankStore.getState()
-      const newest = [...store.playlists].sort((a, b) => b.createdAt - a.createdAt)[0]
+  useEffect(() => {
+    if (playlists.length > prevLengthRef.current) {
+      const newest = [...playlists].sort((a, b) => b.createdAt - a.createdAt)[0]
       if (newest) {
-        setEditingId(newest.id)
-        setEditingName(newest.name)
+        setIsCollapsed(false)
         setExpandedId(newest.id)
-        setActivePlaylist(newest.id)
       }
-    }, 0)
-  }
+    }
+    prevLengthRef.current = playlists.length
+  }, [playlists])
 
   const handleRenameCommit = (id: string) => {
     if (editingName.trim()) renamePlaylist(id, editingName.trim())
@@ -100,9 +106,60 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
     }))
   }
 
+  // Pointer-event based drag — avoids WebView2's broken HTML5 DnD intercept.
+  // The grip handle captures the pointer so we get all moves even outside the list,
+  // then elementFromPoint finds which song slot the cursor is over.
+  const handleGripPointerDown = (
+    e: React.PointerEvent<HTMLSpanElement>,
+    playlistId: string,
+    paths: string[],
+    fromIndex: number,
+  ) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const grip = e.currentTarget
+    grip.setPointerCapture(e.pointerId)
+    setDragIndex(fromIndex)
+    document.body.style.cursor = 'grabbing'
+
+    const onMove = (ev: PointerEvent) => {
+      const el = document.elementFromPoint(ev.clientX, ev.clientY)
+      const li = el?.closest<HTMLElement>('[data-song-index]')
+      if (li) setHoverIndex(Number(li.dataset.songIndex))
+    }
+
+    const cleanup = () => {
+      setDragIndex(null)
+      setHoverIndex(null)
+      document.body.style.cursor = ''
+      grip.removeEventListener('pointermove', onMove)
+      grip.removeEventListener('pointerup', onUp)
+      grip.removeEventListener('lostpointercapture', cleanup)
+    }
+
+    const onUp = (ev: PointerEvent) => {
+      const el = document.elementFromPoint(ev.clientX, ev.clientY)
+      const li = el?.closest<HTMLElement>('[data-song-index]')
+      if (li) {
+        const toIndex = Number(li.dataset.songIndex)
+        // When dragging downward, splice removes the item first so every
+        // subsequent index shifts up by one — subtract 1 to land before
+        // the hovered row as the visual indicator (border-top) implies.
+        const insertAt = fromIndex < toIndex ? toIndex - 1 : toIndex
+        if (!isNaN(toIndex) && insertAt !== fromIndex) {
+          reorderPlaylist(playlistId, reorder(paths, fromIndex, insertAt))
+        }
+      }
+      cleanup()
+    }
+
+    grip.addEventListener('pointermove', onMove)
+    grip.addEventListener('pointerup', onUp)
+    grip.addEventListener('lostpointercapture', cleanup)
+  }
+
   return (
     <div className={styles.section}>
-      {/* Header — two separate buttons, not nested */}
       <div className={styles.header}>
         <button
           className={styles.headerToggle}
@@ -110,14 +167,6 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
         >
           <ChevronIcon className={isCollapsed ? styles.rotated : ''} />
           <span>Playlists</span>
-        </button>
-        <button
-          className={styles.addButton}
-          onClick={handleCreate}
-          title="New playlist"
-          aria-label="New playlist"
-        >
-          <PlusIcon />
         </button>
       </div>
 
@@ -183,11 +232,28 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
                     )}
                     {playlist.paths.map((path, index) => {
                       const isCurrent = isActive && activePlaylistIndex === index
+                      const isDragging = dragIndex === index
+                      const isDropTarget = hoverIndex === index && dragIndex !== index
                       return (
                         <li
                           key={path}
-                          className={`${styles.songItem} ${isCurrent ? styles.activeSong : ''}`}
+                          data-song-index={index}
+                          className={[
+                            styles.songItem,
+                            isCurrent ? styles.activeSong : '',
+                            isDragging ? styles.dragging : '',
+                            isDropTarget ? styles.dragOver : '',
+                          ].join(' ')}
                         >
+                          <span
+                            className={styles.dragHandle}
+                            aria-hidden
+                            onPointerDown={(e) =>
+                              handleGripPointerDown(e, playlist.id, playlist.paths, index)
+                            }
+                          >
+                            <GripIcon />
+                          </span>
                           <button
                             className={styles.songButton}
                             onClick={() => handleSongClick(path, playlist.id, index)}
@@ -205,6 +271,17 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
                         </li>
                       )
                     })}
+
+                    {/* Drop sentinel — allows placing dragged item at the last position */}
+                    {dragIndex !== null && (
+                      <li
+                        data-song-index={playlist.paths.length}
+                        className={[
+                          styles.dropSentinel,
+                          hoverIndex === playlist.paths.length ? styles.dragOver : '',
+                        ].join(' ')}
+                      />
+                    )}
 
                     {/* Add current song — inline, visible, with state feedback */}
                     {currentTabPath && (
