@@ -19,8 +19,8 @@
 }
 
 .bassString {
-  stroke: var(--klank-color-text);
-  stroke-width: 2;
+  stroke: var(--klank-color-border);
+  stroke-width: 1;
 }
 
 .dot {

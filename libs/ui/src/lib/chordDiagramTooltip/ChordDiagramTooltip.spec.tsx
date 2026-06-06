@@ -201,6 +201,83 @@ describe('ChordDiagramTooltip', () => {
     )
   })
 
+  it('keeps tooltip visible after click (pin) + mouse leave', async () => {
+    setupFetch(makeMap({ Am: 2 }))
+    const { container } = render(
+      <ChordDiagramTooltip chordName="Am" instrument="guitar" isScrolling={false}>
+        <span data-testid="child">Am</span>
+      </ChordDiagramTooltip>,
+    )
+    await act(async () => {})
+    const wrapper = container.querySelector('span')!
+
+    fireEvent.mouseEnter(wrapper)
+    await waitFor(() => {
+      expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
+    })
+
+    // Click to pin, then mouse leave — tooltip must survive
+    await act(async () => {
+      fireEvent.click(wrapper)
+    })
+    fireEvent.mouseLeave(wrapper)
+    expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
+  })
+
+  it('closes pinned tooltip immediately on click outside', async () => {
+    setupFetch(makeMap({ Am: 2 }))
+    const { container } = render(
+      <ChordDiagramTooltip chordName="Am" instrument="guitar" isScrolling={false}>
+        <span data-testid="child">Am</span>
+      </ChordDiagramTooltip>,
+    )
+    await act(async () => {})
+    const wrapper = container.querySelector('span')!
+
+    fireEvent.mouseEnter(wrapper)
+    await waitFor(() => {
+      expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
+    })
+
+    await act(async () => {
+      fireEvent.click(wrapper) // pin
+    })
+
+    await act(async () => {
+      fireEvent.mouseDown(document.body) // click outside
+    })
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull()
+  })
+
+  it('closes tooltip after 1s delay when mouse leaves without clicking', async () => {
+    setupFetch(makeMap({ Am: 1 }))
+    const { container } = render(
+      <ChordDiagramTooltip chordName="Am" instrument="guitar" isScrolling={false}>
+        <span data-testid="child">Am</span>
+      </ChordDiagramTooltip>,
+    )
+    // Flush the loadChordDiagrams effect with real timers before enabling fake ones
+    await act(async () => {})
+
+    vi.useFakeTimers()
+    try {
+      const wrapper = container.querySelector('span')!
+
+      act(() => { fireEvent.mouseEnter(wrapper) })
+      expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
+
+      act(() => { fireEvent.mouseLeave(wrapper) })
+      // Immediately after leave: still visible (delayed close scheduled)
+      expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
+
+      // Advance past 1s — timer fires, tooltip closes
+      act(() => { vi.advanceTimersByTime(1000) })
+      expect(document.body.querySelector('[role="tooltip"]')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('resets alt index to 0 when chordName changes', async () => {
     const map = makeMap({ Am: 3, Em: 2 })
     setupFetch(map)

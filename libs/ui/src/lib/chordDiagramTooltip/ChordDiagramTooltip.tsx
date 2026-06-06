@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 import ReactDOM from 'react-dom'
-import type { Instrument, ChordVariant, ChordDiagramMap } from '@klank/platform-api'
+import type { Instrument, ChordVariant } from '@klank/platform-api'
 import { loadChordDiagrams, lookupChordDiagram } from '@klank/platform-api'
 import { ChordDiagram } from '../chordDiagram/ChordDiagram.js'
 import styles from './chordDiagramTooltip.module.css'
 
-type TooltipPos = { top: number; left: number }
+type TooltipPos = { bottom: number; left: number }
 
 type ChordDiagramTooltipProps = {
   chordName: string
@@ -23,10 +23,27 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
   const [variants, setVariants] = useState<ChordVariant[]>([])
   const [altIndex, setAltIndex] = useState(0)
   const [tooltipPos, setTooltipPos] = useState<TooltipPos | null>(null)
+  const [isPinned, setIsPinned] = useState(false)
   const wrapperRef = useRef<HTMLSpanElement>(null)
+  const tooltipRef = useRef<HTMLDivElement>(null)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearCloseTimer = () => {
+    if (closeTimerRef.current !== null) {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+  }
+
+  const scheduleClose = () => {
+    clearCloseTimer()
+    closeTimerRef.current = setTimeout(() => {
+      setTooltipPos(null)
+      setIsPinned(false)
+    }, 1000)
+  }
 
   // Load chord data and resolve variants whenever instrument or chord name changes.
-  // loadChordDiagrams caches at the module level so repeated calls are free.
   useEffect(() => {
     let cancelled = false
     loadChordDiagrams(instrument).then((map) => {
@@ -34,7 +51,9 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
       setVariants(lookupChordDiagram(map, chordName))
       setAltIndex(0)
     })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [instrument, chordName])
 
   // Arrow key navigation while tooltip is visible
@@ -53,17 +72,59 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
     return () => window.removeEventListener('keydown', onKey)
   }, [tooltipPos, variants.length])
 
-  const handleMouseEnter = () => {
-    if (isScrolling || variants.length === 0) return
+  // Click outside: close immediately when tooltip is visible
+  useEffect(() => {
+    if (!tooltipPos) return
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (wrapperRef.current?.contains(e.target as Node)) return
+      if (tooltipRef.current?.contains(e.target as Node)) return
+      if (closeTimerRef.current !== null) {
+        clearTimeout(closeTimerRef.current)
+        closeTimerRef.current = null
+      }
+      setTooltipPos(null)
+      setIsPinned(false)
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [tooltipPos])
+
+  // Cleanup any pending close timer on unmount
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current !== null) clearTimeout(closeTimerRef.current)
+    }
+  }, [])
+
+  const getChordPos = (): TooltipPos | null => {
     const rect = wrapperRef.current?.getBoundingClientRect()
-    if (!rect) return
-    setTooltipPos({
-      top: rect.bottom + 8,
+    if (!rect) return null
+    return {
+      bottom: window.innerHeight - rect.top + 8,
       left: rect.left + rect.width / 2,
-    })
+    }
   }
 
-  const handleMouseLeave = () => setTooltipPos(null)
+  const handleMouseEnter = () => {
+    clearCloseTimer()
+    if (isScrolling || variants.length === 0) return
+    const pos = getChordPos()
+    if (pos) setTooltipPos(pos)
+  }
+
+  const handleMouseLeave = () => {
+    if (!isPinned) scheduleClose()
+  }
+
+  const handleClick = () => {
+    if (variants.length === 0 || isScrolling) return
+    clearCloseTimer()
+    setIsPinned(true)
+    if (!tooltipPos) {
+      const pos = getChordPos()
+      if (pos) setTooltipPos(pos)
+    }
+  }
 
   const currentVariant = variants[altIndex]
   const strings = currentVariant?.frets.length ?? (instrument === 'bass' ? 4 : 6)
@@ -72,11 +133,15 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
     tooltipPos && currentVariant
       ? ReactDOM.createPortal(
           <div
+            ref={tooltipRef}
             className={styles.tooltip}
-            style={{ top: tooltipPos.top, left: tooltipPos.left }}
+            style={{ bottom: tooltipPos.bottom, left: tooltipPos.left }}
             role="tooltip"
-            onMouseEnter={() => setTooltipPos(tooltipPos)}
-            onMouseLeave={handleMouseLeave}
+            onClick={(e) => e.stopPropagation()}
+            onMouseEnter={clearCloseTimer}
+            onMouseLeave={() => {
+              if (!isPinned) scheduleClose()
+            }}
           >
             <div className={styles.chordName}>{chordName}</div>
             <ChordDiagram variant={currentVariant} strings={strings} />
@@ -111,6 +176,7 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
       ref={wrapperRef}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onClick={handleClick}
       className={styles.wrapper}
     >
       {children}
