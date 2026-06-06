@@ -8,6 +8,8 @@ export { FileTreeView } from './lib/fileTreeView/FileTreeView';
 export { IncrementButton } from './lib/incrementButton/IncrementButton';
 export { SheetToolbar } from './lib/sheetToolbar/SheetToolbar';
 export { Sheet } from './lib/sheet/Sheet';
+export { ChordDiagram } from './lib/chordDiagram/ChordDiagram';
+export { ChordDiagramTooltip } from './lib/chordDiagramTooltip/ChordDiagramTooltip';
 
 export * from './lib/theme/theme'
 export { PlayIcon } from './lib/icons/PlayIcon';

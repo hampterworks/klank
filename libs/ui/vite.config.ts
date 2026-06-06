@@ -7,6 +7,11 @@ import * as path from 'path';
 export default defineConfig(({ mode }) => ({
   root: __dirname,
   cacheDir: '../../node_modules/.vite/libs/ui',
+  resolve: {
+    alias: {
+      '@klank/platform-api': path.resolve(__dirname, '../../libs/platform-api/src/index.ts'),
+    },
+  },
   plugins: [
     // Only use React plugin for building, not during development
     mode === 'production' && react(),
