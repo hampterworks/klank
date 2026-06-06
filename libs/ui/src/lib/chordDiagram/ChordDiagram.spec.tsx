@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import fc from 'fast-check'
 import { ChordDiagram } from './ChordDiagram.js'
 import type { ChordVariant } from '@klank/platform-api'

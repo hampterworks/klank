@@ -15,6 +15,7 @@ vi.mock('@klank/platform-api', async (importOriginal) => {
   }
 })
 
+// eslint-disable-next-line import/first
 import { loadChordDiagrams } from '@klank/platform-api'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -36,24 +37,6 @@ const makeMap = (chords: Record<string, number>): ChordDiagramMap =>
 
 const setupFetch = (map: ChordDiagramMap) => {
   vi.mocked(loadChordDiagrams).mockResolvedValue(map)
-}
-
-const renderTooltip = (props: {
-  chordName: string
-  isScrolling: boolean
-  map: ChordDiagramMap
-}) => {
-  setupFetch(props.map)
-  const result = render(
-    <ChordDiagramTooltip
-      chordName={props.chordName}
-      instrument="guitar"
-      isScrolling={props.isScrolling}
-    >
-      <span data-testid="chord-child">{props.chordName}</span>
-    </ChordDiagramTooltip>,
-  )
-  return result
 }
 
 const hoverWrapper = (container: HTMLElement) => {
