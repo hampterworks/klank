@@ -3,6 +3,7 @@ export * from './lib/git';
 export * from './lib/sort'
 export * from './lib/chords';
 export * from './lib/chord-diagrams';
+export * from './lib/chord-theory';
 export * from './lib/userAgent';
 export * from './lib/download';
 export * from './lib/app';
