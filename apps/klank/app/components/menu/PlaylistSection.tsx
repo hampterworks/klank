@@ -272,6 +272,17 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
                       )
                     })}
 
+                    {/* Drop sentinel — allows placing dragged item at the last position */}
+                    {dragIndex !== null && (
+                      <li
+                        data-song-index={playlist.paths.length}
+                        className={[
+                          styles.dropSentinel,
+                          hoverIndex === playlist.paths.length ? styles.dragOver : '',
+                        ].join(' ')}
+                      />
+                    )}
+
                     {/* Add current song — inline, visible, with state feedback */}
                     {currentTabPath && (
                       <li className={styles.addSongRow}>

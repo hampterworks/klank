@@ -241,6 +241,15 @@
   }
 }
 
+.dropSentinel {
+  height: 8px;
+  list-style: none;
+
+  &.dragOver {
+    border-top: 2px solid var(--klank-color-text);
+  }
+}
+
 .addSongRow {
   padding: 0.25rem 0.5rem 0.125rem 0.5rem;
 }
