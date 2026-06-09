@@ -1,6 +1,6 @@
 ---
 name: update-dependencies
-description: Upgrades pnpm workspace and Cargo.toml dependencies safely — detects breaking changes, runs tests, and escalates risky upgrades. Use when dependencies need updating or security advisories require action.
+description: Upgrades pnpm workspace and Cargo.toml dependencies safely - detects breaking changes and runs tests. Use when dependencies need updating or a security advisory requires action.
 ---
 
 # update-dependencies

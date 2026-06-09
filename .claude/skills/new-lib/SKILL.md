@@ -18,7 +18,7 @@ description: Scaffolds a new NX library with correct Vite + Vitest config and @k
 3. Verify `libs/<name>/src/index.ts` exists as the named barrel file.
 4. Run `build` to confirm the project reference graph is valid.
 5. Register the lib in `AGENTS.md §Project Structure`.
-6. Ensure the generated `index.ts` uses named exports only — remove any `export default` the generator added.
+6. Ensure the generated `index.ts` uses named exports only - remove any `export default` the generator added.
 
 ## Failure modes
 

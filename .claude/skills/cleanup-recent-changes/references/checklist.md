@@ -1,4 +1,4 @@
-# Cleanup Smell Catalogue — Klank
+# Cleanup Smell Catalogue - Klank
 
 Apply these checks in order during a cleanup pass. Subtract before adding.
 

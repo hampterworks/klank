@@ -15,7 +15,7 @@ description: Runs the full NX build pipeline including TypeScript type-check and
 
 1. Full build + type-check + lint: `pnpm nx run-many -t build typecheck lint`
 2. Single project: `pnpm nx build klank`
-3. Tauri release bundle: `pnpm nx run klank:tauri:build` — produces platform-specific binary in `apps/klank/src-tauri/target/release/`.
+3. Tauri release bundle: `pnpm nx run klank:tauri:build` - produces platform-specific binary in `apps/klank/src-tauri/target/release/`.
 
 ## Failure modes
 

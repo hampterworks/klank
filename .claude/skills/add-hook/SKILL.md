@@ -1,13 +1,13 @@
 ---
 name: add-hook
-description: Adds a new Claude Code hook as a TypeScript file under .claude/hooks/ and registers it in .claude/settings.json. Use when a constraint is mechanically checkable and currently only documented as a bullet.
+description: Adds a Claude Code hook as a TypeScript file under .claude/hooks/ and registers it in .claude/settings.json. Use when a mechanically checkable constraint is currently only a documented bullet.
 ---
 
 # add-hook
 
 ## When to use
 
-- A constraint in a role file's Hard Constraints is violated repeatedly
+- A constraint in a subagent's Hard Constraints is violated repeatedly
 - A new field name or file extension must be guarded against accidental changes
 - A lint or verify step should run automatically on every file edit
 

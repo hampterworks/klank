@@ -14,7 +14,7 @@ description: Audits and optimizes .github/workflows/ci.yml for duration, caching
 ## Procedure
 
 1. Read `.github/workflows/ci.yml` in full.
-2. Check for unpinned actions — prefer SHA-pinned actions over tag-only references.
+2. Check for unpinned actions - prefer SHA-pinned actions over tag-only references.
 3. Check for missing `cancel-in-progress` on PR triggers:
    ```yaml
    concurrency:
