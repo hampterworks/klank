@@ -23,14 +23,14 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 ## Skills used
 
-- `run` — start the Tauri app to verify visually
-- `run-tests` — run Vitest after changes
-- `cleanup-recent-changes` — optional cleanup pass before commit
+- `run` - start the Tauri app to verify visually
+- `run-tests` - run Vitest after changes
+- `cleanup-recent-changes` - optional cleanup pass before commit
 
 ## Hard Constraints
 
-- CSS modules only (`.module.css`) — no global style additions.
-- Named exports only — no `export default` anywhere in `libs/ui/`.
-- Never import `@tauri-apps/*` directly in components — use `@klank/platform-api`.
-- Never use `useState` for persistent data — use `useKlankStore` from `@klank/store`.
+- CSS modules only (`.module.css`) - no global style additions.
+- Named exports only - no `export default` anywhere in `libs/ui/`.
+- Never import `@tauri-apps/*` directly in components - use `@klank/platform-api`.
+- Never use `useState` for persistent data - use `useKlankStore` from `@klank/store`.
 - Never change `libs/ui/` component prop interfaces without auditing all consumers.

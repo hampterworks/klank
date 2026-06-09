@@ -12,7 +12,7 @@ Subagent identities describe *who* acts and *what* they produce. Skill files des
 
 ## 3. One fact, one home
 
-Build commands live in `AGENTS.md`. Field names that are persisted live in `libs/store/src/lib/store.ts`. The `.tab.txt` extension filter lives in `libs/platform-api/src/lib/fs.ts`. The `@klank/*` path aliases live in `tsconfig.base.json §paths`. Never duplicate these facts — reference them.
+Build commands live in `AGENTS.md`. Field names that are persisted live in `libs/store/src/lib/store.ts`. The `.tab.txt` extension filter lives in `libs/platform-api/src/lib/fs.ts`. The `@klank/*` path aliases live in `tsconfig.base.json §paths`. Never duplicate these facts - reference them.
 
 ## 4. Hooks enforce, docs document
 
@@ -20,7 +20,7 @@ When a constraint can be checked mechanically (file extension, export style, cap
 
 ## 5. Self-contained identities, one home per skill
 
-Each role identity lives in two self-contained native files — `.claude/agents/<name>.md` (Claude) and `.github/agents/<name>.agent.md` (Copilot) — with identical `description` and `model`. The body *is* the identity, routed by `description`; never a redirect to a parallel doc, and never a hand-maintained role-routing table in `CLAUDE.md`/`AGENTS.md`. Skills live once, in `.claude/skills/<name>/`; Claude, Copilot, and Cursor auto-discover that directory and Junie imports it — never mirror a skill into `.github/agents/`. Run `audit-agent-setup` before any commit touching these trees.
+Each role identity lives in two self-contained native files - `.claude/agents/<name>.md` (Claude) and `.github/agents/<name>.agent.md` (Copilot) - with identical `description` and `model`. The body *is* the identity, routed by `description`; never a redirect to a parallel doc, and never a hand-maintained role-routing table in `CLAUDE.md`/`AGENTS.md`. Skills live once, in `.claude/skills/<name>/`; Claude, Copilot, and Cursor auto-discover that directory and Junie imports it - never mirror a skill into `.github/agents/`. Run `audit-agent-setup` before any commit touching these trees.
 
 ## 6. Token budgets
 

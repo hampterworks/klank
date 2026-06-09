@@ -6,7 +6,7 @@ Read `ARCHITECTURE.md` for the invariants every file here depends on.
 
 **Subagents**: kebab-case, noun phrase (`music-theory-expert`, not `musicTheory`).
 **Skills**: kebab-case, `verb-object` form (`run-tests`, `update-docs`).
-**Copilot mirrors**: `<name>.agent.md` in `.github/agents/` — same `name` as the `.claude/agents/` subagent.
+**Copilot mirrors**: `<name>.agent.md` in `.github/agents/` - same `name` as the `.claude/agents/` subagent.
 
 ## Adding a New Role
 
@@ -14,7 +14,7 @@ Use the `add-role` skill. It writes the self-contained subagent identity in `.cl
 
 ## Adding a New Skill
 
-Use the `add-skill` skill. It creates the SKILL.md and registers the catalogue row. Skills are auto-discovered — never mirrored into `.github/agents/`.
+Use the `add-skill` skill. It creates the SKILL.md and registers the catalogue row. Skills are auto-discovered - never mirrored into `.github/agents/`.
 
 ## Update Matrix
 
@@ -41,15 +41,15 @@ When this fact changes → update these files:
 | `add-role` | No | Create a subagent identity (`.claude/agents/` + `.github/agents/` mirror) |
 | `add-skill` | No | Create a new skill SKILL.md + catalogue entry |
 | `add-hook` | No | Add a new Claude Code hook to settings.json |
-| `audit-agent-setup` | Yes — before any commit under `.claude/`, `.github/agents/`, or `docs/agents/` | Consistency checks for klank's agent system |
-| `cleanup-recent-changes` | Yes — after development sessions | Senior-dev cleanup pass on recent changes |
+| `audit-agent-setup` | Yes - before any commit under `.claude/`, `.github/agents/`, or `docs/agents/` | Consistency checks for klank's agent system |
+| `cleanup-recent-changes` | Yes - after development sessions | Senior-dev cleanup pass on recent changes |
 | `update-dependencies` | No | pnpm workspace + Cargo.toml dependency upgrades |
-| `ci-pipeline-optimize` | Yes — when `.github/workflows/` is touched | Audit and optimize the CI pipeline |
-| `update-docs` | Yes — after any structural change | Keep README and human-readable docs current |
+| `ci-pipeline-optimize` | Yes - when `.github/workflows/` is touched | Audit and optimize the CI pipeline |
+| `update-docs` | Yes - after any structural change | Keep README and human-readable docs current |
 
 ## Hook Catalogue
 
-*(Empty — no hooks registered yet. Use `add-hook` to bootstrap the first one.)*
+*(Empty - no hooks registered yet. Use `add-hook` to bootstrap the first one.)*
 
 ## Token Budget Reference
 

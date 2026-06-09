@@ -1,8 +1,8 @@
-# Audit Checks — Detailed Reference
+# Audit Checks - Detailed Reference
 
 ## Check 1: Mirror Parity
 
-For every `.claude/agents/<name>.md` there must be a `.github/agents/<name>.agent.md`, and vice versa — these are the same role identity for Claude and Copilot.
+For every `.claude/agents/<name>.md` there must be a `.github/agents/<name>.agent.md`, and vice versa - these are the same role identity for Claude and Copilot.
 
 Skills are **not** mirrored: Copilot and Cursor auto-discover `.claude/skills/` and Junie imports it. A `.github/agents/<name>.agent.md` whose `<name>` matches a `.claude/skills/<name>/` directory is a stray skill mirror.
 
@@ -23,7 +23,7 @@ In each `.claude/agents/*.md`, the `## Skills used` section lists skills by name
 
 ## Check 4: Self-Contained Identities
 
-Every `.claude/agents/<name>.md` and `.github/agents/<name>.agent.md` body must be a real identity (Trigger, Inputs, Outputs, Process, Skills used, Hard Constraints) — never a redirect such as `Read \`docs/agents/roles/<name>.md\` and follow its process`. There must be no hand-maintained role-routing table in `CLAUDE.md` or `AGENTS.md`; routing is by `description`.
+Every `.claude/agents/<name>.md` and `.github/agents/<name>.agent.md` body must be a real identity (Trigger, Inputs, Outputs, Process, Skills used, Hard Constraints) - never a redirect such as `Read \`docs/agents/roles/<name>.md\` and follow its process`. There must be no hand-maintained role-routing table in `CLAUDE.md` or `AGENTS.md`; routing is by `description`.
 
 **Fix**: Inline the identity into the subagent body; delete any parallel role doc and any routing table.
 
@@ -41,7 +41,7 @@ The `description` and `model` fields in `.claude/agents/<name>.md` must exactly 
 
 ## Check 7: Stale References
 
-Any backtick-quoted file path in a `.claude/`, `.github/agents/`, or `docs/agents/` markdown file must resolve on disk relative to the repo root. Paths containing `<` or `>` are patterns — skip them.
+Any backtick-quoted file path in a `.claude/`, `.github/agents/`, or `docs/agents/` markdown file must resolve on disk relative to the repo root. Paths containing `<` or `>` are patterns - skip them.
 
 **Fix**: Update the path to match the current file location, or remove the reference.
 

@@ -17,19 +17,19 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 1. Read `apps/klank/src-tauri/src/lib.rs` in full before adding any command.
 2. Write the Rust command with `#[tauri::command]`; use `async` for any IO operation.
-3. Register the command in `generate_handler![]` — never skip this step.
+3. Register the command in `generate_handler![]` - never skip this step.
 4. Declare required permissions in `apps/klank/src-tauri/capabilities/*.json` for FS, network, or dialog access.
 5. Write the TypeScript wrapper in `libs/platform-api/src/lib/` and export it from `src/index.ts`; run `pnpm nx typecheck`.
 6. Run `run` (`pnpm tauri:dev`) to confirm Rust compiles and the command is reachable from JS.
 
 ## Skills used
 
-- `run` — verify Rust compiles and IPC is reachable
-- `build` — confirm release build is clean
+- `run` - verify Rust compiles and IPC is reachable
+- `build` - confirm release build is clean
 
 ## Hard Constraints
 
 - Every command must appear in `generate_handler![]` in `lib.rs`.
-- Capabilities must be declared in `capabilities/*.json` — never `dangerouslyAllowedUri`.
+- Capabilities must be declared in `capabilities/*.json` - never `dangerouslyAllowedUri`.
 - Rust command names are snake_case; TypeScript callers use the same name via `invoke()`.
-- Never call Tauri plugins from `apps/klank/app/` components — wrap in `@klank/platform-api`.
+- Never call Tauri plugins from `apps/klank/app/` components - wrap in `@klank/platform-api`.

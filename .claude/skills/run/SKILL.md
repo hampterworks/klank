@@ -13,8 +13,8 @@ description: Starts the Vite dev server or full Tauri desktop app. Use when star
 
 ## Procedure
 
-1. For Vite-only (React UI, no Rust backend): `pnpm dev` — serves on `http://localhost:4200`.
-2. For full Tauri desktop app (includes Rust backend, IPC, file system): `pnpm tauri:dev` — opens the native desktop window with hot reload.
+1. For Vite-only (React UI, no Rust backend): `pnpm dev` - serves on `http://localhost:4200`.
+2. For full Tauri desktop app (includes Rust backend, IPC, file system): `pnpm tauri:dev` - opens the native desktop window with hot reload.
 3. After running, check the terminal for Rust compile errors before inspecting the UI.
 4. In Tauri dev mode, right-click the window and select Inspect to open browser devtools.
 

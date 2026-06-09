@@ -13,16 +13,16 @@ pnpm nx run-many -t typecheck
 
 ## Roles
 
-Specialist subagents live in `.github/agents/*.agent.md`, each routed by its `description` — pick the matching one by task. For work spanning ≥ 2 roles, start with the Orchestrator.
+Specialist subagents live in `.github/agents/*.agent.md`, each routed by its `description` - pick the matching one by task. For work spanning ≥ 2 roles, start with the Orchestrator.
 
 ## Constraints
 
-- Named exports only — never `export default`
-- CSS modules only — no global styles
+- Named exports only - never `export default`
+- CSS modules only - no global styles
 - `useKlankStore` for persistent state, `useState` for ephemeral only
 - Tab files: `.tab.txt` extension only
-- Tauri capabilities in `apps/klank/src-tauri/capabilities/*.json` — no CSP bypasses
+- Tauri capabilities in `apps/klank/src-tauri/capabilities/*.json` - no CSP bypasses
 - Rust commands must be in `generate_handler![]` in `lib.rs`
-- Never import `@tauri-apps/*` directly in app components — use `@klank/platform-api`
-- Never rename `transpose`, `fontSize`, `scrollSpeed` in `TabSetting` — persisted in localStorage
-- Path aliases: `@klank/ui`, `@klank/store`, `@klank/platform-api` — never relative cross-lib imports
+- Never import `@tauri-apps/*` directly in app components - use `@klank/platform-api`
+- Never rename `transpose`, `fontSize`, `scrollSpeed` in `TabSetting` - persisted in localStorage
+- Path aliases: `@klank/ui`, `@klank/store`, `@klank/platform-api` - never relative cross-lib imports

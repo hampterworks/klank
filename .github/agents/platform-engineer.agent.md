@@ -22,13 +22,13 @@ model: claude-sonnet-4-6
 
 ## Skills used
 
-- `new-lib` — scaffold a new NX library
-- `build` — verify the full build pipeline
-- `ci-pipeline-optimize` — audit CI when `.github/workflows/` is touched
+- `new-lib` - scaffold a new NX library
+- `build` - verify the full build pipeline
+- `ci-pipeline-optimize` - audit CI when `.github/workflows/` is touched
 
 ## Hard Constraints
 
 - Every new library must export a named barrel at `src/index.ts`.
 - Path aliases in `tsconfig.base.json` must match actual `libs/<name>/src/index.ts` location.
-- Never add workspace entries to `package.json` manually — use `pnpm-workspace.yaml`.
+- Never add workspace entries to `package.json` manually - use `pnpm-workspace.yaml`.
 - NX library names must match the `@klank/<name>` alias pattern.

@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Plans and coordinates multi-role work — produces a labelled DAG with handoff payloads and acceptance gates. Use when a task spans ≥ 2 roles or needs cross-role sequencing. Never writes code.
+description: Plans and coordinates multi-role work - produces a labelled DAG with handoff payloads and acceptance gates. Use when a task spans ≥ 2 roles or needs cross-role sequencing. Never writes code.
 model: claude-opus-4-7
 disallowedTools: Write, Edit, Bash, WebSearch, WebFetch
 ---
@@ -23,7 +23,7 @@ disallowedTools: Write, Edit, Bash, WebSearch, WebFetch
 
 ## Skills used
 
-*(none — Orchestrator reads and plans only; never writes code, Rust, CSS, or test files)*
+*(none - Orchestrator reads and plans only; never writes code, Rust, CSS, or test files)*
 
 ## Hard Constraints
 
