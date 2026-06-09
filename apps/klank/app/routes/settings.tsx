@@ -12,6 +12,8 @@ export default function Settings() {
   const setBaseDirectory = useKlankStore().setBaseDirectory
   const setTheme = useKlankStore().setTheme
   const theme = useKlankStore().theme
+  const instrument = useKlankStore().instrument
+  const setInstrument = useKlankStore().setInstrument
   const fileService = useKlankStore().fileService
 
   const gitRef = useRef<GitService | null>(null)
@@ -133,6 +135,24 @@ export default function Settings() {
               onClick={() => setTheme(theme === 'Light' ? 'Dark' : 'Light')}
             >
               {theme === 'Light' ? 'Switch to Dark' : 'Switch to Light'}
+            </button>
+          </div>
+
+          <div className={styles.row}>
+            <span className={styles.label}>Instrument</span>
+            <button
+              className={styles.button}
+              style={{ opacity: instrument === 'guitar' ? 1 : 0.5 }}
+              onClick={() => setInstrument('guitar')}
+            >
+              Guitar
+            </button>
+            <button
+              className={styles.button}
+              style={{ opacity: instrument === 'bass' ? 1 : 0.5 }}
+              onClick={() => setInstrument('bass')}
+            >
+              Bass
             </button>
           </div>
         </section>

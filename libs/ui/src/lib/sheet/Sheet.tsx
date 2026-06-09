@@ -8,12 +8,16 @@ import {
   testSpaces,
   testTokenContext,
   transposeChord,
+  type Instrument,
 } from '@klank/platform-api'
+import { ChordDiagramTooltip } from '../chordDiagramTooltip/ChordDiagramTooltip.js'
 
 const lineMatcher = (
   line: string,
   index: number,
-  transpose: number
+  transpose: number,
+  isScrolling: boolean,
+  instrument?: Instrument
 ): React.ReactNode => {
   if (!line.trim()) {
     return <div key={index} className={styles.blankLine}>&nbsp;</div>
@@ -36,13 +40,27 @@ const lineMatcher = (
         if (testChords(currentValue) || currentValue === 'e') {
           const chordToTranspose = currentValue === 'e' ? 'E' : currentValue
           const isStringIndicator = isTablature && i === 0
-          return (
+          const displayChord = isStringIndicator
+            ? currentValue
+            : transposeChord(chordToTranspose, transpose)
+          const span = (
             <span className={styles.chord} key={`${index}-${i}`}>
-              {isStringIndicator
-                ? currentValue
-                : transposeChord(chordToTranspose, transpose)}
+              {displayChord}
             </span>
           )
+          if (instrument && !isStringIndicator) {
+            return (
+              <ChordDiagramTooltip
+                key={`${index}-${i}`}
+                chordName={displayChord}
+                instrument={instrument}
+                isScrolling={isScrolling}
+              >
+                {span}
+              </ChordDiagramTooltip>
+            )
+          }
+          return span
         }
         return (
           <React.Fragment key={`${index}-${i}`}>
@@ -66,6 +84,7 @@ type SheetProps = {
   tabScrollSpeed: number
   isScrolling: boolean
   setTabIsScrolling: (isScrolling: boolean) => void
+  instrument?: Instrument
 } & React.ComponentPropsWithRef<'pre'>
 
 export const Sheet: React.FC<SheetProps> = ({
@@ -74,6 +93,7 @@ export const Sheet: React.FC<SheetProps> = ({
   tabScrollSpeed,
   isScrolling,
   setTabIsScrolling,
+  instrument,
   ...props
 }) => {
   const containerRef = useRef<HTMLPreElement>(null)
@@ -118,7 +138,10 @@ export const Sheet: React.FC<SheetProps> = ({
     if (!isScrolling) return
 
     const maxScroll = container.scrollHeight - container.clientHeight
-    if (maxScroll <= 0) return
+    if (maxScroll <= 0) {
+      setTabIsScrolling(false)
+      return
+    }
 
     // Capture position, zero native scroll, compensate with transform — all in one
     // synchronous block so the browser batches them into a single paint.
@@ -139,7 +162,7 @@ export const Sheet: React.FC<SheetProps> = ({
     }
     container.addEventListener('wheel', onWheel, { passive: false })
 
-    const pxPerSec = 8 * Math.pow(1.5, tabScrollSpeed - 1)
+    const pxPerSec = 4 * Math.pow(1.5, tabScrollSpeed - 1)
     let rafId: number
     let lastTime: number | null = null
 
@@ -163,6 +186,8 @@ export const Sheet: React.FC<SheetProps> = ({
 
       if (virtualY.current < maxScroll) {
         rafId = requestAnimationFrame(step)
+      } else {
+        setTabIsScrolling(false)
       }
     }
 
@@ -175,14 +200,14 @@ export const Sheet: React.FC<SheetProps> = ({
       container.style.overflowY = ''
       container.scrollTop = pos
     }
-  }, [isScrolling, tabScrollSpeed])
+  }, [isScrolling, tabScrollSpeed, setTabIsScrolling])
 
   const lines: string[] = tabData.split(/\r?\n|\r|\n/g)
 
   return (
     <pre ref={containerRef} className={styles.container} {...props}>
       <div ref={contentRef} className={styles.content}>
-        {lines.map((line, index) => lineMatcher(line, index, transpose))}
+        {lines.map((line, index) => lineMatcher(line, index, transpose, isScrolling, instrument))}
         <div ref={sentinelRef}>&nbsp;</div>
       </div>
     </pre>

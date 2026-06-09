@@ -23,6 +23,7 @@ export const Player: React.FC<SheetProps> = ({ ...props }) => {
   const prevInPlaylist = useKlankStore().prevInPlaylist
   const mode = useKlankStore().mode
   const setMode = useKlankStore().setMode
+  const instrument = useKlankStore().instrument
   const [tabData, setTabData] = useState<string | undefined>()
   const [editedContent, setEditedContent] = useState<string>('')
 
@@ -90,6 +91,7 @@ export const Player: React.FC<SheetProps> = ({ ...props }) => {
           setTabIsScrolling={setTabIsScrolling}
           tabData={tabData ?? ''}
           transpose={transpose}
+          instrument={instrument}
           style={{ fontSize: `${fontSize}px` }}
         />
       )}

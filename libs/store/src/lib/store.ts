@@ -1,7 +1,9 @@
 import {create} from 'zustand'
 import {devtools, persist} from 'zustand/middleware'
 import type {} from '@redux-devtools/extension'
-import { FileService, PerTabSettings } from '@klank/platform-api'
+import { FileService, PerTabSettings, type Instrument } from '@klank/platform-api'
+
+export type { Instrument }
 
 export type Mode = "Read" | "Edit"
 export type Theme = "Light" | "Dark"
@@ -68,6 +70,9 @@ type KlankState = {
   setTabDetails: (details: string) => void
   setTabLink: (link: string) => void
   setServerMode: (serverMode: boolean) => void
+  /** @persisted Instrument used for chord diagram tooltips. */
+  instrument: Instrument
+  setInstrument: (instrument: Instrument) => void
   /** Named playlists — persisted to localStorage. */
   playlists: Playlist[]
   /** ID of the currently active playlist, or null when none is active. Persisted. */
@@ -126,6 +131,7 @@ export const useKlankStore = create<KlankState>()(
         tabSettingByPath: {},
         mode: "Read",
         theme: "Light",
+        instrument: "guitar" as Instrument,
         playlists: [],
         activePlaylistId: null,
         activePlaylistIndex: null,
@@ -135,6 +141,7 @@ export const useKlankStore = create<KlankState>()(
         toggleMenu: (isMenuExtended) => set((state) => ({...state, ui: {...state.ui, isMenuExtended}})),
         setMenuWidth: (menuWidth) => set((state) => ({...state, ui: {...state.ui, menuWidth}})),
         setTheme: (theme) => set((state) => ({...state, theme})),
+        setInstrument: (instrument) => set((state) => ({...state, instrument})),
         setTabPath: (path) => set((state) => {
           const saved = state.tabSettingByPath[path]
           const tab: TabSetting = {

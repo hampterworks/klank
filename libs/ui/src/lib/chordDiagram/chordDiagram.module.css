@@ -1,0 +1,60 @@
+.diagram {
+  width: 90px;
+  height: auto;
+  display: block;
+}
+
+.nut {
+  fill: var(--klank-color-text);
+}
+
+.fretLine {
+  stroke: var(--klank-color-border);
+  stroke-width: 1;
+}
+
+.stringLine {
+  stroke: var(--klank-color-border);
+  stroke-width: 1;
+}
+
+.bassString {
+  stroke: var(--klank-color-border);
+  stroke-width: 1;
+}
+
+.dot {
+  fill: var(--klank-color-text);
+}
+
+.barreDot {
+  fill: var(--klank-color-text);
+}
+
+.fingerNum {
+  fill: var(--klank-color-background);
+  font-size: 8px;
+  text-anchor: middle;
+  dominant-baseline: auto;
+  user-select: none;
+}
+
+.openMarker {
+  fill: none;
+  stroke: var(--klank-color-text);
+  stroke-width: 1.5;
+}
+
+.mutedMarker {
+  fill: var(--klank-color-text);
+  font-size: 9px;
+  text-anchor: middle;
+  dominant-baseline: auto;
+  user-select: none;
+}
+
+.baseFretLabel {
+  fill: var(--klank-color-text);
+  font-size: 8px;
+  dominant-baseline: auto;
+}
