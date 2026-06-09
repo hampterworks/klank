@@ -1,4 +1,4 @@
-Read the role file in `docs/agents/roles/` matching your task before writing any code.
+Specialist work routes to the subagents in `.claude/agents/` (Copilot: `.github/agents/`) automatically by their `description`. Read the matching subagent's identity before writing any code; invoke the Orchestrator first for multi-role tasks.
 
 ---
 
@@ -32,10 +32,10 @@ apps/klank/src-tauri/capabilities/  Tauri permission declarations (JSON) — one
 libs/ui/src/                        Shared React components (@klank/ui)
 libs/store/src/lib/store.ts         Zustand store with persisted TabSetting (@klank/store)
 libs/platform-api/src/lib/          FileService, chords, download, sort, userAgent (@klank/platform-api)
-docs/agents/                        Agent instructional context
-.claude/agents/                     Agent bridge files (subagent definitions)
-.claude/skills/                     Procedure-skills
-.github/agents/                     GitHub Copilot mirrors
+docs/agents/                        Agent architecture + setup conventions
+.claude/agents/                     Subagent identities (self-contained, routed by description)
+.claude/skills/                     Procedure-skills (auto-discovered by Claude, Copilot, Cursor)
+.github/agents/                     Copilot subagent mirrors (same identities)
 ```
 
 ## Code Style
@@ -59,15 +59,8 @@ docs/agents/                        Agent instructional context
 - **Never rename `transpose`, `fontSize`, `scrollSpeed` in `TabSetting`** — they are persisted in `klank-storage` in localStorage
 - **Never import `@tauri-apps/*` directly in `apps/klank/app/` components** — wrap in `@klank/platform-api`
 
-## Per-Role Context Loading
+## Gotchas
 
-| Role | Load | Skip |
-|------|------|------|
-| Orchestrator | role file | all other role files |
-| Frontend Engineer | role file | `tauri-engineer.md`, `tester.md` |
-| Tauri Engineer | role file | `frontend-engineer.md`, `tester.md` |
-| Music Theory Expert | role file, `libs/platform-api/src/lib/chords.ts`, `libs/platform-api/src/lib/download.ts` | UI role files |
-| Platform Engineer | role file, `nx.json`, `tsconfig.base.json` | all other role files |
-| Tester | role file | design and music docs |
-| Documentation Specialist | role file, `docs/agents/agent-setup.md` | all other docs |
-| UX Designer | role file | `tauri-engineer.md`, `tester.md` |
+- Each subagent in `.claude/agents/` is a self-contained identity routed by `description` — there is no role-routing table to keep in sync.
+- The `.github/agents/` copies are the same identities for Copilot; when you edit a subagent, update both files' `description` and `model`.
+- Skills live once under `.claude/skills/` — never mirror them into `.github/agents/`; Copilot and Cursor auto-discover the directory and Junie imports it.

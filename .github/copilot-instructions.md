@@ -11,18 +11,9 @@ pnpm lint             # ESLint across workspace
 pnpm nx run-many -t typecheck
 ```
 
-## Role Detection
+## Roles
 
-| Task | Role |
-|------|------|
-| Multi-role planning | Orchestrator |
-| React, CSS modules, routing, `apps/klank/app/`, `libs/ui/` | Frontend Engineer |
-| Rust, Tauri, `src-tauri/`, capabilities JSON, `Cargo.toml` | Tauri Engineer |
-| Tab parsing, chord transposition, UG scraper, `chords.ts`, `download.ts` | Music Theory Expert |
-| NX, Vite, pnpm workspaces, CI/CD, new lib | Platform Engineer |
-| Vitest, test files | Tester |
-| README, AGENTS.md, role files, docs | Documentation Specialist |
-| UI layout, accessibility, UX | UX Designer |
+Specialist subagents live in `.github/agents/*.agent.md`, each routed by its `description` — pick the matching one by task. For work spanning ≥ 2 roles, start with the Orchestrator.
 
 ## Constraints
 

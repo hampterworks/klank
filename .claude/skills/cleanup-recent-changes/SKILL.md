@@ -1,6 +1,6 @@
 ---
 name: cleanup-recent-changes
-description: Performs a senior-developer cleanup pass on recent code changes — removes smells, dead code, and bad patterns, then verifies the build and tests still pass. Use after any development session before committing.
+description: Performs a senior-dev cleanup pass on recent changes — removes smells, dead code, and bad patterns, then verifies build and tests pass. Use after a development session before committing.
 ---
 
 # cleanup-recent-changes
