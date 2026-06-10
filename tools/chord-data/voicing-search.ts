@@ -1,3 +1,7 @@
+// Relative imports (not @klank/platform-api): this tool runs under plain
+// `node` with type stripping, which can't resolve workspace path aliases, and
+// the lib barrel pulls in Tauri-importing modules. chord-theory.ts is kept
+// free of runtime imports for exactly this reason.
 import type { ChordVariant, Instrument } from '../../libs/platform-api/src/lib/chord-diagrams.ts'
 import {
   CHORD_INTERVALS,
@@ -10,13 +14,16 @@ import {
   validateChordVariant,
 } from '../../libs/platform-api/src/lib/chord-theory.ts'
 
+/** Highest neck position a voicing search window may start at. */
 const MAX_BASE = 12
 const MAX_FINGERS = 4
+/** Even power chords get 3 strings (root, 5th, octave) — the shape players know. */
+const MIN_SOUNDING = 3
 
 export type ScoredVariant = { variant: ChordVariant; score: number }
 
 /** Lowest fretted fret — the neck position of a shape (0 = all open). */
-export function positionOf(variant: ChordVariant): number {
+function positionOf(variant: ChordVariant): number {
   const fretted = variant.frets.filter((f) => f > 0)
   return fretted.length > 0 ? Math.min(...fretted) : 0
 }
@@ -63,7 +70,7 @@ function compareFrets(a: readonly number[], b: readonly number[]): number {
  * order, which reproduces canonical fingerings for open shapes; five or more
  * fretted positions become an index-finger barre at the lowest fret.
  */
-export function assignFingering(frets: number[], strings: number): ChordVariant | null {
+function assignFingering(frets: number[], strings: number): ChordVariant | null {
   const positions = frets
     .map((fret, string) => ({ fret, string }))
     .filter((p) => p.fret > 0)
@@ -119,8 +126,6 @@ export function searchVoicings(chordKey: string, instrument: Instrument): Scored
   const allowed = getAllowedPitches(parsed)
   const required = getRequiredPitches(parsed)
   const bassPitch = parsed.bassPitch ?? parsed.rootPitch
-  // even power chords get 3 strings (root, 5th, octave) — the shape players know
-  const minSounding = 3
 
   const seen = new Set<string>()
   const results: ScoredVariant[] = []
@@ -141,8 +146,8 @@ export function searchVoicings(chordKey: string, instrument: Instrument): Scored
 
   for (let base = 1; base <= MAX_BASE; base++) {
     const windowMax = base + MAX_SPAN
-    for (let start = 0; start <= n - minSounding; start++) {
-      for (let end = start + minSounding - 1; end < n; end++) {
+    for (let start = 0; start <= n - MIN_SOUNDING; start++) {
+      for (let end = start + MIN_SOUNDING - 1; end < n; end++) {
         // options per sounding string: open string or an allowed tone inside the
         // window; open strings only mix with shapes at the nut — ringing opens
         // under a hand parked at the 5th fret are unidiomatic
@@ -186,8 +191,9 @@ export function searchVoicings(chordKey: string, instrument: Instrument): Scored
   return results
 }
 
-/** Diverse picks below this score are too awkward to ship as alternatives. */
-const DIVERSITY_SCORE_FLOOR = -12
+/** Shapes scoring below this are too awkward to ship as alternatives;
+ *  only the first (best) pick of a key may ignore it. */
+const SCORE_FLOOR = -12
 
 /**
  * Picks up to `count` voicings from a best-first list. A first pass prefers
@@ -209,7 +215,7 @@ export function selectVoicings(
     for (const { variant, score } of ranked) {
       if (picked.length >= count) break
       if (isDuplicate(variant)) continue
-      if (score < DIVERSITY_SCORE_FLOOR && picked.length > 0) continue
+      if (score < SCORE_FLOOR && picked.length > 0) continue
       if (diverse && picked.some((p) => Math.abs(positionOf(p) - positionOf(variant)) < 2)) continue
       picked.push(variant)
     }
@@ -223,5 +229,5 @@ export function selectVoicings(
       (scoreOf.get(b.frets.join(',')) ?? 0) - (scoreOf.get(a.frets.join(',')) ?? 0) ||
       compareFrets(a.frets, b.frets),
   )
-  return [...picked.slice(0, preselected.length), ...searched]
+  return [...preselected, ...searched]
 }
