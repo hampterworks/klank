@@ -27,6 +27,10 @@ export const CHORD_INTERVALS: Record<string, readonly number[]> = {
   '5': [0, 7],             // power chord
 }
 
+/** Qualities in the order the chord JSON files enumerate them.
+ *  (Object.keys(CHORD_INTERVALS) won't do: JS hoists integer-like keys like '5'.) */
+export const CHORD_QUALITIES = ['', 'm', '7', 'm7', 'maj7', 'sus2', 'sus4', 'dim', 'aug', '5'] as const
+
 /** Roots in the order the chord JSON files enumerate them. */
 export const CHORD_ROOTS = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'] as const
 
@@ -134,7 +138,7 @@ export function getInvalidNotes(
  *  plain keys grouped by quality, then slash keys grouped by root. */
 export function expectedChordKeys(): string[] {
   const keys: string[] = []
-  for (const quality of Object.keys(CHORD_INTERVALS)) {
+  for (const quality of CHORD_QUALITIES) {
     for (const root of CHORD_ROOTS) keys.push(root + quality)
   }
   for (const root of CHORD_ROOTS) {
