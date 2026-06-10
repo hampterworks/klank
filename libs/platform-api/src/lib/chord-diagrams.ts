@@ -23,19 +23,19 @@ const FLAT_TO_SHARP: Record<string, string> = {
   Ab: 'G#',
 }
 
+/** Map a flat-spelled note prefix to its sharp equivalent ("Bb..." → "A#..."). */
+function sharpen(note: string): string {
+  const twoChar = note.slice(0, 2)
+  return FLAT_TO_SHARP[twoChar] ? FLAT_TO_SHARP[twoChar] + note.slice(2) : note
+}
+
 /** Normalize a chord name to the sharps-based key used in the JSON data.
- *  Strips slash-bass notes and maps flat roots to their sharp equivalents. */
+ *  Keeps slash-bass notes and maps flat roots and bass notes to sharps
+ *  (e.g. "Dm/Gb" → "Dm/F#"). */
 export function normalizeChordKey(chordName: string): string {
   const slashIdx = chordName.indexOf('/')
-  const base = slashIdx !== -1 ? chordName.slice(0, slashIdx) : chordName
-
-  // Try two-char root first (e.g. "Bb", "C#"), then single char
-  const twoChar = base.slice(0, 2)
-  if (FLAT_TO_SHARP[twoChar]) {
-    return FLAT_TO_SHARP[twoChar] + base.slice(2)
-  }
-
-  return base
+  if (slashIdx === -1) return sharpen(chordName)
+  return `${sharpen(chordName.slice(0, slashIdx))}/${sharpen(chordName.slice(slashIdx + 1))}`
 }
 
 const cache = new Map<Instrument, ChordDiagramMap>()
@@ -65,9 +65,16 @@ export async function loadChordDiagrams(instrument: Instrument): Promise<ChordDi
 }
 
 /** Look up chord variants from a pre-loaded map.
- *  Normalizes the chord name and returns an empty array when not found.
- *  Uses hasOwnProperty to guard against prototype property names (e.g. "valueOf"). */
+ *  Normalizes the chord name; slash chords missing from the map fall back to
+ *  the plain root chord (e.g. "Am/B" → "Am"). Returns an empty array when not
+ *  found. Uses hasOwnProperty to guard against prototype property names. */
 export function lookupChordDiagram(map: ChordDiagramMap, chordName: string): ChordVariant[] {
   const key = normalizeChordKey(chordName)
-  return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : []
+  if (Object.prototype.hasOwnProperty.call(map, key)) return map[key]
+  const slashIdx = key.indexOf('/')
+  if (slashIdx !== -1) {
+    const plain = key.slice(0, slashIdx)
+    if (Object.prototype.hasOwnProperty.call(map, plain)) return map[plain]
+  }
+  return []
 }

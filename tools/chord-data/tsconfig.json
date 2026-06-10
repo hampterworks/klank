@@ -11,5 +11,10 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
-  "include": ["*.ts"]
+  "include": ["*.ts"],
+  "references": [
+    {
+      "path": "../../libs/platform-api"
+    }
+  ]
 }
