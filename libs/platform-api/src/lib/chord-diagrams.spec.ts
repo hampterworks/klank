@@ -54,19 +54,14 @@ describe('normalizeChordKey', () => {
     )
   })
 
-  it('maps all flat roots to their sharp equivalents', () => {
-    for (const [flat, sharp] of FLAT_PAIRS) {
-      expect(normalizeChordKey(flat)).toBe(sharp)
-      expect(normalizeChordKey(`${flat}m`)).toBe(`${sharp}m`)
-      expect(normalizeChordKey(`${flat}maj7`)).toBe(`${sharp}maj7`)
-    }
-  })
-
-  it('maps flat bass notes to their sharp equivalents', () => {
-    for (const [flat, sharp] of FLAT_PAIRS) {
-      expect(normalizeChordKey(`C/${flat}`)).toBe(`C/${sharp}`)
-      expect(normalizeChordKey(`${flat}m/${flat}`)).toBe(`${sharp}m/${sharp}`)
-    }
+  it('maps flat roots and flat bass notes to their sharp equivalents, for any suffix', () => {
+    fc.assert(
+      fc.property(fc.constantFrom(...FLAT_PAIRS), suffixArb, fc.constantFrom(...FLAT_PAIRS), ([flatRoot, sharpRoot], suffix, [flatBass, sharpBass]) => {
+        expect(normalizeChordKey(`${flatRoot}${suffix}`)).toBe(`${sharpRoot}${suffix}`)
+        expect(normalizeChordKey(`${flatRoot}${suffix}/${flatBass}`)).toBe(`${sharpRoot}${suffix}/${sharpBass}`)
+        expect(normalizeChordKey(`${flatRoot}${suffix}/${sharpBass}`)).toBe(`${sharpRoot}${suffix}/${sharpBass}`)
+      }),
+    )
   })
 
   it('leaves sharp roots unchanged', () => {
@@ -115,12 +110,16 @@ describe('lookupChordDiagram', () => {
   })
 
   it('prefers the exact slash key and falls back to the plain root chord', () => {
-    const plain = makeVariant()
-    const slash = makeVariant()
-    const map: ChordDiagramMap = { Am: [plain], 'Am/G': [slash] }
-    expect(lookupChordDiagram(map, 'Am/G')).toEqual([slash])
-    expect(lookupChordDiagram(map, 'Am/C')).toEqual([plain])
-    expect(lookupChordDiagram(map, 'Am/Gb')).toEqual([plain])
+    const plain = [makeVariant()]
+    const slash = [makeVariant()]
+    const map: ChordDiagramMap = { Am: plain, 'Am/G': slash }
+    expect(lookupChordDiagram(map, 'Am/G')).toBe(slash)
+    fc.assert(
+      fc.property(noteArb.filter((n) => n !== 'G'), (bass) => {
+        expect(lookupChordDiagram(map, `Am/${bass}`)).toBe(plain)
+      }),
+    )
+    expect(lookupChordDiagram(map, 'Am/Gb')).toBe(plain) // flat bass normalizes to F#
   })
 
   it('returns the exact array stored in the map without copying', () => {
