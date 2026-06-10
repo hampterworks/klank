@@ -42,25 +42,26 @@ describe('normalizeChordKey', () => {
     )
   })
 
-  it('strips slash-bass note for any chord/bass combination', () => {
+  it('preserves the slash-bass note for any chord/bass combination', () => {
     fc.assert(
       fc.property(
         chordNameArb,
         fc.constantFrom('G', 'B', 'D', 'F', 'A', 'C#'),
         (chord, bass) => {
-          const result = normalizeChordKey(`${chord}/${bass}`)
-          expect(result).not.toContain('/')
+          expect(normalizeChordKey(`${chord}/${bass}`)).toBe(`${chord}/${bass}`)
         },
       ),
     )
   })
 
-  it('maps all flat roots to their sharp equivalents', () => {
-    for (const [flat, sharp] of FLAT_PAIRS) {
-      expect(normalizeChordKey(flat)).toBe(sharp)
-      expect(normalizeChordKey(`${flat}m`)).toBe(`${sharp}m`)
-      expect(normalizeChordKey(`${flat}maj7`)).toBe(`${sharp}maj7`)
-    }
+  it('maps flat roots and flat bass notes to their sharp equivalents, for any suffix', () => {
+    fc.assert(
+      fc.property(fc.constantFrom(...FLAT_PAIRS), suffixArb, fc.constantFrom(...FLAT_PAIRS), ([flatRoot, sharpRoot], suffix, [flatBass, sharpBass]) => {
+        expect(normalizeChordKey(`${flatRoot}${suffix}`)).toBe(`${sharpRoot}${suffix}`)
+        expect(normalizeChordKey(`${flatRoot}${suffix}/${flatBass}`)).toBe(`${sharpRoot}${suffix}/${sharpBass}`)
+        expect(normalizeChordKey(`${flatRoot}${suffix}/${sharpBass}`)).toBe(`${sharpRoot}${suffix}/${sharpBass}`)
+      }),
+    )
   })
 
   it('leaves sharp roots unchanged', () => {
@@ -92,7 +93,8 @@ describe('lookupChordDiagram', () => {
     const map: ChordDiagramMap = { Am: [makeVariant()] }
     fc.assert(
       fc.property(
-        fc.string({ maxLength: 30 }).filter((s) => !['Am', 'A#m'].includes(s)),
+        // exclude anything that legitimately resolves to "Am", incl. slash fallback
+        fc.string({ maxLength: 30 }).filter((s) => normalizeChordKey(s).split('/')[0] !== 'Am'),
         (name) => {
           expect(lookupChordDiagram(map, name)).toHaveLength(0)
         },
@@ -107,11 +109,17 @@ describe('lookupChordDiagram', () => {
     expect(lookupChordDiagram(map, 'A#')).toEqual([variant])
   })
 
-  it('ignores slash bass notes', () => {
-    const variant = makeVariant()
-    const map: ChordDiagramMap = { Am: [variant] }
-    expect(lookupChordDiagram(map, 'Am/C')).toEqual([variant])
-    expect(lookupChordDiagram(map, 'Am/G')).toEqual([variant])
+  it('prefers the exact slash key and falls back to the plain root chord', () => {
+    const plain = [makeVariant()]
+    const slash = [makeVariant()]
+    const map: ChordDiagramMap = { Am: plain, 'Am/G': slash }
+    expect(lookupChordDiagram(map, 'Am/G')).toBe(slash)
+    fc.assert(
+      fc.property(noteArb.filter((n) => n !== 'G'), (bass) => {
+        expect(lookupChordDiagram(map, `Am/${bass}`)).toBe(plain)
+      }),
+    )
+    expect(lookupChordDiagram(map, 'Am/Gb')).toBe(plain) // flat bass normalizes to F#
   })
 
   it('returns the exact array stored in the map without copying', () => {

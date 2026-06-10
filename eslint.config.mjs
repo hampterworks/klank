@@ -32,6 +32,14 @@ export default [
     },
   },
   {
+    // tools/ scripts run under plain `node` with type stripping, which cannot
+    // resolve @klank/* workspace aliases — they import lib sources relatively
+    files: ['tools/**/*.ts'],
+    rules: {
+      '@nx/enforce-module-boundaries': 'off',
+    },
+  },
+  {
     files: [
       '**/*.ts',
       '**/*.tsx',
