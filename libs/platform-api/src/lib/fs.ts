@@ -82,6 +82,19 @@ export type FileService = {
    * The file is sorted by key on every write to produce minimal git diffs.
    */
   writeTabSetting: (tabPath: string, settings: PerTabSettings, baseDirectory: string) => Promise<void>
+  /**
+   * Permanently deletes a tab file from disk.
+   * Throws on failure (permission denied, file locked); callers may treat a
+   * missing file ("No such file" / os error 2) as success.
+   */
+  deleteTabFile: (path: string) => Promise<void>
+  /**
+   * Removes the entry for `tabPath` from `.klank-settings.json` in `baseDirectory`.
+   * Keys are stored relative to `baseDirectory` (forward-slash separated), so the
+   * incoming path is normalised the same way `writeTabSetting` does.
+   * Silently succeeds when the file or the entry does not exist.
+   */
+  deleteTabSetting: (tabPath: string, baseDirectory: string) => Promise<void>
 }
 
 /**
@@ -127,7 +140,7 @@ type LegacyKlankEntry = {
 }
 
 const createTauriFileService = async (): Promise<FileService> => {
-  const { BaseDirectory, readDir, readTextFile, writeTextFile, create, exists } = await import(
+  const { BaseDirectory, readDir, readTextFile, writeTextFile, create, exists, remove } = await import(
     '@tauri-apps/plugin-fs'
   )
   const { appLocalDataDir, join } = await import('@tauri-apps/api/path')
@@ -332,6 +345,29 @@ const createTauriFileService = async (): Promise<FileService> => {
         await writeTextFile(settingsPath, JSON.stringify(sorted, null, 2))
       } catch (error) {
         console.error('Failed to write tab setting:', error)
+      }
+    },
+
+    async deleteTabFile(path) {
+      await remove(path)
+    },
+
+    async deleteTabSetting(tabPath, baseDirectory) {
+      try {
+        const settingsPath = await join(baseDirectory, SETTINGS_FILE)
+        const content = await readTextFile(settingsPath)
+        const current = JSON.parse(content) as Record<string, PerTabSettings>
+
+        const relKey = toRelativeKey(tabPath, baseDirectory)
+        if (!(relKey in current)) return
+        delete current[relKey]
+
+        const sorted = Object.fromEntries(
+          Object.entries(current).sort(([a], [b]) => a.localeCompare(b))
+        )
+        await writeTextFile(settingsPath, JSON.stringify(sorted, null, 2))
+      } catch (error) {
+        console.error('Failed to delete tab setting:', error)
       }
     },
   }
