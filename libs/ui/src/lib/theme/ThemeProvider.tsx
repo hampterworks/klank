@@ -19,6 +19,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     className={className ?? ''}
     style={{
       ...themeVariables,
+      colorScheme: theme === 'Dark' ? 'dark' : 'light',
       ...style
     } as React.CSSProperties & Record<string, string | number>}
 

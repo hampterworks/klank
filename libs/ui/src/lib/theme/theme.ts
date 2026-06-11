@@ -15,6 +15,7 @@ export const getThemeVariables = (theme: Theme = 'Light'): CSSCustomProperties =
       '--klank-color-selected': '#ededed',
       '--klank-color-success': '#36b15d',
       '--klank-color-fail': '#b13636',
+      '--klank-color-divider': 'rgba(0, 0, 0, 0.05)',
     },
     Dark: {
       '--klank-color-background': '#020202',
@@ -25,6 +26,7 @@ export const getThemeVariables = (theme: Theme = 'Light'): CSSCustomProperties =
       '--klank-color-selected': '#616161',
       '--klank-color-success': '#36b15d',
       '--klank-color-fail': '#b13636',
+      '--klank-color-divider': 'rgba(255, 255, 255, 0.07)',
     }
   }
 
