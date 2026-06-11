@@ -88,6 +88,13 @@ type KlankState = {
   setActivePlaylist: (id: string | null) => void
   nextInPlaylist: () => void
   prevInPlaylist: () => void
+  /**
+   * Cleans up all state referencing a tab file that was deleted from disk:
+   * clears `tab.path` if it was open, drops its `tabSettingByPath` entry, and
+   * removes it from every playlist (adjusting `activePlaylistIndex`).
+   * Does not touch the file system — callers delete the file via FileService first.
+   */
+  deleteTab: (path: string) => void
 }
 
 /** All valid scroll speed levels (0–9, displayed as 1–10). */
@@ -314,6 +321,31 @@ export const useKlankStore = create<KlankState>()(
               scrollSpeed: saved?.scrollSpeed ?? state.tab.scrollSpeed,
             },
           }
+        }),
+        deleteTab: (path) => set((state) => {
+          const tabSettingByPath = { ...state.tabSettingByPath }
+          delete tabSettingByPath[path]
+          const tab = state.tab.path === path
+            ? { ...state.tab, path: "", isScrolling: false }
+            : state.tab
+
+          let activePlaylistIndex = state.activePlaylistIndex
+          const playlists = state.playlists.map((p) => {
+            const removedIndex = p.paths.indexOf(path)
+            if (removedIndex === -1) return p
+            const newPaths = p.paths.filter((x) => x !== path)
+            if (p.id === state.activePlaylistId && activePlaylistIndex !== null) {
+              if (newPaths.length === 0) {
+                activePlaylistIndex = null
+              } else {
+                if (removedIndex < activePlaylistIndex) activePlaylistIndex = activePlaylistIndex - 1
+                if (activePlaylistIndex >= newPaths.length) activePlaylistIndex = newPaths.length - 1
+              }
+            }
+            return { ...p, paths: newPaths }
+          })
+
+          return { ...state, tab, tabSettingByPath, playlists, activePlaylistIndex }
         }),
       }),
       {

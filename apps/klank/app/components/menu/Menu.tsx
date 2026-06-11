@@ -1,9 +1,9 @@
 import styles from './menu.module.css'
 import * as React from 'react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router'
-import { FileEntry, getSheetFromUG } from '@klank/platform-api'
+import { FileEntry, getSheetFromUG, sortByArtist } from '@klank/platform-api'
 import {
   DownloadIcon,
   FileTreeView,
@@ -20,6 +20,53 @@ type MenuProps = {
   setNeedsUpdate: React.Dispatch<React.SetStateAction<boolean>>
 } & React.ComponentPropsWithRef<'ul'>
 
+/**
+ * Derives the song display name from a full file path:
+ * strips the directory, removes `.tab.txt`, and drops the `Artist - ` prefix.
+ */
+const getSongDisplayName = (path: string): string => {
+  const filename = path.split(/[/\\]/).slice(-1)[0] ?? ''
+  const withoutExt = filename.slice(0, -8) // strip ".tab.txt"
+  const dashIndex = withoutExt.indexOf(' - ')
+  return dashIndex !== -1 ? withoutExt.slice(dashIndex + 3) : withoutExt
+}
+
+/**
+ * Returns the neighbor path to navigate to after deleting `deletedPath`.
+ * Follows the same sorted/grouped order that FileTreeView renders:
+ * artist groups sorted alphabetically, songs in insertion order within each group.
+ *
+ * Priority:
+ * 1. Next song in the same artist group
+ * 2. Previous song in the same artist group
+ * 3. First song of the next artist group
+ * 4. "" (no open tab)
+ */
+const getNeighborPath = (tree: FileEntry[], deletedPath: string): string => {
+  const sorted = sortByArtist(tree) // no filter — use full tree order
+  const artistKeys = Object.keys(sorted)
+
+  for (let ai = 0; ai < artistKeys.length; ai++) {
+    const songs = sorted[artistKeys[ai]]
+    const si = songs.findIndex((s) => s.path === deletedPath)
+    if (si === -1) continue
+
+    // 1. Next in same group
+    if (si + 1 < songs.length) return songs[si + 1].path
+    // 2. Previous in same group
+    if (si - 1 >= 0) return songs[si - 1].path
+    // 3. First song of next artist group
+    if (ai + 1 < artistKeys.length) {
+      const nextGroup = sorted[artistKeys[ai + 1]]
+      if (nextGroup.length > 0) return nextGroup[0].path
+    }
+    // 4. No neighbor
+    return ''
+  }
+
+  return ''
+}
+
 export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) => {
   const navigate = useNavigate()
   const isMenuExtended = useKlankStore().ui.isMenuExtended
@@ -33,6 +80,8 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
   const playlists = useKlankStore().playlists
   const addTabToPlaylist = useKlankStore().addTabToPlaylist
   const createPlaylist = useKlankStore().createPlaylist
+  const deleteTab = useKlankStore().deleteTab
+
   const [searchFilter, setSearchFilter] = useState<string>('')
   const [isEnteringUrl, setIsEnteringUrl] = useState(false)
   const [urlValue, setUrlValue] = useState('')
@@ -40,6 +89,10 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
   const [downloadError, setDownloadError] = useState<string | null>(null)
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false)
   const [newPlaylistName, setNewPlaylistName] = useState('')
+  const [pathToConfirmDelete, setPathToConfirmDelete] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  const deleteErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const activePlaylist = playlists.find((p) => p.id === activePlaylistId) ?? null
 
@@ -97,6 +150,61 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
       setIsDownloading(false)
     }
   }
+
+  const handleCancelDelete = () => {
+    setPathToConfirmDelete(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!pathToConfirmDelete || !fileService) return
+    const path = pathToConfirmDelete
+
+    // Step 1: Compute neighbor (only needed if it was the open tab)
+    const neighbor = path === currentTabPath ? getNeighborPath(tree, path) : null
+
+    // Step 2: Delete the file
+    try {
+      await fileService.deleteTabFile(path)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      const isNotFound =
+        /os error 2/i.test(msg) || /no such file/i.test(msg)
+      if (!isNotFound) {
+        setDeleteError('Could not delete file. It may be in use by another program.')
+        if (deleteErrorTimerRef.current) clearTimeout(deleteErrorTimerRef.current)
+        deleteErrorTimerRef.current = setTimeout(() => setDeleteError(null), 4000)
+        setPathToConfirmDelete(null)
+        return
+      }
+      // ENOENT — treat as success
+    }
+
+    // Step 3: Navigate away if needed (setTabPath snapshots current settings — MUST run before deleteTab)
+    if (neighbor !== null) {
+      setTabPath(neighbor)
+    }
+
+    // Step 4: Clean up store
+    deleteTab(path)
+
+    // Step 5: Remove from settings file
+    if (baseDirectory) {
+      await fileService.deleteTabSetting(path, baseDirectory)
+    }
+
+    // Step 6: Refresh tree
+    setNeedsUpdate(true)
+
+    // Step 7: Close modal
+    setPathToConfirmDelete(null)
+  }
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (deleteErrorTimerRef.current) clearTimeout(deleteErrorTimerRef.current)
+    }
+  }, [])
 
   const createPlaylistModal = isCreatingPlaylist && createPortal(
     <div
@@ -166,6 +274,40 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
     document.body
   )
 
+  const deleteConfirmModal = pathToConfirmDelete !== null && createPortal(
+    <div
+      className={styles.overlay}
+      onClick={(e) => { if (e.target === e.currentTarget) handleCancelDelete() }}
+    >
+      <div className={styles.modal}>
+        <div className={styles.modalHeader}>
+          <span className={styles.modalTitle}>Delete tab</span>
+        </div>
+        <div className={styles.modalBody}>
+          <p className={styles.modalText}>
+            <strong>{getSongDisplayName(pathToConfirmDelete)}</strong> will be permanently deleted from disk.
+          </p>
+          <span className={styles.modalHint}>This action cannot be undone.</span>
+        </div>
+        <div className={styles.modalActions}>
+          <button className={styles.btnCancel} onClick={handleCancelDelete}>Cancel</button>
+          <button
+            className={styles.btnDanger}
+            onClick={handleConfirmDelete}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleConfirmDelete() }
+              if (e.key === 'Escape') handleCancelDelete()
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+
   return (
     <>
       <ul className={styles.container} data-collapsed={!isMenuExtended} {...props}>
@@ -196,6 +338,7 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
                 tree={tree}
                 onAddToPlaylist={activePlaylist ? (path) => addTabToPlaylist(activePlaylist.id, path) : undefined}
                 activePlaylistPaths={activePlaylist?.paths}
+                onDeleteTab={(path) => setPathToConfirmDelete(path)}
               />
             </div>
           </>
@@ -209,6 +352,11 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
       </ul>
       {createPlaylistModal}
       {downloadModal}
+      {deleteConfirmModal}
+      {deleteError !== null && createPortal(
+        <div className={styles.toastError}>{deleteError}</div>,
+        document.body
+      )}
     </>
   )
 }
