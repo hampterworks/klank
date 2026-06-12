@@ -35,12 +35,26 @@ export type FileEntry = {
 
 /**
  * The three user-adjustable settings saved per tab file.
- * Stored in `tab-settings.json` in the app's local data directory.
+ * Stored in `.klank-settings.json` in the active tab directory.
  */
 export type PerTabSettings = {
   fontSize: number
   transpose: number
   scrollSpeed: number
+}
+
+/**
+ * A named, ordered collection of tab files.
+ * Persisted under the reserved `"playlists"` key in `.klank-settings.json`;
+ * paths are stored relative to the base directory in the file, but the
+ * `FileService` API exposes them as absolute paths.
+ */
+export type Playlist = {
+  id: string
+  name: string
+  /** Ordered list of full file-system paths to .tab.txt files. */
+  paths: string[]
+  createdAt: number
 }
 
 /**
@@ -95,6 +109,20 @@ export type FileService = {
    * Silently succeeds when the file or the entry does not exist.
    */
   deleteTabSetting: (tabPath: string, baseDirectory: string) => Promise<void>
+  /**
+   * Reads the playlists stored under the reserved `"playlists"` key in
+   * `.klank-settings.json` in `baseDirectory`. Playlist paths are returned
+   * as absolute paths. Returns an empty array when the file or the key
+   * does not exist.
+   */
+  readPlaylists: (baseDirectory: string) => Promise<Playlist[]>
+  /**
+   * Persists all playlists under the reserved `"playlists"` key in
+   * `.klank-settings.json` in `baseDirectory`, leaving per-tab entries
+   * untouched. Playlist paths are stored relative to `baseDirectory`
+   * (forward-slash separated, portable).
+   */
+  writePlaylists: (playlists: Playlist[], baseDirectory: string) => Promise<void>
 }
 
 /**
@@ -131,6 +159,9 @@ export const mapTreeStructure = (
 
 const SETTINGS_FILE = '.klank-settings.json'
 const LEGACY_RC_FILE = '.klankrc.json'
+// Reserved top-level key in .klank-settings.json. Cannot collide with tab
+// entries because tab keys always end in `.tab.txt`.
+const PLAYLISTS_KEY = 'playlists'
 
 type LegacyKlankEntry = {
   fontSize: number
@@ -317,9 +348,12 @@ const createTauriFileService = async (): Promise<FileService> => {
 
         const content = await readTextFile(settingsPath)
         const raw = JSON.parse(content) as Record<string, PerTabSettings>
-        // Convert relative keys back to absolute paths
+        // Convert relative keys back to absolute paths, skipping the reserved
+        // playlists key (read via readPlaylists instead)
         return Object.fromEntries(
-          Object.entries(raw).map(([rel, val]) => [toAbsPath(rel, baseDirectory), val])
+          Object.entries(raw)
+            .filter(([rel]) => rel !== PLAYLISTS_KEY)
+            .map(([rel, val]) => [toAbsPath(rel, baseDirectory), val])
         )
       } catch {
         return {}
@@ -350,6 +384,46 @@ const createTauriFileService = async (): Promise<FileService> => {
 
     async deleteTabFile(path) {
       await remove(path)
+    },
+
+    async readPlaylists(baseDirectory) {
+      try {
+        const settingsPath = await join(baseDirectory, SETTINGS_FILE)
+        const content = await readTextFile(settingsPath)
+        const raw = JSON.parse(content) as Record<string, unknown>
+        const stored = raw[PLAYLISTS_KEY]
+        if (!Array.isArray(stored)) return []
+        return (stored as Playlist[]).map((playlist) => ({
+          ...playlist,
+          paths: playlist.paths.map((rel) => toAbsPath(rel, baseDirectory)),
+        }))
+      } catch {
+        return []
+      }
+    },
+
+    async writePlaylists(playlists, baseDirectory) {
+      try {
+        const settingsPath = await join(baseDirectory, SETTINGS_FILE)
+        // Read current file, replace the playlists key, sort keys, write back
+        let current: Record<string, unknown> = {}
+        try {
+          const content = await readTextFile(settingsPath)
+          current = JSON.parse(content) as Record<string, unknown>
+        } catch { /* file doesn't exist yet */ }
+
+        current[PLAYLISTS_KEY] = playlists.map((playlist) => ({
+          ...playlist,
+          paths: playlist.paths.map((abs) => toRelativeKey(abs, baseDirectory)),
+        }))
+
+        const sorted = Object.fromEntries(
+          Object.entries(current).sort(([a], [b]) => a.localeCompare(b))
+        )
+        await writeTextFile(settingsPath, JSON.stringify(sorted, null, 2))
+      } catch (error) {
+        console.error('Failed to write playlists:', error)
+      }
     },
 
     async deleteTabSetting(tabPath, baseDirectory) {

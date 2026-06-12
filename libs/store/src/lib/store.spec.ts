@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import fc from 'fast-check'
 
 // Stub localStorage before store import — persist middleware reads it on init.
@@ -13,6 +13,7 @@ vi.stubGlobal('localStorage', {
   key: vi.fn(() => null),
 })
 
+import type { FileService } from '@klank/platform-api'
 import { useKlankStore, type Playlist } from './store.js'
 
 const makePlaylist = (overrides: Partial<Playlist> = {}): Playlist => ({
@@ -370,5 +371,140 @@ describe('deleteTab', () => {
     useKlankStore.getState().deleteTab(oldPath)
 
     expect(useKlankStore.getState().tabSettingByPath).not.toHaveProperty(oldPath)
+  })
+})
+
+// ── Playlists persisted to .klank-settings.json ────────────────────────────────
+
+describe('playlist write-through to the settings file', () => {
+  const baseDirectory = '/tabs'
+  let writePlaylists: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    writePlaylists = vi.fn()
+    resetPlaylists()
+    useKlankStore.setState({
+      baseDirectory,
+      fileService: { writePlaylists } as unknown as FileService,
+    })
+  })
+
+  afterEach(() => {
+    useKlankStore.setState({ baseDirectory: undefined, fileService: undefined })
+  })
+
+  it('createPlaylist writes the updated playlist list and base directory', () => {
+    useKlankStore.getState().createPlaylist('Practice')
+
+    expect(writePlaylists).toHaveBeenCalledTimes(1)
+    const [playlists, dir] = writePlaylists.mock.calls[0] as [Playlist[], string]
+    expect(dir).toBe(baseDirectory)
+    expect(playlists).toEqual(useKlankStore.getState().playlists)
+  })
+
+  it('deletePlaylist, renamePlaylist and reorderPlaylist write through', () => {
+    const playlist = makePlaylist({ paths: ['/tabs/A.tab.txt', '/tabs/B.tab.txt'] })
+    resetPlaylists([playlist])
+
+    useKlankStore.getState().renamePlaylist(playlist.id, 'Renamed')
+    useKlankStore.getState().reorderPlaylist(playlist.id, ['/tabs/B.tab.txt', '/tabs/A.tab.txt'])
+    useKlankStore.getState().deletePlaylist(playlist.id)
+
+    expect(writePlaylists).toHaveBeenCalledTimes(3)
+    const [finalPlaylists] = writePlaylists.mock.calls[2] as [Playlist[]]
+    expect(finalPlaylists).toEqual([])
+  })
+
+  it('addTabToPlaylist and removeTabFromPlaylist write through', () => {
+    const playlist = makePlaylist()
+    resetPlaylists([playlist])
+
+    useKlankStore.getState().addTabToPlaylist(playlist.id, '/tabs/A.tab.txt')
+    useKlankStore.getState().removeTabFromPlaylist(playlist.id, '/tabs/A.tab.txt')
+
+    expect(writePlaylists).toHaveBeenCalledTimes(2)
+    const [afterAdd] = writePlaylists.mock.calls[0] as [Playlist[]]
+    expect(afterAdd[0].paths).toEqual(['/tabs/A.tab.txt'])
+    const [afterRemove] = writePlaylists.mock.calls[1] as [Playlist[]]
+    expect(afterRemove[0].paths).toEqual([])
+  })
+
+  it('deleteTab writes through only when a playlist contained the path', () => {
+    const inPlaylist = '/tabs/Artist - In.tab.txt'
+    const notInPlaylist = '/tabs/Artist - Out.tab.txt'
+    resetPlaylists([makePlaylist({ paths: [inPlaylist] })])
+
+    useKlankStore.getState().deleteTab(notInPlaylist)
+    expect(writePlaylists).not.toHaveBeenCalled()
+
+    useKlankStore.getState().deleteTab(inPlaylist)
+    expect(writePlaylists).toHaveBeenCalledTimes(1)
+    const [playlists] = writePlaylists.mock.calls[0] as [Playlist[]]
+    expect(playlists[0].paths).toEqual([])
+  })
+
+  it('does not write when no base directory is set', () => {
+    useKlankStore.setState({ baseDirectory: undefined })
+
+    useKlankStore.getState().createPlaylist('Practice')
+
+    expect(writePlaylists).not.toHaveBeenCalled()
+  })
+
+  it('setPlaylists hydration does not write back to the settings file', () => {
+    useKlankStore.getState().setPlaylists([makePlaylist()])
+
+    expect(writePlaylists).not.toHaveBeenCalled()
+  })
+})
+
+describe('setPlaylists hydration', () => {
+  beforeEach(() => resetPlaylists())
+
+  it('replaces all playlists', () => {
+    resetPlaylists([makePlaylist({ name: 'Stale' })])
+    const fromFile = [makePlaylist({ name: 'FromFile' })]
+
+    useKlankStore.getState().setPlaylists(fromFile)
+
+    expect(useKlankStore.getState().playlists).toEqual(fromFile)
+  })
+
+  it('keeps the active selection when the active playlist still exists', () => {
+    const playlist = makePlaylist({ paths: ['/tabs/A.tab.txt', '/tabs/B.tab.txt'] })
+    useKlankStore.setState({ playlists: [], activePlaylistId: playlist.id, activePlaylistIndex: 1 })
+
+    useKlankStore.getState().setPlaylists([playlist])
+
+    expect(useKlankStore.getState().activePlaylistId).toBe(playlist.id)
+    expect(useKlankStore.getState().activePlaylistIndex).toBe(1)
+  })
+
+  it('clears the active selection when the active playlist is not in the loaded data', () => {
+    useKlankStore.setState({ playlists: [], activePlaylistId: 'gone', activePlaylistIndex: 0 })
+
+    useKlankStore.getState().setPlaylists([makePlaylist()])
+
+    expect(useKlankStore.getState().activePlaylistId).toBeNull()
+    expect(useKlankStore.getState().activePlaylistIndex).toBeNull()
+  })
+
+  it('clamps activePlaylistIndex when the loaded playlist is shorter', () => {
+    const playlist = makePlaylist({ paths: ['/tabs/A.tab.txt'] })
+    useKlankStore.setState({ playlists: [], activePlaylistId: playlist.id, activePlaylistIndex: 5 })
+
+    useKlankStore.getState().setPlaylists([playlist])
+
+    expect(useKlankStore.getState().activePlaylistIndex).toBe(0)
+  })
+
+  it('nulls activePlaylistIndex when the loaded active playlist is empty', () => {
+    const playlist = makePlaylist({ paths: [] })
+    useKlankStore.setState({ playlists: [], activePlaylistId: playlist.id, activePlaylistIndex: 2 })
+
+    useKlankStore.getState().setPlaylists([playlist])
+
+    expect(useKlankStore.getState().activePlaylistId).toBe(playlist.id)
+    expect(useKlankStore.getState().activePlaylistIndex).toBeNull()
   })
 })
