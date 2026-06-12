@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-  CHORD_INTERVALS,
+  OPTIONAL_INTERVALS,
   expectedChordKeys,
   findDuplicateVariants,
   getInvalidNotes,
@@ -38,7 +38,7 @@ describe.each(INSTRUMENTS)('%s chord data', (instrument) => {
   const map = loadMap(instrument)
 
   it('defines exactly the expected chord keys, in order', () => {
-    expect(Object.keys(map)).toEqual(expectedChordKeys())
+    expect(Object.keys(map)).toEqual(expectedChordKeys(instrument))
   })
 
   it('has 1 to 4 variants per key with no duplicates', () => {
@@ -65,11 +65,11 @@ describe.each(INSTRUMENTS)('%s chord data', (instrument) => {
     expect(failures, failures.join('\n')).toHaveLength(0)
   })
 
-  it('every triad variant is complete — all chord tones present', () => {
+  it('every variant of a no-omission quality is complete — all chord tones present', () => {
     const failures: string[] = []
     for (const [key, variants] of Object.entries(map)) {
       const parsed = parseChordKey(key)
-      if (!parsed || CHORD_INTERVALS[parsed.quality].length === 4) continue
+      if (!parsed || (OPTIONAL_INTERVALS[parsed.quality] ?? []).length > 0) continue
       for (const [i, variant] of variants.entries()) {
         const sounded = getVariantNotes(variant, DATA[instrument].tuning)
         const missing = [...getRequiredPitches(parsed)].filter((p) => !sounded.has(p))

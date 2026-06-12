@@ -1,3 +1,4 @@
+import fc from 'fast-check'
 import {
   isTablatureLine,
   testHeader,
@@ -6,6 +7,7 @@ import {
   transposeChord,
   testTokenContext,
 } from './chords.js'
+import { formatChordSymbol, parseChordSymbol } from './chord-symbol.js'
 
 describe('isTablatureLine', () => {
   it('returns true for a standard E string tablature line', () => {
@@ -188,6 +190,32 @@ describe('transposeChord', () => {
 
   it('transposes A down by 1 semitone to G#', () => {
     expect(transposeChord('A', -1)).toBe('G#')
+  })
+
+  it('returns non-chord input unchanged for any transpose amount', () => {
+    fc.assert(
+      fc.property(fc.string({ maxLength: 10 }), fc.integer({ min: -24, max: 24 }), (s, n) => {
+        fc.pre(parseChordSymbol(s) === null)
+        expect(transposeChord(s, n)).toBe(s)
+      }),
+    )
+  })
+
+  it('composes additively on canonical chord strings', () => {
+    const canonicalChordArb = fc
+      .tuple(
+        fc.integer({ min: 0, max: 11 }),
+        fc.constantFrom('', 'm', '7', 'm7', 'maj7', 'sus4', 'dim', 'aug', '5', 'm7b5', '6/9'),
+        fc.option(fc.integer({ min: 0, max: 11 })),
+      )
+      .map(([rootPitch, suffix, bassPitch]) =>
+        formatChordSymbol(bassPitch === null ? { rootPitch, suffix } : { rootPitch, suffix, bassPitch }),
+      )
+    fc.assert(
+      fc.property(canonicalChordArb, fc.integer({ min: -24, max: 24 }), fc.integer({ min: -24, max: 24 }), (chord, a, b) => {
+        expect(transposeChord(transposeChord(chord, a), b)).toBe(transposeChord(chord, a + b))
+      }),
+    )
   })
 })
 

@@ -1,81 +1,71 @@
 import React, { useEffect, useRef } from 'react'
 import styles from './sheet.module.css'
 import {
-  delimiterMatcher,
-  isTablatureLine,
-  testChords,
-  testHeader,
-  testSpaces,
-  testTokenContext,
-  transposeChord,
+  classifySheetLine,
   type Instrument,
 } from '@klank/platform-api'
 import { ChordDiagramTooltip } from '../chordDiagramTooltip/ChordDiagramTooltip.js'
 
-const lineMatcher = (
+const renderLine = (
   line: string,
   index: number,
   transpose: number,
   isScrolling: boolean,
   instrument?: Instrument
 ): React.ReactNode => {
-  if (!line.trim()) {
-    return <div key={index} className={styles.blankLine}>&nbsp;</div>
-  }
+  const classified = classifySheetLine(line, transpose)
 
-  const tokens = line.split(delimiterMatcher).filter((token) => token !== '')
-  const sanitizedTokens = tokens.filter((token) => !testSpaces(token))
+  switch (classified.kind) {
+    case 'blank':
+      return <div key={index} className={styles.blankLine}>&nbsp;</div>
 
-  const isTablature = isTablatureLine(line)
+    case 'header':
+      return <div key={index} className={styles.header}>{classified.text}</div>
 
-  const hasValidChords = tokens.some(
-    (token) => testChords(token.replace('|', '')) || token === 'e'
-  )
-  const isMixedContent = hasValidChords && testTokenContext(sanitizedTokens)
+    case 'plain':
+      return <div key={index}>{classified.text}</div>
 
-  if (hasValidChords && !isMixedContent) {
-    const processedChords = line
-      .split(delimiterMatcher)
-      .map((currentValue, i) => {
-        if (testChords(currentValue) || currentValue === 'e') {
-          const chordToTranspose = currentValue === 'e' ? 'E' : currentValue
-          const isStringIndicator = isTablature && i === 0
-          const displayChord = isStringIndicator
-            ? currentValue
-            : transposeChord(chordToTranspose, transpose)
-          const span = (
-            <span className={styles.chord} key={`${index}-${i}`}>
-              {displayChord}
-            </span>
-          )
-          if (instrument && !isStringIndicator) {
-            return (
-              <ChordDiagramTooltip
-                key={`${index}-${i}`}
-                chordName={displayChord}
-                instrument={instrument}
-                isScrolling={isScrolling}
-              >
-                {span}
-              </ChordDiagramTooltip>
+    case 'chord-line':
+      return (
+        <div key={index} className={styles.chordLine}>
+          {classified.tokens.map((token, i) => {
+            if (token.kind === 'text') {
+              return (
+                <React.Fragment key={`${index}-${i}`}>
+                  {token.raw}
+                </React.Fragment>
+              )
+            }
+            if (token.kind === 'string-indicator') {
+              return (
+                <span className={styles.chord} key={`${index}-${i}`}>
+                  {token.raw}
+                </span>
+              )
+            }
+            // token.kind === 'chord'
+            const span = (
+              <span className={styles.chord} key={`${index}-${i}`}>
+                {token.display}
+              </span>
             )
-          }
-          return span
-        }
-        return (
-          <React.Fragment key={`${index}-${i}`}>
-            {currentValue}
-          </React.Fragment>
-        )
-      })
-    return <div key={index} className={styles.chordLine}>{processedChords}</div>
+            if (instrument) {
+              return (
+                <ChordDiagramTooltip
+                  key={`${index}-${i}`}
+                  chordName={token.display}
+                  instrument={instrument}
+                  isScrolling={isScrolling}
+                >
+                  {span}
+                </ChordDiagramTooltip>
+              )
+            }
+            return span
+          })}
+        </div>
+      )
   }
-
-  if (testHeader(line)) {
-    return <div key={index} className={styles.header}>{line}</div>
-  }
-
-  return <div key={index}>{line}</div>
 }
 
 type SheetProps = {
@@ -207,7 +197,7 @@ export const Sheet: React.FC<SheetProps> = ({
   return (
     <pre ref={containerRef} className={styles.container} {...props}>
       <div ref={contentRef} className={styles.content}>
-        {lines.map((line, index) => lineMatcher(line, index, transpose, isScrolling, instrument))}
+        {lines.map((line, index) => renderLine(line, index, transpose, isScrolling, instrument))}
         <div ref={sentinelRef}>&nbsp;</div>
       </div>
     </pre>

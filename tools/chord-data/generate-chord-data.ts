@@ -31,7 +31,7 @@ const VARIANT_COUNT: Record<Instrument, { plain: number; slash: number }> = {
 
 function buildMap(instrument: Instrument): ChordDiagramMap {
   const map: ChordDiagramMap = {}
-  for (const key of expectedChordKeys()) {
+  for (const key of expectedChordKeys(instrument)) {
     const counts = VARIANT_COUNT[instrument]
     const count = key.includes('/') ? counts.slash : counts.plain
 
