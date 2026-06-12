@@ -26,6 +26,7 @@ export function App() {
   const fileService = useKlankStore().fileService
   const setFileService = useKlankStore().setFileService
   const setTabSettings = useKlankStore().setTabSettings
+  const setPlaylists = useKlankStore().setPlaylists
   const [tree, setTree] = useState<FileEntry[]>()
   const [needsUpdate, setNeedsUpdate] = useState(false)
   const containerRef = useRef<HTMLElement>(null)
@@ -49,9 +50,12 @@ export function App() {
           return // re-triggers effect once baseDirectory is in state
         }
 
-        // Load per-tab settings from the tab directory, then load the tree
+        // Load per-tab settings and playlists from the tab directory, then load the tree
         const savedSettings = await fileService.readTabSettings(dir)
         setTabSettings(savedSettings)
+
+        const savedPlaylists = await fileService.readPlaylists(dir)
+        setPlaylists(savedPlaylists)
 
         const data = await fileService.readDirectoryRecursively(
           dir,
@@ -65,7 +69,7 @@ export function App() {
     }
 
     initializeApp()
-  }, [baseDirectory, serverMode, setBaseDirectory, setFileService, setTabSettings])
+  }, [baseDirectory, serverMode, setBaseDirectory, setFileService, setTabSettings, setPlaylists])
 
   useEffect(() => {
     const container = containerRef.current
