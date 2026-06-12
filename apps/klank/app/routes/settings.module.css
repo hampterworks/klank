@@ -168,11 +168,11 @@
 }
 
 .statusLine.success {
-  border-color: #4caf50;
+  border-color: var(--klank-color-success);
 }
 
 .statusLine.error {
-  border-color: #f44336;
+  border-color: var(--klank-color-fail);
 }
 
 .infoMessage {

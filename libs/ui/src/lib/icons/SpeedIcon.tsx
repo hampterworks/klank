@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 export const SpeedIcon: React.FC<React.ComponentPropsWithoutRef<'svg'>> = () => (
-  <svg id="svg822" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 15.96">
+  <svg id="svg822" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 15.96" fill="currentColor">
     <title>speed</title>
     <g id="layer1">
       <path id="path4625" d="M14.7,5.57a12,12,0,0,0-12,12,12.23,12.23,0,0,0,.69,4,10.59,10.59,0,0,1-.29-2.45,10.75,10.75,0,0,1,16.73-8.92L22,8A12.07,12.07,0,0,0,14.7,5.57Zm9.15,3.61a1.12,1.12,0,0,0-.72.28l-9.19,7.78a1.72,1.72,0,0,0,0,2.82,1.72,1.72,0,0,0,2.82,0l7.79-9.19a1,1,0,0,0,0-1.41.93.93,0,0,0-.7-.28Zm1.85,3.6-2,2a10.86,10.86,0,0,1,.91,4.2h2a11.32,11.32,0,0,0,.1-1.43A12,12,0,0,0,25.7,12.78Z" transform="translate(-2.7 -5.57)"/>

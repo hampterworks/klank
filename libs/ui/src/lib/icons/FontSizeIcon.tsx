@@ -1,7 +1,7 @@
 import * as React from "react";
 
 export const FontSizeIcon: React.FC<React.ComponentPropsWithoutRef<'svg'>> = () =>
-  <svg width="20px" height="20px" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+  <svg width="20px" height="20px" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
     <title>text-size-solid</title>
     <g id="Layer_2" data-name="Layer 2">
       <g id="invisible_box" data-name="invisible box">

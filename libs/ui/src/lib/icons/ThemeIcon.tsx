@@ -4,7 +4,7 @@ export const ThemeIcon: React.FC<
   React.ComponentPropsWithoutRef<'svg'>
 > = () => (
   <svg
-    fill="#000000"
+    fill="currentColor"
     height="24px"
     width="24px"
     version="1.1"

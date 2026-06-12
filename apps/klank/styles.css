@@ -109,4 +109,6 @@ body {
   width: 100%;
   font-family: 'Roboto Mono', monospace;
   font-size: 1rem;
+  color: var(--klank-color-text);
+  background: var(--klank-color-background);
 }
