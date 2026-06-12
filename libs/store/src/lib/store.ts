@@ -1,23 +1,15 @@
 import {create} from 'zustand'
 import {devtools, persist} from 'zustand/middleware'
 import type {} from '@redux-devtools/extension'
-import { FileService, PerTabSettings, type Instrument } from '@klank/platform-api'
+import { FileService, PerTabSettings, type Instrument, type Playlist } from '@klank/platform-api'
 
-export type { Instrument }
+export type { Instrument, Playlist }
 
 export type Mode = "Read" | "Edit"
 export type Theme = "Light" | "Dark"
 export type Ui = {
   isMenuExtended: boolean
   menuWidth: number
-}
-
-export type Playlist = {
-  id: string
-  name: string
-  /** Ordered list of full file-system paths to .tab.txt files. */
-  paths: string[]
-  createdAt: number
 }
 
 /**
@@ -73,12 +65,18 @@ type KlankState = {
   /** @persisted Instrument used for chord diagram tooltips. */
   instrument: Instrument
   setInstrument: (instrument: Instrument) => void
-  /** Named playlists — persisted to localStorage. */
+  /** Named playlists — persisted to `.klank-settings.json` in the tab directory. */
   playlists: Playlist[]
-  /** ID of the currently active playlist, or null when none is active. Persisted. */
+  /** ID of the currently active playlist, or null when none is active. Persisted to localStorage. */
   activePlaylistId: string | null
-  /** Index of the currently playing song within the active playlist. Persisted. */
+  /** Index of the currently playing song within the active playlist. Persisted to localStorage. */
   activePlaylistIndex: number | null
+  /**
+   * Replaces all playlists — used to hydrate from `.klank-settings.json` at
+   * startup. Clears or clamps the active selection when it no longer matches
+   * the loaded playlists. Does not write back to the settings file.
+   */
+  setPlaylists: (playlists: Playlist[]) => void
   createPlaylist: (name: string) => void
   deletePlaylist: (id: string) => void
   renamePlaylist: (id: string, name: string) => void
@@ -100,6 +98,20 @@ type KlankState = {
 /** All valid scroll speed levels (0–9, displayed as 1–10). */
 export const SCROLL_SPEEDS = [...new Array(10).keys()] as const
 export type ScrollSpeeds = typeof SCROLL_SPEEDS[number]
+
+/** The slice of KlankState saved to localStorage — must match what `partialize` returns. */
+type PersistedKlankState = Pick<
+  KlankState,
+  'tab' | 'theme' | 'ui' | 'baseDirectory' | 'activePlaylistId' | 'activePlaylistIndex'
+>
+
+/** Fire-and-forget write of all playlists to `.klank-settings.json`. No-op until a directory and FileService are set. */
+const persistPlaylists = (
+  state: Pick<KlankState, 'fileService' | 'baseDirectory'>,
+  playlists: Playlist[],
+) => {
+  if (state.baseDirectory) state.fileService?.writePlaylists(playlists, state.baseDirectory)
+}
 
 const clampFontSize = (size: number) => {
   if (size < 0) {
@@ -216,31 +228,53 @@ export const useKlankStore = create<KlankState>()(
         setTabDetails: (details) => set((state) => ({...state,tab: {...state.tab, details}})),
         setTabLink: (link) => set( state => ({...state, tab: {...state.tab, link}})),
         setServerMode: (serverMode) => set((state) => ({...state, serverMode})),
-        createPlaylist: (name) => set((state) => ({
-          ...state,
-          playlists: [
+        setPlaylists: (playlists) => set((state) => {
+          const active = playlists.find((p) => p.id === state.activePlaylistId)
+          let activePlaylistIndex = active ? state.activePlaylistIndex : null
+          if (active && activePlaylistIndex !== null) {
+            activePlaylistIndex = active.paths.length === 0
+              ? null
+              : Math.min(activePlaylistIndex, active.paths.length - 1)
+          }
+          return {
+            ...state,
+            playlists,
+            activePlaylistId: active ? state.activePlaylistId : null,
+            activePlaylistIndex,
+          }
+        }),
+        createPlaylist: (name) => set((state) => {
+          const playlists = [
             ...state.playlists,
             { id: crypto.randomUUID(), name, paths: [], createdAt: Date.now() },
-          ],
-        })),
-        deletePlaylist: (id) => set((state) => ({
-          ...state,
-          playlists: state.playlists.filter((p) => p.id !== id),
-          activePlaylistId: state.activePlaylistId === id ? null : state.activePlaylistId,
-          activePlaylistIndex: state.activePlaylistId === id ? null : state.activePlaylistIndex,
-        })),
-        renamePlaylist: (id, name) => set((state) => ({
-          ...state,
-          playlists: state.playlists.map((p) => p.id === id ? { ...p, name } : p),
-        })),
-        addTabToPlaylist: (id, path) => set((state) => ({
-          ...state,
-          playlists: state.playlists.map((p) =>
+          ]
+          persistPlaylists(state, playlists)
+          return { ...state, playlists }
+        }),
+        deletePlaylist: (id) => set((state) => {
+          const playlists = state.playlists.filter((p) => p.id !== id)
+          persistPlaylists(state, playlists)
+          return {
+            ...state,
+            playlists,
+            activePlaylistId: state.activePlaylistId === id ? null : state.activePlaylistId,
+            activePlaylistIndex: state.activePlaylistId === id ? null : state.activePlaylistIndex,
+          }
+        }),
+        renamePlaylist: (id, name) => set((state) => {
+          const playlists = state.playlists.map((p) => p.id === id ? { ...p, name } : p)
+          persistPlaylists(state, playlists)
+          return { ...state, playlists }
+        }),
+        addTabToPlaylist: (id, path) => set((state) => {
+          const playlists = state.playlists.map((p) =>
             p.id === id && !p.paths.includes(path)
               ? { ...p, paths: [...p.paths, path] }
               : p
-          ),
-        })),
+          )
+          persistPlaylists(state, playlists)
+          return { ...state, playlists }
+        }),
         removeTabFromPlaylist: (id, path) => set((state) => {
           const playlist = state.playlists.find((p) => p.id === id)
           const newPaths = playlist?.paths.filter((p) => p !== path) ?? []
@@ -250,16 +284,19 @@ export const useKlankStore = create<KlankState>()(
             if (removedIndex < newIndex) newIndex = newIndex - 1
             if (newIndex >= newPaths.length) newIndex = Math.max(0, newPaths.length - 1)
           }
+          const playlists = state.playlists.map((p) => p.id === id ? { ...p, paths: newPaths } : p)
+          persistPlaylists(state, playlists)
           return {
             ...state,
-            playlists: state.playlists.map((p) => p.id === id ? { ...p, paths: newPaths } : p),
+            playlists,
             activePlaylistIndex: newIndex,
           }
         }),
-        reorderPlaylist: (id, paths) => set((state) => ({
-          ...state,
-          playlists: state.playlists.map((p) => p.id === id ? { ...p, paths } : p),
-        })),
+        reorderPlaylist: (id, paths) => set((state) => {
+          const playlists = state.playlists.map((p) => p.id === id ? { ...p, paths } : p)
+          persistPlaylists(state, playlists)
+          return { ...state, playlists }
+        }),
         setActivePlaylist: (id) => set((state) => {
           if (id === null) return { ...state, activePlaylistId: null, activePlaylistIndex: null }
           const playlist = state.playlists.find((p) => p.id === id)
@@ -329,6 +366,7 @@ export const useKlankStore = create<KlankState>()(
             ? { ...state.tab, path: "", isScrolling: false }
             : state.tab
 
+          const playlistsChanged = state.playlists.some((p) => p.paths.includes(path))
           let activePlaylistIndex = state.activePlaylistIndex
           const playlists = state.playlists.map((p) => {
             const removedIndex = p.paths.indexOf(path)
@@ -344,18 +382,25 @@ export const useKlankStore = create<KlankState>()(
             }
             return { ...p, paths: newPaths }
           })
+          if (playlistsChanged) persistPlaylists(state, playlists)
 
           return { ...state, tab, tabSettingByPath, playlists, activePlaylistIndex }
         }),
       }),
       {
         name: 'klank-storage',
+        version: 1,
+        // v0 persisted playlists in localStorage; they now live in
+        // .klank-settings.json, so stale localStorage copies are dropped.
+        migrate: (persistedState) => {
+          const { playlists: _dropped, ...rest } = (persistedState ?? {}) as Record<string, unknown>
+          return rest as unknown as PersistedKlankState
+        },
         partialize: (state) => ({
           tab: { ...state.tab, isScrolling: false },
           theme: state.theme,
           ui: state.ui,
           baseDirectory: state.baseDirectory,
-          playlists: state.playlists,
           activePlaylistId: state.activePlaylistId,
           activePlaylistIndex: state.activePlaylistIndex,
         }),
