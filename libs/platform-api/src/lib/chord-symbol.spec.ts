@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
 import {
+  canonicalSuffix,
   formatChordSymbol,
   isChordSymbol,
   parseChordSymbol,
@@ -9,7 +10,7 @@ import {
   transposeChordSymbol,
   type ParsedChordSymbol,
 } from './chord-symbol.js'
-import { expectedChordKeys, parseChordKey, pitchName } from './chord-theory.js'
+import { CHORD_QUALITIES, expectedChordKeys, parseChordKey, pitchName } from './chord-theory.js'
 import { normalizeChordKey } from './chord-diagrams.js'
 
 // ── Legacy detection oracle ───────────────────────────────────────────────────
@@ -45,8 +46,9 @@ const ALLOWED_NUMBERS = new Set(['2', '4', '5', '6', '7', '9', '11', '13'])
 
 const stripRoot = (s: string) => s.replace(/^[A-G](?:##|bb|♭♭|#|b|♭)?/, '')
 
-/** New-only accepts must be one of the added forms. */
-const isApprovedAddition = (s: string) => /aug|6\/9|[#b♭]\d/.test(s)
+/** New-only accepts must be one of the added forms: aug, 6/9 (or 69),
+ *  altered tones, or the jazz symbols - + ° ø. */
+const isApprovedAddition = (s: string) => /aug|6\/9|69|[#b♭]\d|[-+°ø]/.test(s)
 
 /** Legacy-only accepts must be one of the dropped non-chord forms. */
 const isApprovedRemoval = (s: string) => {
@@ -60,9 +62,9 @@ const isApprovedRemoval = (s: string) => {
 
 const letterArb = fc.constantFrom('A', 'B', 'C', 'D', 'E', 'F', 'G')
 const accidentalArb = fc.constantFrom('', '#', '##', 'b', 'bb', '♭', '♭♭')
-const qualityArb = fc.constantFrom('', 'maj', 'min', 'm', 'M', 'dim', 'aug', 'sus', 'add')
+const qualityArb = fc.constantFrom('', 'maj', 'min', 'm', 'M', 'dim', 'aug', 'sus', 'add', '-', '+', '°', 'ø')
 const numberArb = fc.constantFrom('2', '4', '5', '6', '7', '9', '11', '13')
-const extensionArb = fc.constantFrom('', '2', '4', '5', '6', '6/9', '7', '9', '11', '13')
+const extensionArb = fc.constantFrom('', '2', '4', '5', '6', '69', '6/9', '7', '9', '11', '13')
 const tailArb = fc.oneof(
   fc.constant(''),
   fc
@@ -96,7 +98,7 @@ const parsedArb: fc.Arbitrary<ParsedChordSymbol> = fc
 /** Adversarial near-chord strings over a chord-flavoured alphabet. */
 const chordishStringArb = fc
   .array(
-    fc.constantFrom(...'ABCDEFGmajsudin#b♭/0123456789Mhe '.split('')),
+    fc.constantFrom(...'ABCDEFGmajsudin#b♭/0123456789Mhe-+°ø '.split('')),
     { maxLength: 10 },
   )
   .map((chars) => chars.join(''))
@@ -144,7 +146,9 @@ describe('parseChordSymbol grammar', () => {
     'Am', 'C#maj7', 'Dm7/G', 'Eb', 'B♭♭', 'Bsus4', 'Cadd9', 'Am7add9',
     'Cmaj13', 'C7sus4', 'Dmin7', 'CM7', 'Cmmaj7', 'C5', 'Cdim7',
     // forms the legacy grammar missed
-    'Caug', 'Am7b5', 'C6/9', 'E7#9', 'Fadd11', 'G7b9#5',
+    'Caug', 'Am7b5', 'C6/9', 'C69', 'E7#9', 'Fadd11', 'G7b9#5',
+    // jazz/lead-sheet symbol spellings
+    'C-', 'C-7', 'A-7/G', 'C+', 'C+5', 'C°', 'C°7', 'Cø', 'Cø7', 'C-7b5', 'C-maj7',
   ])('accepts %s', (chord) => {
     expect(parseChordSymbol(chord)).not.toBeNull()
   })
@@ -153,6 +157,8 @@ describe('parseChordSymbol grammar', () => {
     'hello', 'the', 'e', '', '/G', 'H7',
     // non-chords the legacy grammar accepted
     'Cmaj23', 'C8', 'C97', 'Cmin1', 'C7m7',
+    // malformed symbol spellings
+    'C--', 'C-+', 'C7-7', '+C', '-', 'ø',
   ])('rejects %s', (chord) => {
     expect(parseChordSymbol(chord)).toBeNull()
   })
@@ -284,15 +290,34 @@ describe('chord-symbol vs chord-theory on canonical keys', () => {
     )
   })
 
-  it('toTheoryChord bridges exactly the canonical qualities', () => {
+  it('normalizeChordKey resolves equivalent spellings to the diagram key', () => {
+    expect(normalizeChordKey('D-7')).toBe('Dm7')
+    expect(normalizeChordKey('Bb-')).toBe('A#m')
+    expect(normalizeChordKey('C+')).toBe('Caug')
+    expect(normalizeChordKey('Cø')).toBe('Cm7b5')
+    expect(normalizeChordKey('Eb°7')).toBe('D#dim7')
+    expect(normalizeChordKey('C6/9')).toBe('C69')
+    expect(normalizeChordKey('Dmin7/G')).toBe('Dm7/G')
+    expect(normalizeChordKey('CM7')).toBe('Cmaj7')
+  })
+
+  it('toTheoryChord bridges exactly the canonicalized qualities', () => {
     fc.assert(
       fc.property(knownKeyArb, (key) => {
         expect(toTheoryChord(parseChordSymbol(key)!)).toEqual(parseChordKey(key))
       }),
     )
-    // permissive-only suffixes do not bridge
-    expect(toTheoryChord(parseChordSymbol('Dmin7')!)).toBeNull()
-    expect(toTheoryChord(parseChordSymbol('Am7b5')!)).toBeNull()
+    // equivalent spellings bridge to the same theory chord
+    expect(toTheoryChord(parseChordSymbol('Dmin7')!)).toEqual(parseChordKey('Dm7'))
+    expect(toTheoryChord(parseChordSymbol('C-')!)).toEqual(parseChordKey('Cm'))
+    expect(toTheoryChord(parseChordSymbol('C+')!)).toEqual(parseChordKey('Caug'))
+    expect(toTheoryChord(parseChordSymbol('C°')!)).toEqual(parseChordKey('Cdim'))
+    expect(toTheoryChord(parseChordSymbol('Cø')!)).toEqual(parseChordKey('Cm7b5'))
+    expect(toTheoryChord(parseChordSymbol('C6/9')!)).toEqual(parseChordKey('C69'))
+    expect(toTheoryChord(parseChordSymbol('CM7')!)).toEqual(parseChordKey('Cmaj7'))
+    // suffixes naming no canonical quality do not bridge
+    expect(toTheoryChord(parseChordSymbol('C7sus4')!)).toBeNull()
+    expect(toTheoryChord(parseChordSymbol('Am7add9')!)).toBeNull()
   })
 
   it('formats every pitch class to its sharps-only name', () => {
@@ -301,5 +326,40 @@ describe('chord-symbol vs chord-theory on canonical keys', () => {
         expect(formatChordSymbol({ rootPitch: pitch, suffix: '' })).toBe(pitchName(pitch))
       }),
     )
+  })
+})
+
+// ── canonicalSuffix ───────────────────────────────────────────────────────────
+
+describe('canonicalSuffix', () => {
+  it('is idempotent on any string', () => {
+    fc.assert(
+      fc.property(fc.oneof(suffixArb, fc.string({ maxLength: 8 })), (suffix) => {
+        expect(canonicalSuffix(canonicalSuffix(suffix))).toBe(canonicalSuffix(suffix))
+      }),
+    )
+  })
+
+  it('is the identity on every canonical quality', () => {
+    for (const quality of CHORD_QUALITIES) {
+      expect(canonicalSuffix(quality), quality).toBe(quality)
+    }
+  })
+
+  it('rewrites equivalent spellings to the canonical quality', () => {
+    expect(canonicalSuffix('-')).toBe('m')
+    expect(canonicalSuffix('-7')).toBe('m7')
+    expect(canonicalSuffix('+')).toBe('aug')
+    expect(canonicalSuffix('°')).toBe('dim')
+    expect(canonicalSuffix('°7')).toBe('dim7')
+    expect(canonicalSuffix('ø')).toBe('m7b5')
+    expect(canonicalSuffix('ø7')).toBe('m7b5')
+    expect(canonicalSuffix('min')).toBe('m')
+    expect(canonicalSuffix('min7')).toBe('m7')
+    expect(canonicalSuffix('M')).toBe('')
+    expect(canonicalSuffix('maj')).toBe('')
+    expect(canonicalSuffix('M7')).toBe('maj7')
+    expect(canonicalSuffix('6/9')).toBe('69')
+    expect(canonicalSuffix('-7b5')).toBe('m7b5')
   })
 })

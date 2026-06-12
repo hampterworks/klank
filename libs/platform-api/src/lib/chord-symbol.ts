@@ -57,15 +57,16 @@ export const parseNotePrefix = (string: string): { pitch: number; rest: string }
 // Quality suffix grammar: quality? extension? (quality extension)? alteration{0,2}
 //
 // Accepts the conventional chord vocabulary — m, maj7, sus4, dim, aug, 5,
-// add9, 7sus4, m7add9, 6/9, and altered tones like m7b5 or 7#9 — while
-// rejecting non-chords such as Cmaj23 or C97. Extensions are limited to the
-// numbers that name real chord tones.
-const QUALITY = '(?:maj|min|m|M|dim|aug|sus|add)'
-// Bare m/M cannot stack onto an extension (C7m7 is not a chord); spelled-out
-// qualities can (Cmmaj7, C7sus4, m7add9).
+// add9, 7sus4, m7add9, 6/9, altered tones like m7b5 or 7#9, and the
+// jazz/lead-sheet symbols - (minor), + (augmented), ° (diminished) and
+// ø (half-diminished) — while rejecting non-chords such as Cmaj23 or C97.
+// Extensions are limited to the numbers that name real chord tones.
+const QUALITY = '(?:maj|min|m|M|dim|aug|sus|add|-|\\+|°|ø)'
+// Bare m/M and the single-symbol qualities cannot stack onto an extension
+// (C7m7 is not a chord); spelled-out qualities can (Cmmaj7, C7sus4, m7add9).
 const TAIL_QUALITY = '(?:maj|min|sus|dim|add)'
 const NUMBER = '(?:13|11|9|7|6|5|4|2)'
-const EXTENSION = '(?:13|11|9|7|6(?:\\/9)?|5|4|2)'
+const EXTENSION = '(?:13|11|9|7|69|6(?:\\/9)?|5|4|2)'
 const ALTERATION = `(?:[#b♭]${NUMBER})`
 const SUFFIX_MATCHER = new RegExp(`^${QUALITY}?${EXTENSION}?(?:${TAIL_QUALITY}${NUMBER})?${ALTERATION}{0,2}$`)
 
@@ -128,13 +129,33 @@ export const transposeChordSymbol = (parsed: ParsedChordSymbol, semitones: numbe
 export const isChordSymbol = (token: string): boolean => parseChordSymbol(token) !== null
 
 /**
+ * Rewrites equivalent quality spellings to the canonical form used by
+ * `CHORD_INTERVALS` and the chord-diagram JSON keys: `-` → `m`, `+` → `aug`,
+ * `°` → `dim`, `ø`/`ø7` → `m7b5`, `min` → `m`, `M`/`maj` → `maj`/`''`, and
+ * `6/9` → `69`. Spellings that are already canonical — or that name no
+ * canonical quality — pass through verbatim. Idempotent.
+ */
+export const canonicalSuffix = (suffix: string): string => {
+  if (suffix === 'ø' || suffix === 'ø7') return 'm7b5'
+  let result = suffix
+  if (result.startsWith('-')) result = 'm' + result.slice(1)
+  else if (result.startsWith('+')) result = 'aug' + result.slice(1)
+  else if (result.startsWith('°')) result = 'dim' + result.slice(1)
+  else if (result.startsWith('min')) result = 'm' + result.slice(3)
+  else if (result.startsWith('M') && !result.startsWith('Maj')) result = 'maj' + result.slice(1)
+  result = result.replace('6/9', '69')
+  return result === 'maj' ? '' : result
+}
+
+/**
  * Bridges the permissive symbol model to the strict theory model: succeeds
- * exactly when the suffix is one of the canonical qualities in
+ * exactly when the canonicalized suffix is one of the qualities in
  * `CHORD_INTERVALS` (the qualities the chord-diagram data is generated for).
  */
 export const toTheoryChord = (parsed: ParsedChordSymbol): ParsedChord | null => {
-  if (!(parsed.suffix in CHORD_INTERVALS)) return null
+  const quality = canonicalSuffix(parsed.suffix)
+  if (!(quality in CHORD_INTERVALS)) return null
   return parsed.bassPitch === undefined
-    ? { rootPitch: parsed.rootPitch, quality: parsed.suffix }
-    : { rootPitch: parsed.rootPitch, quality: parsed.suffix, bassPitch: parsed.bassPitch }
+    ? { rootPitch: parsed.rootPitch, quality }
+    : { rootPitch: parsed.rootPitch, quality, bassPitch: parsed.bassPitch }
 }

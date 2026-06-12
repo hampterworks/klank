@@ -29,9 +29,9 @@ import { createFileService, transposeChord, getSheetFromUG } from '@klank/platfo
 
 ## Chord Symbols
 
-All chord interpretation flows through one model: `parseChordSymbol()` resolves a symbol's root and slash-bass notes to pitch classes (C = 0, shared with `chord-theory.ts`) and validates the quality suffix against a permissive grammar (maj, min, dim, aug, sus, add, extensions like 7/9/11/13, altered tones like `m7b5` or `7#9`, and `6/9`). Output is always spelled in sharps: A, A#, B, C, C#, D, D#, E, F, F#, G, G#.
+All chord interpretation flows through one model: `parseChordSymbol()` resolves a symbol's root and slash-bass notes to pitch classes (C = 0, shared with `chord-theory.ts`) and validates the quality suffix against a permissive grammar (maj, min, dim, aug, sus, add, extensions like 7/9/11/13, altered tones like `m7b5` or `7#9`, `6/9`, and the jazz symbols `-` minor, `+` augmented, `°` diminished, `ø` half-diminished). Output is always spelled in sharps: A, A#, B, C, C#, D, D#, E, F, F#, G, G#.
 
-`transposeChord()` transposes a chord string by semitones, preserving the suffix verbatim and moving root and bass together; non-chord input is returned unchanged. `toTheoryChord()` bridges parsed symbols to the strict `chord-theory.ts` model when the suffix is one of the canonical diagram qualities.
+`transposeChord()` transposes a chord string by semitones, preserving the suffix verbatim and moving root and bass together; non-chord input is returned unchanged. `toTheoryChord()` bridges parsed symbols to the strict `chord-theory.ts` model, and `canonicalSuffix()` folds equivalent spellings (`D-7`, `Dmin7`, `DM7`, `Cø`) onto the canonical quality so chord-diagram lookups resolve regardless of spelling.
 
 ## UG Scraper
 

@@ -51,8 +51,11 @@ const legacyLineMatcher = (line: string): LegacyDecision => {
 
 // ── Arbitraries ───────────────────────────────────────────────────────────────
 
-const chordArb = fc.constantFrom('Am', 'C', 'G', 'Em', 'Dm7/G', 'Bb', 'C#maj7', 'Asus4', 'Caug', 'Am7b5', 'e')
-const wordArb = fc.constantFrom('the', 'quick', 'hello', 'la', 'darling', 'oo', 'Hm')
+const chordArb = fc.constantFrom(
+  'Am', 'C', 'G', 'Em', 'Dm7/G', 'Bb', 'C#maj7', 'Asus4', 'Caug', 'Am7b5', 'e',
+  'C-', 'C-7', 'A-7/G', 'C+', 'C°7', 'Cø', 'C6/9',
+)
+const wordArb = fc.constantFrom('the', 'quick', 'hello', 'la', 'darling', 'oo', 'Hm', 'A-flat', 're-do')
 const fragmentArb = fc.oneof(
   chordArb,
   wordArb,
@@ -100,9 +103,24 @@ describe('classifySheetLine', () => {
     )
   })
 
-  it('matches the legacy lineMatcher decision on every line', () => {
+  it('matches the legacy lineMatcher decision on every line without a dash-merged chord', () => {
+    // A dash merge can occur where a token is followed by a single `-` and the
+    // pieces join into a chord — the one approved tokenization change.
+    const dashMergePossible = (line: string): boolean => {
+      if (isTablatureLine(line)) return false
+      const tokens = line.split(delimiterMatcher).filter((token) => token !== '')
+      return tokens.some(
+        (token, i) =>
+          tokens[i + 1] === '-' &&
+          tokens[i + 2] !== '-' &&
+          (testChords(`${token}-`) ||
+            (tokens[i + 2] !== undefined && testChords(`${token}-${tokens[i + 2]}`))),
+      )
+    }
+
     fc.assert(
       fc.property(anyLineArb, transposeArb, (line, transpose) => {
+        fc.pre(!dashMergePossible(line))
         const classified = classifySheetLine(line, transpose)
         const legacy = legacyLineMatcher(line)
         expect(classified.kind).toBe(legacy.kind)
@@ -208,5 +226,47 @@ describe('classifySheetLine examples', () => {
   it('classifies headers after ruling out chord lines', () => {
     expect(classifySheetLine('[Verse]', 0)).toEqual({ kind: 'header', text: '[Verse]' })
     expect(classifySheetLine('[Chorus] Am G', 0).kind).toBe('chord-line')
+  })
+
+  it('re-joins dash-spelled minor chords that the delimiter split apart', () => {
+    expect(classifySheetLine('C- G-', 0)).toEqual({
+      kind: 'chord-line',
+      tokens: [
+        { kind: 'chord', raw: 'C-', display: 'C-' },
+        { kind: 'text', raw: ' ' },
+        { kind: 'chord', raw: 'G-', display: 'G-' },
+      ],
+    })
+    expect(classifySheetLine('C-7  F-7', 2)).toEqual({
+      kind: 'chord-line',
+      tokens: [
+        { kind: 'chord', raw: 'C-7', display: 'D-7' },
+        { kind: 'text', raw: '  ' },
+        { kind: 'chord', raw: 'F-7', display: 'G-7' },
+      ],
+    })
+  })
+
+  it('never merges tablature dashes or lyric hyphens', () => {
+    const tab = classifySheetLine('E|--0--2--', 0)
+    expect(tab.kind).toBe('chord-line')
+    expect(chordLineTokens(tab).filter((t) => t.kind === 'chord')).toEqual([])
+    expect(classifySheetLine('the A-flat major scale', 0)).toEqual({
+      kind: 'plain',
+      text: 'the A-flat major scale',
+    })
+  })
+
+  it('classifies jazz symbol chords without dashes directly', () => {
+    expect(classifySheetLine('C+ Cø B°7', 0)).toEqual({
+      kind: 'chord-line',
+      tokens: [
+        { kind: 'chord', raw: 'C+', display: 'C+' },
+        { kind: 'text', raw: ' ' },
+        { kind: 'chord', raw: 'Cø', display: 'Cø' },
+        { kind: 'text', raw: ' ' },
+        { kind: 'chord', raw: 'B°7', display: 'B°7' },
+      ],
+    })
   })
 })

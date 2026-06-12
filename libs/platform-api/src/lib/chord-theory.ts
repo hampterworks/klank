@@ -25,11 +25,52 @@ export const CHORD_INTERVALS: Record<string, readonly number[]> = {
   dim: [0, 3, 6],          // diminished triad
   aug: [0, 4, 8],          // augmented triad
   '5': [0, 7],             // power chord
+  m7b5: [0, 3, 6, 10],     // half-diminished 7
+  dim7: [0, 3, 6, 9],      // diminished 7
+  '6': [0, 4, 7, 9],       // major 6
+  m6: [0, 3, 7, 9],        // minor 6
+  '69': [0, 4, 7, 9, 2],   // major 6 add 9 (written 6/9 in tabs)
+  add9: [0, 4, 7, 2],      // major add 9
+  '9': [0, 4, 7, 10, 2],   // dominant 9
+  m9: [0, 3, 7, 10, 2],    // minor 9
+  maj9: [0, 4, 7, 11, 2],  // major 9
+  '7b5': [0, 4, 6, 10],    // dominant 7 flat 5
+  '7#5': [0, 4, 8, 10],    // dominant 7 sharp 5
+  '7b9': [0, 4, 7, 10, 1], // dominant 7 flat 9
+  '7#9': [0, 4, 7, 10, 3], // dominant 7 sharp 9
+  '11': [0, 4, 7, 10, 2, 5],     // dominant 11
+  m11: [0, 3, 7, 10, 2, 5],      // minor 11
+  '13': [0, 4, 7, 10, 2, 5, 9],  // dominant 13
+  m13: [0, 3, 7, 10, 2, 5, 9],   // minor 13
+}
+
+/** Intervals a voicing may omit per quality, following common practice:
+ *  7th/9th chords drop the 5th; 11ths drop the 3rd (it clashes with the 11)
+ *  and the inner extensions; 13ths drop the 5th, 9th and 11th. Qualities not
+ *  listed require every chord tone. */
+export const OPTIONAL_INTERVALS: Record<string, readonly number[]> = {
+  '7': [7],
+  m7: [7],
+  maj7: [7],
+  '69': [7],
+  '9': [7],
+  m9: [7],
+  maj9: [7],
+  '7b9': [7],
+  '7#9': [7],
+  '11': [4, 7, 2],
+  m11: [7, 2],
+  '13': [7, 2, 5],
+  m13: [7, 2, 5],
 }
 
 /** Qualities in the order the chord JSON files enumerate them.
  *  (Object.keys(CHORD_INTERVALS) won't do: JS hoists integer-like keys like '5'.) */
-export const CHORD_QUALITIES = ['', 'm', '7', 'm7', 'maj7', 'sus2', 'sus4', 'dim', 'aug', '5'] as const
+export const CHORD_QUALITIES = [
+  '', 'm', '7', 'm7', 'maj7', 'sus2', 'sus4', 'dim', 'aug', '5',
+  'm7b5', 'dim7', '6', 'm6', '69', 'add9', '9', 'm9', 'maj9',
+  '7b5', '7#5', '7b9', '7#9', '11', 'm11', '13', 'm13',
+] as const
 
 /** Roots in the order the chord JSON files enumerate them.
  *  This is a file-ordering constant, not a pitch table — pitch arithmetic
@@ -89,14 +130,14 @@ export function getAllowedPitches(parsed: ParsedChord): Set<number> {
   return allowed
 }
 
-/** Pitch classes a variant must contain to be a complete chord.
- *  All chord tones are required; only 4-note qualities (7, m7, maj7) may omit the 5th. */
+/** Pitch classes a variant must contain to be a complete chord:
+ *  every chord tone except those `OPTIONAL_INTERVALS` allows the quality to
+ *  omit, plus the slash bass when there is one. */
 export function getRequiredPitches(parsed: ParsedChord): Set<number> {
-  const intervals = CHORD_INTERVALS[parsed.quality]
-  const fifthOptional = intervals.length === 4
+  const optional = new Set(OPTIONAL_INTERVALS[parsed.quality] ?? [])
   const required = new Set<number>()
-  for (const interval of intervals) {
-    if (fifthOptional && interval === 7) continue
+  for (const interval of CHORD_INTERVALS[parsed.quality]) {
+    if (optional.has(interval)) continue
     required.add((parsed.rootPitch + interval) % 12)
   }
   if (parsed.bassPitch !== undefined) required.add(parsed.bassPitch)
@@ -137,11 +178,19 @@ export function getInvalidNotes(
   return errors
 }
 
+/** Qualities that cannot be voiced in a single fretted position on a
+ *  4-string bass: a 13th needs both the b7 and the 13 — adjacent pitch
+ *  classes, which on adjacent bass strings always sit a full hand span
+ *  apart. Their keys are omitted from the bass data. */
+export const BASS_UNVOICEABLE_QUALITIES: readonly string[] = ['13', 'm13']
+
 /** Every chord key the JSON data files must define, in file order:
- *  plain keys grouped by quality, then slash keys grouped by root. */
-export function expectedChordKeys(): string[] {
+ *  plain keys grouped by quality, then slash keys grouped by root.
+ *  Without an instrument, returns the full (guitar) superset. */
+export function expectedChordKeys(instrument?: Instrument): string[] {
   const keys: string[] = []
   for (const quality of CHORD_QUALITIES) {
+    if (instrument === 'bass' && BASS_UNVOICEABLE_QUALITIES.includes(quality)) continue
     for (const root of CHORD_ROOTS) keys.push(root + quality)
   }
   for (const root of CHORD_ROOTS) {

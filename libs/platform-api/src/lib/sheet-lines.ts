@@ -30,6 +30,39 @@ export type SheetLine =
   | { kind: 'plain'; text: string }
 
 /**
+ * Re-joins minor-dash chords that the delimiter split tore apart: `-` is a
+ * delimiter (tablature dashes), so `C-7` tokenizes as `C`,`-`,`7`. A note
+ * token followed by a single `-` is merged back when the result is a chord —
+ * together with the next token when the three parse as one chord (`C-7`),
+ * or alone when the dash ends the chord and whitespace or the line end
+ * follows (so lyric hyphens like `A-flat` never merge). Dash runs (`--`)
+ * never merge. Callers must skip this pass on tablature lines.
+ */
+const mergeDashChords = (tokens: string[]): string[] => {
+  const merged: string[] = []
+  let i = 0
+  while (i < tokens.length) {
+    const token = tokens[i]
+    const next = tokens[i + 2]
+    if (tokens[i + 1] === '-' && next !== '-') {
+      if (next !== undefined && testChords(token + '-' + next)) {
+        merged.push(token + '-' + next)
+        i += 3
+        continue
+      }
+      if ((next === undefined || testSpaces(next)) && testChords(token + '-')) {
+        merged.push(token + '-')
+        i += 2
+        continue
+      }
+    }
+    merged.push(token)
+    i++
+  }
+  return merged
+}
+
+/**
  * Classifies one line of tab text.
  *
  * - Blank lines are `blank`.
@@ -45,7 +78,8 @@ export type SheetLine =
 export const classifySheetLine = (line: string, transpose: number): SheetLine => {
   if (!line.trim()) return { kind: 'blank' }
 
-  const tokens = line.split(delimiterMatcher).filter((token) => token !== '')
+  const splitTokens = line.split(delimiterMatcher).filter((token) => token !== '')
+  const tokens = isTablatureLine(line) ? splitTokens : mergeDashChords(splitTokens)
   const sanitizedTokens = tokens.filter((token) => !testSpaces(token))
 
   const hasValidChords = tokens.some((token) => testChords(token) || token === 'e')

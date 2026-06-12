@@ -1,4 +1,4 @@
-import { parseNotePrefix } from './chord-symbol.js'
+import { canonicalSuffix, formatChordSymbol, parseChordSymbol, parseNotePrefix } from './chord-symbol.js'
 import { pitchName } from './chord-theory.js'
 
 export type Instrument = 'guitar' | 'bass'
@@ -26,9 +26,15 @@ function sharpenToken(token: string): string {
 }
 
 /** Normalize a chord name to the sharps-based key used in the JSON data.
- *  Keeps slash-bass notes and respells roots and bass notes in sharps,
- *  resolving any enharmonic spelling (e.g. "Dm/Gb" → "Dm/F#", "Cb" → "B"). */
+ *  Valid chord symbols get their root and bass respelled in sharps and their
+ *  quality canonicalized (e.g. "Dm/Gb" → "Dm/F#", "D-7" → "Dm7", "Cø" →
+ *  "Cm7b5", "CM7" → "Cmaj7"). Names the grammar rejects still get their note
+ *  prefixes respelled so near-miss lookups stay stable. */
 export function normalizeChordKey(chordName: string): string {
+  const parsed = parseChordSymbol(chordName)
+  if (parsed !== null) {
+    return formatChordSymbol({ ...parsed, suffix: canonicalSuffix(parsed.suffix) })
+  }
   const slashIdx = chordName.indexOf('/')
   if (slashIdx === -1) return sharpenToken(chordName)
   return `${sharpenToken(chordName.slice(0, slashIdx))}/${sharpenToken(chordName.slice(slashIdx + 1))}`
