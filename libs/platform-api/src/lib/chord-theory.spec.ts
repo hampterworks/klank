@@ -5,6 +5,7 @@ import {
   CHORD_INTERVALS,
   CHORD_QUALITIES,
   CHORD_ROOTS,
+  OPTIONAL_INTERVALS,
   DIAGRAM_ROWS,
   INSTRUMENT_TUNING,
   MAX_FRET,
@@ -126,7 +127,7 @@ describe('parseChordKey', () => {
 // ── chord tone sets ───────────────────────────────────────────────────────────
 
 describe('getAllowedPitches / getRequiredPitches', () => {
-  it('for every shipped key: required ⊆ allowed, root and slash bass always required, only 7th chords may drop only the 5th', () => {
+  it('for every shipped key: required ⊆ allowed, root and slash bass always required, omissions follow OPTIONAL_INTERVALS', () => {
     fc.assert(
       fc.property(knownKeyArb, (key) => {
         const parsed = parseChordKey(key)!
@@ -141,13 +142,20 @@ describe('getAllowedPitches / getRequiredPitches', () => {
         }
 
         const optional = [...allowed].filter((p) => !required.has(p))
-        if (CHORD_INTERVALS[parsed.quality].length === 4) {
-          expect(optional).toEqual([(parsed.rootPitch + 7) % 12])
-        } else {
-          expect(optional).toEqual([])
-        }
+        const expectedOptional = (OPTIONAL_INTERVALS[parsed.quality] ?? [])
+          .map((interval) => (parsed.rootPitch + interval) % 12)
+          .filter((p) => !required.has(p)) // a slash bass can re-require an optional tone
+        expect(new Set(optional)).toEqual(new Set(expectedOptional))
       }),
     )
+  })
+
+  it('every optional interval is one of the quality\'s chord tones', () => {
+    for (const [quality, optional] of Object.entries(OPTIONAL_INTERVALS)) {
+      for (const interval of optional) {
+        expect(CHORD_INTERVALS[quality], quality).toContain(interval)
+      }
+    }
   })
 
   it('slash bass outside the chord joins both sets (C/B)', () => {
@@ -160,10 +168,10 @@ describe('getAllowedPitches / getRequiredPitches', () => {
 // ── expectedChordKeys ─────────────────────────────────────────────────────────
 
 describe('expectedChordKeys', () => {
-  it('returns 120 plain + 84 slash keys, unique, all parseable', () => {
+  it('returns 324 plain + 84 slash keys, unique, all parseable', () => {
     const keys = expectedChordKeys()
-    expect(keys).toHaveLength(204)
-    expect(new Set(keys).size).toBe(204)
+    expect(keys).toHaveLength(12 * CHORD_QUALITIES.length + 84)
+    expect(new Set(keys).size).toBe(keys.length)
     for (const key of keys) expect(parseChordKey(key), key).not.toBeNull()
   })
 
