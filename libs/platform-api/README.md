@@ -7,7 +7,11 @@ Platform abstraction layer between the React app and Tauri IPC. All communicatio
 | Module | Exports | Purpose |
 |--------|---------|---------|
 | `fs.ts` | `FileService`, `createFileService()`, `mapTreeStructure()` | File I/O via Tauri FS plugin |
-| `chords.ts` | `transposeChord()`, `testChords()`, `isTablatureLine()`, etc. | Chord parsing and transposition |
+| `chord-symbol.ts` | `parseChordSymbol()`, `formatChordSymbol()`, `transposeChordSymbol()` | Structured chord-symbol parsing, formatting, and transposition |
+| `chord-theory.ts` | `parseChordKey()`, `CHORD_INTERVALS`, `validateChordVariant()`, etc. | Pitch-class theory and chord-diagram validation |
+| `chords.ts` | `transposeChord()`, `testChords()`, `isTablatureLine()`, etc. | Tab-text heuristics and string-level chord helpers |
+| `sheet-lines.ts` | `classifySheetLine()` | Pure tab-sheet line classification for the renderer |
+| `chord-diagrams.ts` | `loadChordDiagrams()`, `lookupChordDiagram()`, `normalizeChordKey()` | Chord diagram data loading and lookup |
 | `download.ts` | `getSheetFromUG()` | Downloads tabs from Ultimate Guitar via Tauri scraper |
 | `sort.ts` | `sortByArtist()` | Groups and sorts `FileEntry[]` by artist |
 | `userAgent.ts` | `isMobile()` | Mobile device detection |
@@ -23,9 +27,11 @@ import { createFileService, transposeChord, getSheetFromUG } from '@klank/platfo
 - Only `.tab.txt` files are recognized; `fs.ts` filters all other extensions.
 - Filenames must follow the pattern `Artist - Song.tab.txt`. `mapTreeStructure()` splits on ` - ` to extract artist and song name.
 
-## Chord Transposition
+## Chord Symbols
 
-`transposeChord()` uses a 12-note chromatic scale: A, A#, B, C, C#, D, D#, E, F, F#, G, G#. Supports accidentals, slash bass notes, and chord quality suffixes (maj, min, dim, sus, add, etc.).
+All chord interpretation flows through one model: `parseChordSymbol()` resolves a symbol's root and slash-bass notes to pitch classes (C = 0, shared with `chord-theory.ts`) and validates the quality suffix against a permissive grammar (maj, min, dim, aug, sus, add, extensions like 7/9/11/13, altered tones like `m7b5` or `7#9`, and `6/9`). Output is always spelled in sharps: A, A#, B, C, C#, D, D#, E, F, F#, G, G#.
+
+`transposeChord()` transposes a chord string by semitones, preserving the suffix verbatim and moving root and bass together; non-chord input is returned unchanged. `toTheoryChord()` bridges parsed symbols to the strict `chord-theory.ts` model when the suffix is one of the canonical diagram qualities.
 
 ## UG Scraper
 

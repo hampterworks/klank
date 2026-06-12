@@ -1,3 +1,6 @@
+import { parseNotePrefix } from './chord-symbol.js'
+import { pitchName } from './chord-theory.js'
+
 export type Instrument = 'guitar' | 'bass'
 
 export type ChordBarre = {
@@ -15,27 +18,20 @@ export type ChordVariant = {
 
 export type ChordDiagramMap = Record<string, ChordVariant[]>
 
-const FLAT_TO_SHARP: Record<string, string> = {
-  Bb: 'A#',
-  Db: 'C#',
-  Eb: 'D#',
-  Gb: 'F#',
-  Ab: 'G#',
-}
-
-/** Map a flat-spelled note prefix to its sharp equivalent ("Bb..." → "A#..."). */
-function sharpen(note: string): string {
-  const twoChar = note.slice(0, 2)
-  return FLAT_TO_SHARP[twoChar] ? FLAT_TO_SHARP[twoChar] + note.slice(2) : note
+/** Respell a token's leading note in sharps form ("Bbm7..." → "A#m7...").
+ *  Tokens that do not start with a note pass through unchanged. */
+function sharpenToken(token: string): string {
+  const note = parseNotePrefix(token)
+  return note === null ? token : pitchName(note.pitch) + note.rest
 }
 
 /** Normalize a chord name to the sharps-based key used in the JSON data.
- *  Keeps slash-bass notes and maps flat roots and bass notes to sharps
- *  (e.g. "Dm/Gb" → "Dm/F#"). */
+ *  Keeps slash-bass notes and respells roots and bass notes in sharps,
+ *  resolving any enharmonic spelling (e.g. "Dm/Gb" → "Dm/F#", "Cb" → "B"). */
 export function normalizeChordKey(chordName: string): string {
   const slashIdx = chordName.indexOf('/')
-  if (slashIdx === -1) return sharpen(chordName)
-  return `${sharpen(chordName.slice(0, slashIdx))}/${sharpen(chordName.slice(slashIdx + 1))}`
+  if (slashIdx === -1) return sharpenToken(chordName)
+  return `${sharpenToken(chordName.slice(0, slashIdx))}/${sharpenToken(chordName.slice(slashIdx + 1))}`
 }
 
 const cache = new Map<Instrument, ChordDiagramMap>()
