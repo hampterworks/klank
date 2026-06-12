@@ -45,6 +45,12 @@ const hoverWrapper = (container: HTMLElement) => {
   if (wrapper) fireEvent.mouseEnter(wrapper)
 }
 
+// Arrow-key navigation only works while pinned (clicked open)
+const pinWrapper = (container: HTMLElement) => {
+  const wrapper = container.querySelector('span')
+  if (wrapper) fireEvent.click(wrapper)
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('ChordDiagramTooltip', () => {
@@ -123,6 +129,7 @@ describe('ChordDiagramTooltip', () => {
           )
           await act(async () => {})
           hoverWrapper(container)
+          pinWrapper(container)
 
           if (variantCount > 1) {
             for (const goRight of navSteps) {
@@ -272,6 +279,7 @@ describe('ChordDiagramTooltip', () => {
     )
     await act(async () => {})
     hoverWrapper(container)
+    pinWrapper(container)
 
     // Wait for tooltip to appear with Am's 3 variants
     await waitFor(() => {

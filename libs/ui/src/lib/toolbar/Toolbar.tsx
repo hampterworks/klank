@@ -55,7 +55,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 }) => {
   const handleBaseDirectoryChange = () => {
     if (getDirectoryPath)
-      getDirectoryPath().then((path) => path !== null && setBaseDirectory(path))
+      getDirectoryPath()
+        .then((path) => path !== null && setBaseDirectory(path))
+        .catch((error) => console.error('Folder picker failed:', error))
   }
 
   const handleRandomPathUpdate = () => {

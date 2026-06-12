@@ -37,30 +37,39 @@ export function App() {
   }, [isTauri, setServerMode])
 
   useEffect(() => {
+    // Guards against a slower run for a previous directory resolving after a
+    // newer one (e.g. the user changes folders quickly) and overwriting state.
+    let cancelled = false
+
     const initializeApp = async () => {
       try {
         const fileService = await createFileService()
+        if (cancelled) return
         setFileService(fileService)
 
         // Get base directory if not set yet
         let dir = baseDirectory
         if (!dir) {
           dir = await fileService.getBaseDirectoryPath()
+          if (cancelled) return
           setBaseDirectory(dir)
           return // re-triggers effect once baseDirectory is in state
         }
 
         // Load per-tab settings and playlists from the tab directory, then load the tree
         const savedSettings = await fileService.readTabSettings(dir)
+        if (cancelled) return
         setTabSettings(savedSettings)
 
         const savedPlaylists = await fileService.readPlaylists(dir)
+        if (cancelled) return
         setPlaylists(savedPlaylists)
 
         const data = await fileService.readDirectoryRecursively(
           dir,
           file => file.isDirectory || file.name.endsWith('.tab.txt')
         )
+        if (cancelled) return
         setTree(mapTreeStructure(data ?? []))
 
       } catch (error) {
@@ -69,6 +78,7 @@ export function App() {
     }
 
     initializeApp()
+    return () => { cancelled = true }
   }, [baseDirectory, serverMode, setBaseDirectory, setFileService, setTabSettings, setPlaylists])
 
   useEffect(() => {
@@ -93,8 +103,12 @@ export function App() {
         )
         .then((data) => {
           setTree(mapTreeStructure(data ?? []))
-          setNeedsUpdate(false)
         })
+        .catch((error) => {
+          console.error('Failed to refresh file tree:', error)
+        })
+        // Always clear the flag so a later refresh click re-triggers the effect
+        .finally(() => setNeedsUpdate(false))
     }
   }, [needsUpdate, baseDirectory, fileService])
 
@@ -154,4 +168,6 @@ export function App() {
   );
 }
 
+// React Router route modules (registered in routes.tsx) require a default
+// export for the route component — exception to the named-exports-only rule.
 export default App;
