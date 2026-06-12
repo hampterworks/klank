@@ -13,19 +13,12 @@ export const sortByArtist = (
     : files
 
   const unsortedResult = sortedFiles.reduce((previousValue, currentValue) => {
-    const currentArtist = currentValue.artist.toLowerCase()
-    if (previousValue[currentArtist]) {
-      previousValue[currentArtist].push(currentValue)
-    } else {
-      if (currentValue.song !== undefined) {
-        previousValue[currentArtist] = [currentValue]
-      } else {
-        previousValue['unknown'] = [
-          ...(previousValue['unknown'] ?? []),
-          currentValue,
-        ]
-      }
-    }
+    // Files without a ` - ` separator have no song name and always group
+    // under "unknown", regardless of what group their artist field landed in.
+    const key = currentValue.song !== undefined
+      ? currentValue.artist.toLowerCase()
+      : 'unknown'
+    previousValue[key] = [...(previousValue[key] ?? []), currentValue]
     return previousValue
   }, {} as SortedFileEntry)
 

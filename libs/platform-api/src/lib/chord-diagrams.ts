@@ -40,7 +40,9 @@ export function normalizeChordKey(chordName: string): string {
   return `${sharpenToken(chordName.slice(0, slashIdx))}/${sharpenToken(chordName.slice(slashIdx + 1))}`
 }
 
-const cache = new Map<Instrument, ChordDiagramMap>()
+// Caches the in-flight promise, not the resolved map, so N tooltips mounting
+// at once share a single fetch instead of each firing their own.
+const cache = new Map<Instrument, Promise<ChordDiagramMap>>()
 
 /** Clear the in-memory cache. Intended for use in tests only. */
 export function clearChordDiagramCache(): void {
@@ -49,21 +51,24 @@ export function clearChordDiagramCache(): void {
 
 /** Fetch and parse chord diagram JSON for the given instrument.
  *  Results are cached at the module level — safe to call repeatedly.
- *  Returns an empty map on network or parse errors. */
-export async function loadChordDiagrams(instrument: Instrument): Promise<ChordDiagramMap> {
+ *  Returns an empty map on network or parse errors (failures are not cached,
+ *  so a later call can retry). */
+export function loadChordDiagrams(instrument: Instrument): Promise<ChordDiagramMap> {
   const cached = cache.get(instrument)
   if (cached) return cached
 
-  try {
-    const url = instrument === 'guitar' ? '/chords-guitar.json' : '/chords-bass.json'
+  const url = instrument === 'guitar' ? '/chords-guitar.json' : '/chords-bass.json'
+  const loading = (async (): Promise<ChordDiagramMap> => {
     const res = await fetch(url)
-    if (!res.ok) return {}
-    const data = (await res.json()) as ChordDiagramMap
-    cache.set(instrument, data)
-    return data
-  } catch {
+    if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`)
+    return (await res.json()) as ChordDiagramMap
+  })()
+
+  cache.set(instrument, loading)
+  return loading.catch(() => {
+    cache.delete(instrument)
     return {}
-  }
+  })
 }
 
 /** Look up chord variants from a pre-loaded map.

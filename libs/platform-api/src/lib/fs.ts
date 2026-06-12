@@ -192,6 +192,18 @@ const createTauriFileService = async (): Promise<FileService> => {
     return `${baseDir.replace(/[/\\]$/, '')}${sep}${osRelKey}`
   }
   const { open } = await import('@tauri-apps/plugin-dialog')
+
+  // All mutations of .klank-settings.json are read-modify-write cycles on the
+  // same file. Callers fire them without awaiting (e.g. deleting a tab kicks
+  // off writeTabSetting, writePlaylists, and deleteTabSetting concurrently),
+  // so they must be serialized or whichever writer read the file first
+  // silently clobbers the others' changes on completion.
+  let settingsFileLock: Promise<unknown> = Promise.resolve()
+  const withSettingsLock = <T>(task: () => Promise<T>): Promise<T> => {
+    const run = settingsFileLock.then(task, task)
+    settingsFileLock = run.catch(() => undefined)
+    return run
+  }
   const processEntriesRecursively = async (
     parent: string,
     entries: FileTree,
@@ -228,15 +240,13 @@ const createTauriFileService = async (): Promise<FileService> => {
       data: string
     ): Promise<string> {
       try {
-        console.log(target, filename)
         const localPath = await join(target ?? '', filename)
         const file = await create(localPath)
         await file.write(new TextEncoder().encode(data))
         await file.close()
-        console.log(`File written to ${localPath}`)
         return localPath
       } catch (error) {
-        console.log(error)
+        console.error('Failed to write tab file:', error)
         return error instanceof Error ? error.message : 'Unknown error occurred'
       }
     },
@@ -268,7 +278,9 @@ const createTauriFileService = async (): Promise<FileService> => {
       })
     },
 
-    async readTabSettings(baseDirectory) {
+    readTabSettings(baseDirectory) {
+      // Under the lock because the legacy migration below writes the settings file.
+      return withSettingsLock(async () => {
       try {
         const settingsPath = await join(baseDirectory, SETTINGS_FILE)
 
@@ -358,9 +370,11 @@ const createTauriFileService = async (): Promise<FileService> => {
       } catch {
         return {}
       }
+      })
     },
 
-    async writeTabSetting(tabPath, settings, baseDirectory) {
+    writeTabSetting(tabPath, settings, baseDirectory) {
+      return withSettingsLock(async () => {
       try {
         const settingsPath = await join(baseDirectory, SETTINGS_FILE)
         // Read current file, merge, sort keys, write back
@@ -380,6 +394,7 @@ const createTauriFileService = async (): Promise<FileService> => {
       } catch (error) {
         console.error('Failed to write tab setting:', error)
       }
+      })
     },
 
     async deleteTabFile(path) {
@@ -402,7 +417,8 @@ const createTauriFileService = async (): Promise<FileService> => {
       }
     },
 
-    async writePlaylists(playlists, baseDirectory) {
+    writePlaylists(playlists, baseDirectory) {
+      return withSettingsLock(async () => {
       try {
         const settingsPath = await join(baseDirectory, SETTINGS_FILE)
         // Read current file, replace the playlists key, sort keys, write back
@@ -424,9 +440,11 @@ const createTauriFileService = async (): Promise<FileService> => {
       } catch (error) {
         console.error('Failed to write playlists:', error)
       }
+      })
     },
 
-    async deleteTabSetting(tabPath, baseDirectory) {
+    deleteTabSetting(tabPath, baseDirectory) {
+      return withSettingsLock(async () => {
       try {
         const settingsPath = await join(baseDirectory, SETTINGS_FILE)
         const content = await readTextFile(settingsPath)
@@ -443,6 +461,7 @@ const createTauriFileService = async (): Promise<FileService> => {
       } catch (error) {
         console.error('Failed to delete tab setting:', error)
       }
+      })
     },
   }
 }

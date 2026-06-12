@@ -29,10 +29,16 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Lint
         run: pnpm nx run-many --target=lint
+
+      - name: Typecheck
+        run: pnpm nx run-many --target=typecheck
+
+      - name: Test
+        run: pnpm nx run-many --target=test
 
       - name: Build
         run: pnpm nx run klank:build

@@ -61,9 +61,10 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
     }
   }, [instrument, chordName])
 
-  // Arrow key navigation while tooltip is visible
+  // Arrow key navigation — only while pinned (clicked open), so a transient
+  // hover doesn't hijack arrow keys from the rest of the app.
   useEffect(() => {
-    if (!tooltipPos || variants.length <= 1) return
+    if (!tooltipPos || !isPinned || variants.length <= 1) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
         e.preventDefault()
@@ -75,7 +76,7 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [tooltipPos, variants.length])
+  }, [tooltipPos, isPinned, variants.length])
 
   // Click outside: close immediately when tooltip is visible
   useEffect(() => {

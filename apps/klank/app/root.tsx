@@ -15,7 +15,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 
 export const meta: MetaFunction = () => [
   {
-    title: 'New Nx React Router App',
+    title: 'Klank',
   },
 ];
 
