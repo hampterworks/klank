@@ -19,15 +19,22 @@ export const getSheetFromUG = async (url: string) => {
   const dataContent = await invoke<string>('scrape_ug', { url })
   if (!dataContent) return
 
-  const json = JSON.parse(dataContent)
+  try {
+    const json = JSON.parse(dataContent)
 
-  const data = json.store.page.data.tab_view.wiki_tab.content
-    .toString()
-    .replace(/(\[(ch|tab)\]|\[(\/)?(ch|tab)\])/g, '')
+    const content = json?.store?.page?.data?.tab_view?.wiki_tab?.content
+    if (content === undefined || content === null) return
 
-  const artist = json.store.page.data.tab.artist_name ?? ''
-  const title = json.store.page.data.tab.song_name ?? ''
+    const data = content.toString().replace(/\[\/?(ch|tab)\]/g, '')
 
-  const filename = `${artist} - ${title}.tab.txt`
-  return { data, filename }
+    const artist = json.store.page.data.tab?.artist_name ?? ''
+    const title = json.store.page.data.tab?.song_name ?? ''
+
+    const filename = `${artist} - ${title}.tab.txt`
+    return { data, filename }
+  } catch (error) {
+    // UG page shape changed or Cloudflare served an HTML challenge page
+    console.error('Failed to parse UG response:', error)
+    return
+  }
 }

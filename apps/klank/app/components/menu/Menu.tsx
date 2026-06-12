@@ -93,6 +93,7 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const deleteErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const downloadErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const activePlaylist = playlists.find((p) => p.id === activePlaylistId) ?? null
 
@@ -140,12 +141,18 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
         baseDirectory ?? '',
         sheet.data
       )
-      if (writtenPath) setTabPath(writtenPath)
+      // writeTabFile returns an error message string on failure — only a real
+      // path (always ending in .tab.txt) may become the active tab.
+      if (!writtenPath.endsWith('.tab.txt')) {
+        throw new Error(writtenPath)
+      }
+      setTabPath(writtenPath)
       setNeedsUpdate(true)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Download failed'
       setDownloadError(message)
-      setTimeout(() => setDownloadError(null), 4000)
+      if (downloadErrorTimerRef.current) clearTimeout(downloadErrorTimerRef.current)
+      downloadErrorTimerRef.current = setTimeout(() => setDownloadError(null), 4000)
     } finally {
       setIsDownloading(false)
     }
@@ -199,10 +206,11 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
     setPathToConfirmDelete(null)
   }
 
-  // Cleanup timer on unmount
+  // Cleanup toast timers on unmount
   useEffect(() => {
     return () => {
       if (deleteErrorTimerRef.current) clearTimeout(deleteErrorTimerRef.current)
+      if (downloadErrorTimerRef.current) clearTimeout(downloadErrorTimerRef.current)
     }
   }, [])
 

@@ -14,12 +14,12 @@ export const delimiterMatcher = /(?<whitespace>\s+|\||\(|\)|-|,|\*|%)/
  * e.g. `E|---0--2---` or `A#|--5--`.
  */
 export const isTablatureLine = (line: string): boolean =>
-  /^[A-G][#b]?\|/.test(line) || /^e\|/.test(line)
+  /^[A-Ga-g][#b]?\|/.test(line)
 
 /**
  * Returns true if the string looks like a section header, e.g. `[Verse]` or `[Chorus 1]`.
  */
-export const testHeader = (string: string) => /\[[a-zA-Z0-9\s]+/.test(string)
+export const testHeader = (string: string) => /^\s*\[[a-zA-Z0-9\s]+\]/.test(string)
 
 /**
  * Returns true if `string` is a valid chord symbol.
@@ -73,7 +73,9 @@ export const testTokenContext = (tokens: string[]) => {
     return acc
   }, { result: [], skip: false }).result
 
-  const normalizedTokens = tokensWithoutParentheses.filter(token => !delimiterMatcher.test(token))
+  // Full-match against the delimiter set: tokens that merely *contain* a
+  // delimiter character (e.g. the merged minor chord `C-7`) must be kept.
+  const normalizedTokens = tokensWithoutParentheses.filter(token => !/^(?:\s+|\||\(|\)|-|,|\*|%)$/.test(token))
 
   if (normalizedTokens.every(token => testChords(token)) || normalizedTokens.every(token => !testChords(token))) return false
 

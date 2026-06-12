@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import styles from './sheet.module.css'
 import {
   classifySheetLine,
@@ -127,8 +127,10 @@ export const Sheet: React.FC<SheetProps> = ({
 
     if (!isScrolling) return
 
-    const maxScroll = container.scrollHeight - container.clientHeight
-    if (maxScroll <= 0) {
+    // Recomputed on every use so a window resize or font-size change
+    // mid-scroll doesn't stop early or scroll past the end.
+    const getMaxScroll = () => container.scrollHeight - container.clientHeight
+    if (getMaxScroll() <= 0) {
       setTabIsScrolling(false)
       return
     }
@@ -148,7 +150,7 @@ export const Sheet: React.FC<SheetProps> = ({
           : e.deltaMode === WheelEvent.DOM_DELTA_PAGE
             ? e.deltaY * container.clientHeight
             : e.deltaY
-      virtualY.current = Math.max(0, Math.min(virtualY.current + pixelDelta, maxScroll))
+      virtualY.current = Math.max(0, Math.min(virtualY.current + pixelDelta, getMaxScroll()))
     }
     container.addEventListener('wheel', onWheel, { passive: false })
 
@@ -167,6 +169,7 @@ export const Sheet: React.FC<SheetProps> = ({
       const delta = Math.min(timestamp - lastTime, 100)
       lastTime = timestamp
 
+      const maxScroll = getMaxScroll()
       virtualY.current = Math.min(
         virtualY.current + pxPerSec * (delta / 1000),
         maxScroll
@@ -192,12 +195,17 @@ export const Sheet: React.FC<SheetProps> = ({
     }
   }, [isScrolling, tabScrollSpeed, setTabIsScrolling])
 
-  const lines: string[] = tabData.split(/\r?\n|\r|\n/g)
+  // Line classification runs `classifySheetLine` over the whole tab — memoize
+  // so toolbar-driven re-renders don't re-parse large sheets.
+  const renderedLines = useMemo(() => {
+    const lines = tabData.split(/\r?\n|\r/g)
+    return lines.map((line, index) => renderLine(line, index, transpose, isScrolling, instrument))
+  }, [tabData, transpose, isScrolling, instrument])
 
   return (
     <pre ref={containerRef} className={styles.container} {...props}>
       <div ref={contentRef} className={styles.content}>
-        {lines.map((line, index) => renderLine(line, index, transpose, isScrolling, instrument))}
+        {renderedLines}
         <div ref={sentinelRef}>&nbsp;</div>
       </div>
     </pre>

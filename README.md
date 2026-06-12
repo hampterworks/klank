@@ -6,11 +6,14 @@ Klank is a Tauri desktop application for viewing, downloading, and editing guita
 
 - Browse and search a local directory of `.tab.txt` files grouped by artist
 - Full-text search with highlighted matches in the file tree
-- Chord highlighting within tab content
+- Chord highlighting within tab content with hover fingering diagrams (guitar/bass selectable)
 - Semitone transposition with chromatic chord rewriting
 - Auto-scroll with adjustable speed
+- Playlists — create named playlists, add tabs, reorder with drag-and-drop, and navigate sequentially; persisted to `.klank-settings.json` in the tab directory
 - Download tabs directly from Ultimate Guitar via built-in scraper
-- Light and Dark theme
+- Right-click context menu on file tree entries for tab deletion (with confirmation modal)
+- Light and Dark theme including icons and native chrome
+- App version displayed on the Settings page
 - Keyboard shortcuts for navigation and playback
 
 ## Tech Stack

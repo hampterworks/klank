@@ -72,12 +72,15 @@ const renderTreeStructure = (opts: RenderTreeOptions) => {
               const alreadyInPlaylist = activePlaylistPaths?.includes(item.path)
               return (
                 <li
-                  id={currentTabPath === item.path ? 'active' : ''}
                   className={currentTabPath === item.path ? styles.active : ''}
                   key={item.path}
                 >
                   <button
-                    ref={(el) => { songButtonRefs.current.set(item.path, el) }}
+                    ref={(el) => {
+                      if (el === null) songButtonRefs.current.delete(item.path)
+                      else songButtonRefs.current.set(item.path, el)
+                    }}
+                    aria-haspopup={onDeleteTab ? 'menu' : undefined}
                     onClick={() => setTabPath(item.path)}
                     onContextMenu={(e) => {
                       if (!onDeleteTab) return
@@ -150,13 +153,10 @@ export const FileTreeView: React.FC<FileTreeViewProps> = ({
   }, [currentTabPath, tree])
 
   useEffect(() => {
-    const activeElement = document.getElementById('active')
-    if (activeElement) {
-      activeElement.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-      })
-    }
+    songButtonRefs.current.get(currentTabPath)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
+    })
   }, [currentTabPath, tree, collapsedArtists])
 
   // Close context menu on outside click / Escape

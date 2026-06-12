@@ -54,7 +54,7 @@ jobs:
           workspaces: apps/klank/src-tauri -> target
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build Windows installers
         run: pnpm tauri:build:windows
