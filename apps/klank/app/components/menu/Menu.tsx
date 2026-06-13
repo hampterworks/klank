@@ -5,11 +5,14 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router'
 import { FileEntry, getSheetFromUG, ImportProgress, isMobileDevice, sortByArtist } from '@klank/platform-api'
 import {
+  Button,
   DownloadIcon,
   FileTreeView,
   LogoIcon,
   NewPlaylistIcon,
   Searchbar,
+  ShuffleIcon,
+  TargetIcon,
   Toolbar,
 } from '@klank/ui'
 import { useKlankStore } from '@klank/store'
@@ -495,6 +498,27 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
             onClick={() => toggleMenu(false)}
           />
           <div className={styles.mobileDrawerSheet}>
+            <div className={styles.mobileDrawerActions}>
+              <Button
+                iconButton
+                icon={<TargetIcon />}
+                title="Go to current tab"
+                aria-label="Go to current tab"
+                onClick={() => document.getElementById('active')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+              />
+              <Button
+                iconButton
+                icon={<ShuffleIcon />}
+                title="Go to random tab"
+                aria-label="Go to random tab"
+                onClick={() => {
+                  if (!tree.length) return
+                  const randomItem = tree[Math.floor(Math.random() * tree.length)]
+                  handleSelectSong(randomItem.path)
+                  toggleMenu(false)
+                }}
+              />
+            </div>
             <div className={styles.mobileDrawerContent}>
               <PlaylistSection tree={tree} currentTabPath={currentTabPath} />
               <div className={styles.treeWrapper}>

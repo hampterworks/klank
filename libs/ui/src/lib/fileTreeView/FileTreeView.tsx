@@ -72,6 +72,7 @@ const renderTreeStructure = (opts: RenderTreeOptions) => {
               const alreadyInPlaylist = activePlaylistPaths?.includes(item.path)
               return (
                 <li
+                  id={currentTabPath === item.path ? 'active' : undefined}
                   className={currentTabPath === item.path ? styles.active : ''}
                   key={item.path}
                 >
