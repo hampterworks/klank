@@ -475,6 +475,39 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
         <div className={styles.toastError}>{deleteError}</div>,
         document.body
       )}
+      {isMobileDevice() && isMenuExtended && createPortal(
+        <div className={styles.mobileDrawer}>
+          <div
+            className={styles.mobileDrawerBackdrop}
+            onClick={() => toggleMenu(false)}
+          />
+          <div className={styles.mobileDrawerSheet}>
+            <div className={styles.mobileDrawerContent}>
+              <PlaylistSection tree={tree} currentTabPath={currentTabPath} />
+              <div className={styles.treeWrapper}>
+                <FileTreeView
+                  currentTabPath={currentTabPath}
+                  setTabPath={handleSelectSong}
+                  searchFilter={searchFilter}
+                  tree={tree}
+                  onAddToPlaylist={activePlaylist ? (path) => addTabToPlaylist(activePlaylist.id, path) : undefined}
+                  activePlaylistPaths={activePlaylist?.paths}
+                  onDeleteTab={(path) => setPathToConfirmDelete(path)}
+                />
+              </div>
+            </div>
+            <div className={styles.mobileDrawerSearch}>
+              <Searchbar
+                toggleMenu={toggleMenu}
+                isMenuExtended={isMenuExtended}
+                searchFilter={searchFilter}
+                setSearchFilter={setSearchFilter}
+              />
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </>
   )
 }

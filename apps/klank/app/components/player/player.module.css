@@ -23,3 +23,15 @@
   padding: 8px;
   box-sizing: border-box;
 }
+
+@media (max-width: 599px) {
+  .container {
+    display: flex !important;
+    flex-direction: column;
+    grid-template-rows: unset;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    height: auto;
+  }
+}

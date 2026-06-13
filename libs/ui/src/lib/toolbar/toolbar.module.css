@@ -45,3 +45,37 @@
 .collapsed .downloadError {
   display: none;
 }
+
+@media (max-width: 599px) {
+  .container,
+  .container.collapsed {
+    flex-direction: row;
+    height: 44px;
+    padding: 0 4px;
+    gap: 0;
+    border: none;
+    overflow-x: auto;
+    scrollbar-width: none;
+    align-items: center;
+  }
+
+  .container::-webkit-scrollbar,
+  .container.collapsed::-webkit-scrollbar {
+    display: none;
+  }
+
+  .container button,
+  .container.collapsed button,
+  .container a,
+  .container.collapsed a {
+    min-width: 40px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .downloadError {
+    display: none;
+  }
+}

@@ -301,3 +301,97 @@
 .textarea:focus {
   border-color: var(--klank-color-text);
 }
+
+@media (max-width: 599px) {
+  /* ── Top bar (the <ul> / .container) ─────────────────────────── */
+  .container {
+    flex-direction: row !important;
+    align-items: center;
+    height: 44px;
+    min-height: 44px;
+    max-height: 44px;
+    border-right: none;
+    border-bottom: 1px solid var(--klank-color-border);
+    overflow: visible;
+    width: 100%;
+    flex-shrink: 0;
+    padding-top: var(--safe-top);
+    padding-left: max(0px, var(--safe-left));
+    padding-right: max(0px, var(--safe-right));
+  }
+
+  /* Hide the tree, playlist and searchbar from the top bar */
+  .treeWrapper,
+  .container [class*="playlistSection"],
+  .container [class*="Searchbar"],
+  .container [class*="searchbar"] {
+    display: none !important;
+  }
+
+  /* ── Download / New Tab overlay ────────────────────────────────── */
+  .overlay {
+    align-items: flex-end;
+    padding-bottom: var(--safe-bottom);
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 12px 12px 0 0;
+    max-height: 85dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── Textarea in manual-paste section ──────────────────────────── */
+  .textarea {
+    resize: none;
+    height: 100px;
+    min-height: unset;
+  }
+
+  /* ── Toast error sits above the bottom bar ─────────────────────── */
+  .toastError {
+    bottom: calc(1.5rem + var(--safe-bottom) + 44px);
+  }
+
+  /* ── Mobile drawer ─────────────────────────────────────────────── */
+  .mobileDrawer {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  .mobileDrawerBackdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+  }
+
+  .mobileDrawerSheet {
+    position: relative;
+    background: var(--klank-color-background);
+    border-top: 1px solid var(--klank-color-border);
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - 44px - var(--safe-top));
+    padding-bottom: calc(44px + var(--safe-bottom));
+    overflow: hidden;
+    z-index: 201;
+  }
+
+  .mobileDrawerContent {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .mobileDrawerSearch {
+    flex-shrink: 0;
+    border-top: 1px solid var(--klank-color-border);
+  }
+}

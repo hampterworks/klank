@@ -90,3 +90,23 @@
     opacity: 0.7;
   }
 }
+
+@media (max-width: 599px) {
+  .container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding-bottom: var(--safe-bottom);
+    padding-left: max(0.75rem, var(--safe-left));
+    padding-right: max(0.75rem, var(--safe-right));
+    border-top: 1px solid var(--klank-color-border);
+    border-bottom: none;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    z-index: 100;
+    background: var(--klank-color-background);
+    min-height: 44px;
+    height: auto;
+  }
+}

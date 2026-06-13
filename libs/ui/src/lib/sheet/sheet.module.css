@@ -40,3 +40,9 @@
 .blankLine {
   user-select: none;
 }
+
+@media (max-width: 599px) {
+  .container {
+    padding-bottom: calc(60px + var(--safe-bottom) + 16px);
+  }
+}
