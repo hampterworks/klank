@@ -14,6 +14,6 @@
   "permissions": [
     "core:default",
     "allow-deliver-ug-html",
-    "allow-report-ug-error"
+    "allow-report-ug-challenge"
   ]
 }

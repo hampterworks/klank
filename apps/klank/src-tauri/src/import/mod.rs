@@ -14,6 +14,10 @@
 pub mod pipeline;
 pub mod stages;
 
+// Desktop-only IPC module for the hidden webview stage (registered in `lib.rs`).
+#[cfg(desktop)]
+pub use stages::desktop;
+
 use std::time::Duration;
 use tauri::ipc::Channel;
 

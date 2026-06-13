@@ -22,12 +22,26 @@ async fn scrape_ug(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
-        .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![scrape_ug])
+        .plugin(tauri_plugin_shell::init());
+
+    // The hidden-webview import stage (and its IPC) is desktop-only; Android
+    // uses the mobile API / website stages and (next) a dedicated plugin.
+    #[cfg(desktop)]
+    let builder = builder
+        .manage(import::desktop::UgWebviewState::default())
+        .invoke_handler(tauri::generate_handler![
+            scrape_ug,
+            import::desktop::deliver_ug_html,
+            import::desktop::report_ug_challenge
+        ]);
+    #[cfg(not(desktop))]
+    let builder = builder.invoke_handler(tauri::generate_handler![scrape_ug]);
+
+    builder
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(

@@ -74,7 +74,7 @@ impl ImportStage for UgWebsite {
             return StageOutcome::RetryNext(StageError::Challenged);
         };
 
-        match parse_store(&json) {
+        match parse_store(&json, self.id()) {
             Some(tab) => StageOutcome::Success(tab),
             None => StageOutcome::RetryNext(StageError::Parse("unexpected page shape".into())),
         }
@@ -99,7 +99,8 @@ fn extract_js_store(html: &str) -> Option<String> {
 }
 
 /// Navigates the `store.page.data` JSON to the tab content + metadata.
-fn parse_store(json: &str) -> Option<NormalizedTab> {
+/// Shared with the webview stage, which delivers the same `{ store: … }` shape.
+pub(crate) fn parse_store(json: &str, source: &'static str) -> Option<NormalizedTab> {
     let v: serde_json::Value = serde_json::from_str(json).ok()?;
     let data = v.get("store")?.get("page")?.get("data")?;
     let content = data
@@ -126,7 +127,7 @@ fn parse_store(json: &str) -> Option<NormalizedTab> {
         content,
         artist,
         song,
-        source: "ug-website",
+        source,
     })
 }
 
@@ -147,7 +148,7 @@ mod tests {
             "tab_view":{"wiki_tab":{"content":"[tab]riff[/tab]"}},
             "tab":{"artist_name":"Nirvana","song_name":"Polly"}
         }}}}"#;
-        let tab = parse_store(json).unwrap();
+        let tab = parse_store(json, "ug-website").unwrap();
         assert_eq!(tab.artist, "Nirvana");
         assert_eq!(tab.song, "Polly");
         assert!(tab.content.contains("riff"));

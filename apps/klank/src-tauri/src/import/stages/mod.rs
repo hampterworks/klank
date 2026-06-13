@@ -5,9 +5,16 @@
 //! (including the frontend) needs to change.
 
 mod ug_mobile_api;
+mod ug_webview;
 mod ug_website;
 
 use super::ImportStage;
+
+// Desktop-only IPC module for the hidden webview stage, re-exported for the
+// Tauri builder in `lib.rs`. The whole module is re-exported (not individual
+// items) so `generate_handler!` can resolve each command's hidden helpers.
+#[cfg(desktop)]
+pub use ug_webview::desktop;
 
 /// Builds the ordered list of stages, injecting each with the dependencies it
 /// needs. Order here is the default attempt order (the pipeline may promote the
@@ -20,6 +27,7 @@ pub fn build_stages(
     vec![
         Box::new(ug_mobile_api::UgMobileApi::new(app.clone(), url.clone(), http.clone())),
         Box::new(ug_website::UgWebsite::new(url.clone(), http.clone())),
+        Box::new(ug_webview::UgWebview::new(app.clone(), url.clone())),
     ]
 }
 
