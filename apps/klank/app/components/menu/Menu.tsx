@@ -71,6 +71,17 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
   const navigate = useNavigate()
   const isMenuExtended = useKlankStore().ui.isMenuExtended
   const toggleMenu = useKlankStore().toggleMenu
+
+  // Width-based mobile detection — user-agent checks miss tablets and some
+  // Android WebViews that don't include "mobile" in their UA string.
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' && window.innerWidth <= 599
+  )
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 599)
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
   const currentTabPath = useKlankStore().tab.path
   const setTabPath = useKlankStore().setTabPath
   const baseDirectory = useKlankStore().baseDirectory
@@ -475,7 +486,7 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
         <div className={styles.toastError}>{deleteError}</div>,
         document.body
       )}
-      {isMobileDevice() && isMenuExtended && createPortal(
+      {isMobile && isMenuExtended && createPortal(
         <div className={styles.mobileDrawer}>
           <div
             className={styles.mobileDrawerBackdrop}

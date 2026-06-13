@@ -93,19 +93,42 @@
 
 @media (max-width: 599px) {
   .container {
-    /* Reorder to bottom of the player flex column — avoids position:fixed
-       being trapped by overflow:hidden ancestors on mobile WebView */
     order: 2;
     flex-shrink: 0;
+    /* No wrapping — keep all controls on one scrollable row */
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 0.375rem;
     border-top: 1px solid var(--klank-color-border);
     border-bottom: none;
-    flex-wrap: wrap;
-    gap: 0.375rem;
     background: var(--klank-color-background);
     min-height: 44px;
     height: auto;
-    padding-bottom: var(--safe-bottom);
-    padding-left: max(0.75rem, var(--safe-left));
-    padding-right: max(0.75rem, var(--safe-right));
+    /* Use max() so there's always breathing room above the Android nav bar
+       even when env(safe-area-inset-bottom) returns 0 in Tauri WebView */
+    padding-bottom: max(8px, var(--safe-bottom));
+    padding-left: max(0.5rem, var(--safe-left));
+    padding-right: max(0.5rem, var(--safe-right));
+    padding-top: 0;
+  }
+
+  .container::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Song name is already at the top of the tab content — hide in bottom bar */
+  .songName {
+    display: none;
+  }
+
+  /* Shrink increment buttons slightly so all three groups + action buttons
+     fit on one line without scrolling on a 360 px viewport */
+  .controls {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    overflow: visible;
   }
 }

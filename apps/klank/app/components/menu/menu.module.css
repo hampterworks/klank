@@ -324,11 +324,10 @@
     background: var(--klank-color-background);
   }
 
-  /* Hide the tree, playlist and searchbar from the top bar */
+  /* Hide the tree and playlist sections from the top bar;
+     keep the Searchbar's toggle button visible so the drawer can be opened */
   .treeWrapper,
-  .container [class*="playlistSection"],
-  .container [class*="Searchbar"],
-  .container [class*="searchbar"] {
+  .container [class*="playlistSection"] {
     display: none !important;
   }
 
