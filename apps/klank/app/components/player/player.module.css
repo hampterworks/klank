@@ -31,7 +31,9 @@
     grid-template-rows: unset;
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    /* overflow:clip instead of hidden — prevents scroll-trapping while still
+       clipping overflow, and never creates a fixed-positioning containing block */
+    overflow: clip;
     height: auto;
   }
 }

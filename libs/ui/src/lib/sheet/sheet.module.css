@@ -43,6 +43,12 @@
 
 @media (max-width: 599px) {
   .container {
-    padding-bottom: calc(60px + var(--safe-bottom) + 16px);
+    /* Sheet fills remaining space above the bottom SheetToolbar */
+    order: 1;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    height: auto;
+    padding-bottom: 16px;
   }
 }

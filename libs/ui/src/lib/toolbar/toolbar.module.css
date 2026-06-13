@@ -49,6 +49,7 @@
 @media (max-width: 599px) {
   .container,
   .container.collapsed {
+    flex: 1;
     flex-direction: row;
     height: 44px;
     padding: 0 4px;
@@ -57,6 +58,7 @@
     overflow-x: auto;
     scrollbar-width: none;
     align-items: center;
+    justify-content: flex-end;
   }
 
   .container::-webkit-scrollbar,

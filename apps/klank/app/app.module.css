@@ -37,7 +37,6 @@
     display: flex !important;
     flex-direction: column;
     height: 100dvh;
-    /* The grid-template-columns inline style from app.tsx is overridden
-       because grid properties are inert when display is flex */
+    overflow: clip;
   }
 }
