@@ -76,4 +76,11 @@
     /* Allow wrapping for the chord+lyric pair segments */
     white-space: normal;
   }
+
+  .tablatureBlock {
+    white-space: pre;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
 }

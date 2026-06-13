@@ -291,7 +291,30 @@ export const Sheet: React.FC<SheetProps> = ({
 
       if (classified.kind === 'chord-line') {
         const isTablature = classified.tokens.some(t => t.kind === 'string-indicator')
-        if (!isTablature && i + 1 < lines.length) {
+
+        if (isTablature) {
+          // Tablature is fixed-width ASCII art that must not wrap. Group the run
+          // of consecutive tab lines into one horizontally-scrollable block so
+          // every string stays column-aligned and the block scrolls as a unit.
+          const block: React.ReactNode[] = []
+          let j = i
+          while (j < lines.length) {
+            const c = classifySheetLine(lines[j], transpose)
+            const tab = c.kind === 'chord-line' && c.tokens.some(t => t.kind === 'string-indicator')
+            if (!tab) break
+            block.push(renderLine(lines[j], j, transpose, isScrolling, instrument))
+            j++
+          }
+          result.push(
+            <div key={`tab-${i}`} className={styles.tablatureBlock}>
+              {block}
+            </div>
+          )
+          i = j
+          continue
+        }
+
+        if (i + 1 < lines.length) {
           const next = classifySheetLine(lines[i + 1], transpose)
           if (next.kind === 'plain') {
             result.push(renderChordLyricPair(classified, next.text, i))
