@@ -1,4 +1,0 @@
-[[permission]]
-identifier = "allow-report-ug-error"
-description = "Allows the hidden UG scraper window to call the report_ug_error command."
-commands.allow = ["report_ug_error"]

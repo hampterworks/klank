@@ -7,6 +7,7 @@ Specialist work routes to the subagents in `.claude/agents/` (Copilot: `.github/
 ```
 pnpm dev                              # Vite dev server only (React, no Tauri shell), port 4200
 pnpm tauri:dev                        # Full Tauri desktop app with Rust backend + hot reload
+pnpm tauri:android:dev                # Run on Android (emulator/device); CI builds via .github/workflows/build-android.yml
 pnpm build                            # Production Vite build (nx build klank)
 pnpm test                             # Vitest across all libs (nx run-many -t test)
 pnpm lint                             # ESLint across workspace (nx run-many -t lint)
@@ -27,11 +28,13 @@ pnpm nx run klank:tauri:build
 apps/klank/app/                     React Router 7 app - routes, components, root layout
 apps/klank/app/components/menu/     Left sidebar: directory tree, search bar
 apps/klank/app/components/player/   Center pane: tab display, toolbar, playback controls
-apps/klank/src-tauri/src/lib.rs     Rust commands - scrape_ug, deliver_ug_html, report_ug_error
+apps/klank/src-tauri/src/lib.rs     Rust entry - registers scrape_ug + git_* commands
+apps/klank/src-tauri/src/import/    Tab-import pipeline (stages, orchestrator, progress)
+apps/klank/src-tauri/src/git.rs     In-app git engine (libgit2) - git_pull/commit/push/clone/…
 apps/klank/src-tauri/capabilities/  Tauri permission declarations (JSON) - one file per window
 libs/ui/src/                        Shared React components (@klank/ui)
 libs/store/src/lib/store.ts         Zustand store with persisted TabSetting (@klank/store)
-libs/platform-api/src/lib/          FileService, chords, download, sort, userAgent (@klank/platform-api)
+libs/platform-api/src/lib/          FileService, git (invoke-based), chords, download, userAgent (@klank/platform-api)
 docs/agents/                        Agent architecture + setup conventions
 .claude/agents/                     Subagent identities (self-contained, routed by description)
 .claude/skills/                     Procedure-skills (auto-discovered by Claude, Copilot, Cursor)

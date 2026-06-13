@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-report-ug-challenge"
+description = "Allows the hidden UG scraper window to signal that an interactive Cloudflare challenge was detected, so the window can be revealed."
+commands.allow = ["report_ug_challenge"]

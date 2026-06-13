@@ -1,0 +1,14 @@
+[package]
+name = "tauri-plugin-ug-scraper"
+version = "0.1.0"
+edition = "2021"
+description = "Android-only Tauri plugin that scrapes an Ultimate Guitar page using a self-owned, hidden android.webkit.WebView (outside WRY)."
+links = "tauri-plugin-ug-scraper"
+
+[dependencies]
+tauri = { version = "2.11.2" }
+serde = { version = "1", features = ["derive"] }
+thiserror = "1"
+
+[build-dependencies]
+tauri-plugin = { version = "2", features = ["build"] }

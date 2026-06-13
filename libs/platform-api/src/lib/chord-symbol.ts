@@ -102,14 +102,31 @@ export const parseChordSymbol = (token: string): ParsedChordSymbol | null => {
     : { rootPitch: root.pitch, suffix, bassPitch }
 }
 
+/** Semitone shift of a leading suffix accidental, used by `formatChordSymbol`. */
+const LEADING_ACCIDENTAL_SHIFT: Record<string, number> = { '#': 1, b: -1, '♭': -1 }
+
 /**
  * Renders a parsed symbol back to a string in canonical sharps-only form
  * (`{ rootPitch: 10, suffix: 'm7' }` → `A#m7`). Inverse of `parseChordSymbol`
  * up to enharmonic spelling of the input.
+ *
+ * A suffix can begin with an accidental (a bare `♭6`/`#11` alteration) only when
+ * the source note carried a double accidental (e.g. `B♭#6` parses to
+ * `{ A#, "#6" }`). Since `pitchName` is sharps-form, naively emitting
+ * `pitchName(root) + suffix` would glue them — `"A#" + "#6"` = `"A##6"` — which
+ * re-parses to a different root (`B6`), breaking `format∘parse` idempotency.
+ * We therefore fold any leading suffix accidentals into the root pitch, which is
+ * exactly what re-parsing does, so the output is a stable fixpoint.
  */
 export const formatChordSymbol = (parsed: ParsedChordSymbol): string => {
+  let rootPitch = parsed.rootPitch
+  let suffix = parsed.suffix
+  while (suffix.length > 0 && suffix[0] in LEADING_ACCIDENTAL_SHIFT) {
+    rootPitch = (((rootPitch + LEADING_ACCIDENTAL_SHIFT[suffix[0]]) % 12) + 12) % 12
+    suffix = suffix.slice(1)
+  }
   const bass = parsed.bassPitch !== undefined ? `/${pitchName(parsed.bassPitch)}` : ''
-  return `${pitchName(parsed.rootPitch)}${parsed.suffix}${bass}`
+  return `${pitchName(rootPitch)}${suffix}${bass}`
 }
 
 /**

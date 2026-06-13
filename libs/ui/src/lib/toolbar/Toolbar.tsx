@@ -68,13 +68,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   return (
     <li className={`${styles.container}${isCollapsed ? ' ' + styles.collapsed : ''}`} {...props}>
-      <ToolTip message="Change Folder">
-        <Button
-          onClick={() => handleBaseDirectoryChange()}
-          iconButton={true}
-          icon={<FolderIcon />}
-        />
-      </ToolTip>
+      {getDirectoryPath && (
+        <ToolTip message="Change Folder">
+          <Button
+            onClick={() => handleBaseDirectoryChange()}
+            iconButton={true}
+            icon={<FolderIcon />}
+          />
+        </ToolTip>
+      )}
       <ToolTip message="Refresh">
         <Button
           onClick={() => setNeedsUpdate(true)}

@@ -1,4 +1,4 @@
-package com.tauri.dev
+package io.github.hampterworks.klank
 
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge

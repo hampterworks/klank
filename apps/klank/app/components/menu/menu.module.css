@@ -239,3 +239,65 @@
   z-index: 2000;
   white-space: nowrap;
 }
+
+/* --- Import progress + manual-paste fallback (download modal) --- */
+.importStatus {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.6875rem;
+  opacity: 0.55;
+  padding: 0 2px;
+}
+
+.spinner {
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: klank-spin 0.7s linear infinite;
+  flex: 0 0 auto;
+}
+
+@keyframes klank-spin {
+  to { transform: rotate(360deg); }
+}
+
+.triedList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.6875rem;
+  opacity: 0.5;
+  padding: 0 2px;
+}
+
+.triedItem {
+  display: flex;
+  gap: 6px;
+}
+
+.manualLabel {
+  font-size: 0.6875rem;
+  opacity: 0.6;
+  padding: 4px 2px 0;
+}
+
+.textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 120px;
+  padding: 8px 12px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  resize: vertical;
+  border: 1px solid color-mix(in srgb, var(--klank-color-text) 25%, transparent);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+}
+
+.textarea:focus {
+  border-color: var(--klank-color-text);
+}

@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-scrape"
+description = "Enables the scrape command without any pre-configured scope."
+commands.allow = ["scrape"]
+
+[[permission]]
+identifier = "deny-scrape"
+description = "Denies the scrape command without any pre-configured scope."
+commands.deny = ["scrape"]
