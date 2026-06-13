@@ -1,0 +1,14 @@
+[[permission]]
+identifier = "allow-git"
+description = "Allows the main window to use the in-app libgit2 sync commands."
+commands.allow = [
+  "git_is_repo",
+  "git_status",
+  "git_pull",
+  "git_commit",
+  "git_push",
+  "git_unpushed",
+  "git_clone",
+  "git_set_token",
+  "git_has_token",
+]

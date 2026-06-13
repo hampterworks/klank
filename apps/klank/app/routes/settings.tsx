@@ -24,6 +24,9 @@ export default function Settings() {
   const [status, setStatus] = useState<Status>(null)
   const [busy, setBusy] = useState(false)
   const [version, setVersion] = useState<string>('')
+  const [token, setTokenValue] = useState('')
+  const [hasToken, setHasToken] = useState(false)
+  const [cloneUrl, setCloneUrl] = useState('')
 
   const refreshGitState = async (dir: string, git: GitService) => {
     const [files, commits] = await Promise.all([
@@ -41,9 +44,13 @@ export default function Settings() {
         const git = await createGitService()
         gitRef.current = git
         if (!baseDirectory) return
-        const repo = await git.isGitRepo(baseDirectory)
+        const [repo, tokenStored] = await Promise.all([
+          git.isGitRepo(baseDirectory),
+          git.hasToken(),
+        ])
         if (cancelled) return
         setIsRepo(repo)
+        setHasToken(tokenStored)
         if (repo) await refreshGitState(baseDirectory, git)
       } catch {
         // not in Tauri context (server render)
@@ -67,6 +74,36 @@ export default function Settings() {
     setStatus({ ok: result.success, message: result.output || result.error || '' })
     if (result.success && baseDirectory && gitRef.current) {
       await refreshGitState(baseDirectory, gitRef.current)
+    }
+  }
+
+  const handleSaveToken = async () => {
+    if (!gitRef.current || busy) return
+    setBusy(true)
+    try {
+      await gitRef.current.setToken(token)
+      setHasToken(token.trim().length > 0)
+      setTokenValue('')
+      setStatus({ ok: true, message: token.trim() ? 'Token saved.' : 'Token cleared.' })
+    } catch (e) {
+      setStatus({ ok: false, message: e instanceof Error ? e.message : 'Could not save token' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleClone = async () => {
+    if (!gitRef.current || !baseDirectory || !cloneUrl.trim() || busy) return
+    setBusy(true)
+    try {
+      const result = await gitRef.current.cloneRepo(cloneUrl.trim(), baseDirectory)
+      setStatus({ ok: result.success, message: result.output || result.error || '' })
+      if (result.success) {
+        setIsRepo(true)
+        await refreshGitState(baseDirectory, gitRef.current)
+      }
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -164,14 +201,44 @@ export default function Settings() {
         <section className={styles.section}>
           <h2>Git</h2>
 
+          <div className={styles.row}>
+            <span className={styles.label}>Token</span>
+            <input
+              className={styles.commitInput}
+              type="password"
+              placeholder={hasToken ? '•••••••• (saved)' : 'HTTPS access token'}
+              value={token}
+              onChange={(e) => setTokenValue(e.target.value)}
+              disabled={busy}
+            />
+            <button className={styles.button} onClick={handleSaveToken} disabled={busy || (!token.trim() && !hasToken)}>
+              {token.trim() ? 'Save' : 'Clear'}
+            </button>
+          </div>
+
           {isRepo === null && (
             <span className={styles.infoMessage}>Checking repository…</span>
           )}
 
           {isRepo === false && (
-            <span className={styles.infoMessage}>
-              No git repository found in the current folder. Open a folder that is tracked by git to use these features.
-            </span>
+            <>
+              <span className={styles.infoMessage}>
+                No git repository in the current folder. Clone your tabs repository to sync it here.
+              </span>
+              <div className={styles.row}>
+                <input
+                  className={styles.commitInput}
+                  type="url"
+                  placeholder="https://github.com/you/tabs.git"
+                  value={cloneUrl}
+                  onChange={(e) => setCloneUrl(e.target.value)}
+                  disabled={busy}
+                />
+                <button className={styles.button} onClick={handleClone} disabled={busy || !cloneUrl.trim()}>
+                  Clone
+                </button>
+              </div>
+            </>
           )}
 
           {isRepo === true && (

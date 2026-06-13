@@ -1,6 +1,7 @@
 //! Tauri backend for klank. Exposes the `scrape_ug` IPC command, which imports
 //! a tab from an Ultimate Guitar URL through a layered, observable pipeline (see
 //! the [`import`] module).
+mod git;
 mod import;
 
 use import::ImportProgress;
@@ -25,21 +26,41 @@ pub fn run() {
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_http::init())
-        .plugin(tauri_plugin_shell::init());
+        .plugin(tauri_plugin_http::init());
 
     // The hidden-webview import stage (and its IPC) is desktop-only; Android
-    // uses the mobile API / website stages and (next) a dedicated plugin.
+    // uses the mobile API / website stages and (next) a dedicated plugin. Git
+    // commands are libgit2-based and run on every platform.
     #[cfg(desktop)]
     let builder = builder
         .manage(import::desktop::UgWebviewState::default())
         .invoke_handler(tauri::generate_handler![
             scrape_ug,
             import::desktop::deliver_ug_html,
-            import::desktop::report_ug_challenge
+            import::desktop::report_ug_challenge,
+            git::git_is_repo,
+            git::git_status,
+            git::git_pull,
+            git::git_commit,
+            git::git_push,
+            git::git_unpushed,
+            git::git_clone,
+            git::git_set_token,
+            git::git_has_token
         ]);
     #[cfg(not(desktop))]
-    let builder = builder.invoke_handler(tauri::generate_handler![scrape_ug]);
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        scrape_ug,
+        git::git_is_repo,
+        git::git_status,
+        git::git_pull,
+        git::git_commit,
+        git::git_push,
+        git::git_unpushed,
+        git::git_clone,
+        git::git_set_token,
+        git::git_has_token
+    ]);
 
     builder
         .setup(|app| {
