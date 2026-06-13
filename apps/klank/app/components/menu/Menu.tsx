@@ -456,7 +456,7 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
           onSettingsClick={() => navigate('/settings')}
           isCollapsed={!isMenuExtended}
         />
-        {isMenuExtended && (
+        {!isMobile && isMenuExtended && (
           <>
             <PlaylistSection tree={tree} currentTabPath={currentTabPath} />
             <div className={styles.treeWrapper}>

@@ -324,9 +324,10 @@
     background: var(--klank-color-background);
   }
 
-  /* Hide the tree and playlist sections from the top bar;
-     keep the Searchbar's toggle button visible so the drawer can be opened */
-  .treeWrapper,
+  /* Hide tree and playlist only from the top-bar <ul>.
+     .container .treeWrapper (not bare .treeWrapper) so the portal drawer's
+     treeWrapper is NOT hidden — unscoped .treeWrapper hides it everywhere. */
+  .container .treeWrapper,
   .container [class*="playlistSection"] {
     display: none !important;
   }
@@ -390,8 +391,10 @@
     border-radius: 12px 12px 0 0;
     display: flex;
     flex-direction: column;
-    max-height: calc(100dvh - 44px - var(--safe-top));
-    padding-bottom: calc(44px + var(--safe-bottom));
+    /* Fixed height so the file tree always has room; scrolls within */
+    height: 72dvh;
+    max-height: 85dvh;
+    padding-bottom: max(8px, var(--safe-bottom));
     overflow: hidden;
     z-index: 201;
   }
@@ -405,5 +408,6 @@
   .mobileDrawerSearch {
     flex-shrink: 0;
     border-top: 1px solid var(--klank-color-border);
+    padding: 4px 8px;
   }
 }
