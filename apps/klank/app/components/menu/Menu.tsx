@@ -274,9 +274,11 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
 
   // Cleanup toast timers on unmount
   useEffect(() => {
+    const deleteTimer = deleteErrorTimerRef
+    const downloadTimer = downloadErrorTimerRef
     return () => {
-      if (deleteErrorTimerRef.current) clearTimeout(deleteErrorTimerRef.current)
-      if (downloadErrorTimerRef.current) clearTimeout(downloadErrorTimerRef.current)
+      if (deleteTimer.current) clearTimeout(deleteTimer.current)
+      if (downloadTimer.current) clearTimeout(downloadTimer.current)
     }
   }, [])
 

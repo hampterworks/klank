@@ -42,4 +42,9 @@
     justify-content: center;
     flex-shrink: 0;
   }
+
+  /* Never show the search Input in the top bar — it lives in the drawer only */
+  .container > div {
+    display: none !important;
+  }
 }
