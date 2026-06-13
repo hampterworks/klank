@@ -88,9 +88,18 @@ const chordStringArb = fc
     bass === null ? letter + accidental + suffix : `${letter}${accidental}${suffix}/${bass[0]}${bass[1]}`,
   )
 
-/** Parsed symbols with grammar-valid suffixes (the parser's output domain). */
+/**
+ * Parsed symbols with grammar-valid suffixes (the parser's output domain).
+ *
+ * A suffix that begins with a bare accidental (e.g. `♭5`) is excluded: such a
+ * symbol has no faithful text form — `pitchName(root) + "♭5"` glues the
+ * accidental onto the root note and re-parses to a different root — so it is
+ * outside the representable output domain. `formatChordSymbol` deliberately
+ * folds such leading accidentals into the root (see its docs).
+ */
+const representableSuffixArb = suffixArb.filter((s) => !/^[#b♭]/.test(s))
 const parsedArb: fc.Arbitrary<ParsedChordSymbol> = fc
-  .tuple(fc.integer({ min: 0, max: 11 }), suffixArb, fc.option(fc.integer({ min: 0, max: 11 })))
+  .tuple(fc.integer({ min: 0, max: 11 }), representableSuffixArb, fc.option(fc.integer({ min: 0, max: 11 })))
   .map(([rootPitch, suffix, bassPitch]) =>
     bassPitch === null ? { rootPitch, suffix } : { rootPitch, suffix, bassPitch },
   )
