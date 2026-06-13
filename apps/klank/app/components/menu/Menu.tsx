@@ -10,6 +10,7 @@ import {
   FileTreeView,
   LogoIcon,
   NewPlaylistIcon,
+  RefreshIcon,
   Searchbar,
   ShuffleIcon,
   TargetIcon,
@@ -455,12 +456,13 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
           setTabPath={handleSelectSong}
           tree={tree}
           onRequestCreatePlaylist={isMobile ? undefined : handleRequestCreatePlaylist}
-          onRequestDownload={handleRequestDownload}
+          onRequestDownload={isMobile ? undefined : handleRequestDownload}
           isDownloading={isDownloading}
           downloadError={downloadError}
           onSettingsClick={() => navigate('/settings')}
           isCollapsed={!isMenuExtended}
           hideGoToTab={isMobile}
+          hideRefresh={isMobile}
         />
         {!isMobile && isMenuExtended && (
           <>
@@ -500,32 +502,52 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
           />
           <div className={styles.mobileDrawerSheet}>
             <div className={styles.mobileDrawerActions}>
-              <Button
-                iconButton
-                icon={<TargetIcon />}
-                title="Go to current tab"
-                aria-label="Go to current tab"
-                onClick={() => document.getElementById('active')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-              />
-              <Button
-                iconButton
-                icon={<ShuffleIcon />}
-                title="Go to random tab"
-                aria-label="Go to random tab"
-                onClick={() => {
-                  if (!tree.length) return
-                  const randomItem = tree[Math.floor(Math.random() * tree.length)]
-                  handleSelectSong(randomItem.path)
-                  toggleMenu(false)
-                }}
-              />
-              <Button
-                iconButton
-                icon={<NewPlaylistIcon />}
-                title="New playlist"
-                aria-label="New playlist"
-                onClick={handleRequestCreatePlaylist}
-              />
+              {/* Utility — act on tree state, keep drawer open */}
+              <div className={styles.mobileDrawerActionsGroup}>
+                <Button
+                  iconButton
+                  icon={<TargetIcon />}
+                  title="Go to current tab"
+                  aria-label="Go to current tab"
+                  onClick={() => document.getElementById('active')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                />
+                <Button
+                  iconButton
+                  icon={<RefreshIcon />}
+                  title="Refresh"
+                  aria-label="Refresh"
+                  onClick={() => setNeedsUpdate(true)}
+                />
+              </div>
+              {/* Creation / navigation — may close drawer or open a modal */}
+              <div className={styles.mobileDrawerActionsGroup}>
+                <Button
+                  iconButton
+                  icon={<ShuffleIcon />}
+                  title="Go to random tab"
+                  aria-label="Go to random tab"
+                  onClick={() => {
+                    if (!tree.length) return
+                    const randomItem = tree[Math.floor(Math.random() * tree.length)]
+                    handleSelectSong(randomItem.path)
+                    toggleMenu(false)
+                  }}
+                />
+                <Button
+                  iconButton
+                  icon={<NewPlaylistIcon />}
+                  title="New playlist"
+                  aria-label="New playlist"
+                  onClick={handleRequestCreatePlaylist}
+                />
+                <Button
+                  iconButton
+                  icon={<DownloadIcon />}
+                  title="Download tab"
+                  aria-label="Download tab"
+                  onClick={handleRequestDownload}
+                />
+              </div>
             </div>
             <div className={styles.mobileDrawerContent}>
               <PlaylistSection tree={tree} currentTabPath={currentTabPath} />

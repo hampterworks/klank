@@ -39,6 +39,8 @@ type ToolbarProps = {
   isCollapsed?: boolean
   /** When true the "Go to Tab" button is hidden (it lives in the mobile drawer instead). */
   hideGoToTab?: boolean
+  /** When true the Refresh button is hidden (it lives in the mobile drawer instead). */
+  hideRefresh?: boolean
 } & React.ComponentPropsWithRef<'li'>
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -54,6 +56,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   tree,
   isCollapsed,
   hideGoToTab,
+  hideRefresh,
   ...props
 }) => {
   const handleBaseDirectoryChange = () => {
@@ -80,13 +83,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           />
         </ToolTip>
       )}
-      <ToolTip message="Refresh">
-        <Button
-          onClick={() => setNeedsUpdate(true)}
-          iconButton={true}
-          icon={<RefreshIcon />}
-        />
-      </ToolTip>
+      {!hideRefresh && (
+        <ToolTip message="Refresh">
+          <Button
+            onClick={() => setNeedsUpdate(true)}
+            iconButton={true}
+            icon={<RefreshIcon />}
+          />
+        </ToolTip>
+      )}
       <ToolTip message="Settings">
         <Button iconButton={true} icon={<SettingsIcon />} onClick={onSettingsClick} />
       </ToolTip>
@@ -120,18 +125,20 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           Error
         </span>
       )}
-      <ToolTip message={isDownloading ? 'Downloading…' : 'Download Tab'}>
-        <Button
-          onClick={() => onRequestDownload?.()}
-          iconButton={true}
-          disabled={isDownloading}
-          icon={
-            isDownloading
-              ? <span className={styles.spinner}><RefreshIcon /></span>
-              : <DownloadIcon />
-          }
-        />
-      </ToolTip>
+      {onRequestDownload && (
+        <ToolTip message={isDownloading ? 'Downloading…' : 'Download Tab'}>
+          <Button
+            onClick={() => onRequestDownload()}
+            iconButton={true}
+            disabled={isDownloading}
+            icon={
+              isDownloading
+                ? <span className={styles.spinner}><RefreshIcon /></span>
+                : <DownloadIcon />
+            }
+          />
+        </ToolTip>
+      )}
     </li>
   )
 }
