@@ -1,10 +1,21 @@
 import styles from './settings.module.css'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { createGitService, getAppVersion, isMobileDevice, type GitChangedFile, type GitResult, type GitService } from '@klank/platform-api'
+import { createGitService, getAppVersion, isMobileDevice, type BranchInfo, type GitService } from '@klank/platform-api'
 import { useKlankStore } from '@klank/store'
+import { runGitSync } from '../useGitSync'
 
 type Status = { ok: boolean; message: string } | null
+
+const formatSince = (ts: number | null): string => {
+  if (!ts) return 'never'
+  const mins = Math.floor((Date.now() - ts) / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
+}
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -15,12 +26,16 @@ export default function Settings() {
   const instrument = useKlankStore().instrument
   const setInstrument = useKlankStore().setInstrument
   const fileService = useKlankStore().fileService
+  const setTabSettings = useKlankStore().setTabSettings
+  const setPlaylists = useKlankStore().setPlaylists
+  const syncSettings = useKlankStore().syncSettings
+  const setSyncSettings = useKlankStore().setSyncSettings
+  const syncStatus = useKlankStore().syncStatus
 
   const gitRef = useRef<GitService | null>(null)
   const [isRepo, setIsRepo] = useState<boolean | null>(null)
-  const [changedFiles, setChangedFiles] = useState<GitChangedFile[]>([])
-  const [unpushedCommits, setUnpushedCommits] = useState<string[]>([])
-  const [commitMessage, setCommitMessage] = useState('Update tabs')
+  const [branches, setBranches] = useState<BranchInfo[]>([])
+  const [currentBranch, setCurrentBranch] = useState<string>('')
   const [status, setStatus] = useState<Status>(null)
   const [busy, setBusy] = useState(false)
   const [version, setVersion] = useState<string>('')
@@ -28,13 +43,20 @@ export default function Settings() {
   const [hasToken, setHasToken] = useState(false)
   const [cloneUrl, setCloneUrl] = useState('')
 
-  const refreshGitState = async (dir: string, git: GitService) => {
-    const [files, commits] = await Promise.all([
-      git.getChangedFiles(dir),
-      git.getUnpushedCommits(dir),
+  const refreshBranches = async (dir: string, git: GitService) => {
+    const list = await git.listBranches(dir)
+    setBranches(list)
+    setCurrentBranch(list.find((b) => b.isHead)?.name ?? '')
+  }
+
+  const rehydrate = async (dir: string) => {
+    if (!fileService) return
+    const [settings, playlists] = await Promise.all([
+      fileService.readTabSettings(dir),
+      fileService.readPlaylists(dir),
     ])
-    setChangedFiles(files)
-    setUnpushedCommits(commits)
+    setTabSettings(settings)
+    setPlaylists(playlists)
   }
 
   useEffect(() => {
@@ -51,7 +73,7 @@ export default function Settings() {
         if (cancelled) return
         setIsRepo(repo)
         setHasToken(tokenStored)
-        if (repo) await refreshGitState(baseDirectory, git)
+        if (repo) await refreshBranches(baseDirectory, git)
       } catch {
         // not in Tauri context (server render)
       }
@@ -68,13 +90,6 @@ export default function Settings() {
     if (!fileService) return
     const path = await fileService.getDirectoryPath()
     if (path) setBaseDirectory(path)
-  }
-
-  const applyResult = async (result: GitResult) => {
-    setStatus({ ok: result.success, message: result.output || result.error || '' })
-    if (result.success && baseDirectory && gitRef.current) {
-      await refreshGitState(baseDirectory, gitRef.current)
-    }
   }
 
   const handleSaveToken = async () => {
@@ -100,38 +115,38 @@ export default function Settings() {
       setStatus({ ok: result.success, message: result.output || result.error || '' })
       if (result.success) {
         setIsRepo(true)
-        await refreshGitState(baseDirectory, gitRef.current)
+        await refreshBranches(baseDirectory, gitRef.current)
+        await rehydrate(baseDirectory)
       }
     } finally {
       setBusy(false)
     }
   }
 
-  const handlePull = async () => {
-    if (!baseDirectory || !gitRef.current || busy) return
+  const handleSyncNow = async () => {
+    if (!gitRef.current || !baseDirectory || busy) return
     setBusy(true)
     try {
-      await applyResult(await gitRef.current.pull(baseDirectory))
+      await runGitSync(gitRef.current, baseDirectory, fileService)
+      await refreshBranches(baseDirectory, gitRef.current)
     } finally {
       setBusy(false)
     }
   }
 
-  const handleCommit = async () => {
-    if (!baseDirectory || !gitRef.current || busy || !commitMessage.trim()) return
+  const handleSelectBranch = async (name: string) => {
+    if (!gitRef.current || !baseDirectory || busy || name === currentBranch) return
     setBusy(true)
     try {
-      await applyResult(await gitRef.current.commit(baseDirectory, commitMessage.trim()))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const handlePush = async () => {
-    if (!baseDirectory || !gitRef.current || busy) return
-    setBusy(true)
-    try {
-      await applyResult(await gitRef.current.push(baseDirectory))
+      // Commit/push current branch first so switching never loses local edits.
+      await runGitSync(gitRef.current, baseDirectory, fileService)
+      const result = await gitRef.current.checkoutBranch(baseDirectory, name)
+      setStatus({ ok: result.success, message: result.output || result.error || '' })
+      if (result.success) {
+        await rehydrate(baseDirectory)
+        await runGitSync(gitRef.current, baseDirectory, fileService)
+        await refreshBranches(baseDirectory, gitRef.current)
+      }
     } finally {
       setBusy(false)
     }
@@ -199,7 +214,7 @@ export default function Settings() {
         </section>
 
         <section className={styles.section}>
-          <h2>Git</h2>
+          <h2>Sync</h2>
 
           <div className={styles.row}>
             <span className={styles.label}>Token</span>
@@ -243,59 +258,74 @@ export default function Settings() {
 
           {isRepo === true && (
             <>
-              <div>
-                <div className={styles.row} style={{ marginBottom: 8 }}>
-                  <span className={styles.label}>Changes</span>
-                  <span style={{ fontSize: '0.875rem', opacity: 0.7 }}>
-                    {changedFiles.length} file{changedFiles.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-                {changedFiles.length === 0 ? (
-                  <span className={styles.noChanges}>No uncommitted changes</span>
-                ) : (
-                  <div className={styles.fileList}>
-                    {changedFiles.map((f, i) => (
-                      <div key={i} className={styles.fileItem}>
-                        <span className={styles.fileStatus}>{f.status}</span>
-                        <span>{f.path}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <div className={styles.row}>
+                <span className={styles.label}>Branch</span>
+                <select
+                  className={styles.commitInput}
+                  value={currentBranch}
+                  onChange={(e) => handleSelectBranch(e.target.value)}
+                  disabled={busy || branches.length === 0}
+                >
+                  {branches.length === 0 && <option value="">…</option>}
+                  {branches.map((b) => (
+                    <option key={b.name} value={b.name}>
+                      {b.name}{b.isRemote ? ' (remote)' : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className={styles.row}>
-                <button className={styles.button} onClick={handlePull} disabled={busy}>
-                  Pull
+                <span className={styles.label}>Status</span>
+                <span className={styles.dirPath}>
+                  {syncStatus.state === 'syncing'
+                    ? 'Syncing…'
+                    : syncStatus.state === 'error'
+                      ? `Error: ${syncStatus.message}`
+                      : syncStatus.state === 'offline'
+                        ? syncStatus.message
+                        : `Last synced ${formatSince(syncStatus.lastSyncedAt)}`}
+                </span>
+                <button className={styles.button} onClick={handleSyncNow} disabled={busy}>
+                  Sync now
                 </button>
               </div>
 
               <div className={styles.row}>
+                <span className={styles.label}>Auto-sync</span>
+                <button
+                  className={styles.button}
+                  onClick={() => setSyncSettings({ enabled: !syncSettings.enabled })}
+                  disabled={busy}
+                >
+                  {syncSettings.enabled ? 'On' : 'Off'}
+                </button>
+              </div>
+
+              <div className={styles.row}>
+                <span className={styles.label}>Every</span>
                 <input
                   className={styles.commitInput}
-                  type="text"
-                  value={commitMessage}
-                  onChange={(e) => setCommitMessage(e.target.value)}
-                  placeholder="Commit message"
-                  disabled={busy}
+                  type="number"
+                  min={1}
+                  value={syncSettings.intervalMinutes}
+                  onChange={(e) => setSyncSettings({ intervalMinutes: Math.max(1, Number(e.target.value) || 1) })}
+                  disabled={busy || !syncSettings.enabled}
                 />
-                <button
-                  className={styles.button}
-                  onClick={handleCommit}
-                  disabled={busy || changedFiles.length === 0 || !commitMessage.trim()}
-                >
-                  Commit
-                </button>
+                <span className={styles.label}>min</span>
               </div>
 
               <div className={styles.row}>
-                <button
-                  className={styles.button}
-                  onClick={handlePush}
-                  disabled={busy || unpushedCommits.length === 0}
-                >
-                  Push{unpushedCommits.length > 0 ? ` (${unpushedCommits.length})` : ''}
-                </button>
+                <span className={styles.label}>After edit</span>
+                <input
+                  className={styles.commitInput}
+                  type="number"
+                  min={0}
+                  value={syncSettings.debounceMinutes}
+                  onChange={(e) => setSyncSettings({ debounceMinutes: Math.max(0, Number(e.target.value) || 0) })}
+                  disabled={busy || !syncSettings.enabled}
+                />
+                <span className={styles.label}>min</span>
               </div>
 
               {status && (

@@ -9,6 +9,7 @@ import {
 } from '@klank/platform-api'
 import { Menu } from './components/menu/Menu'
 import { Player } from './components/player/Player'
+import { useGitSync } from './useGitSync'
 
 const MIN_WIDTH = 160
 const MAX_WIDTH = 800
@@ -31,6 +32,9 @@ export function App() {
   const [needsUpdate, setNeedsUpdate] = useState(false)
   const containerRef = useRef<HTMLElement>(null)
   const handleRef = useRef<HTMLDivElement>(null)
+
+  // Background git sync: refresh the file tree when a sync pulls remote changes.
+  useGitSync(() => setNeedsUpdate(true))
 
   useEffect(() => {
     setServerMode(!isTauri)

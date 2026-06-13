@@ -33,6 +33,49 @@ export type TabSetting = {
   link?: string
 }
 
+/** User-configurable auto-sync cadence. Persisted to localStorage. */
+export type SyncSettings = {
+  /** Master switch for background git sync. */
+  enabled: boolean
+  /** Periodic sync interval in minutes. */
+  intervalMinutes: number
+  /** Debounce after a local edit before syncing, in minutes. */
+  debounceMinutes: number
+}
+
+export const DEFAULT_SYNC_SETTINGS: SyncSettings = {
+  enabled: true,
+  intervalMinutes: 30,
+  debounceMinutes: 5,
+}
+
+export type SyncRunState = 'idle' | 'syncing' | 'error' | 'offline'
+
+/** Live status of the background sync loop, surfaced in Settings. Not persisted. */
+export type SyncStatus = {
+  state: SyncRunState
+  /** Epoch ms of the last successful sync, or null if never. */
+  lastSyncedAt: number | null
+  message: string
+}
+
+/**
+ * Lightweight change signal driving debounced auto-sync. Tab/settings/playlist
+ * writes call `notifyTabsChanged`; the auto-sync hook subscribes via `onTabsChanged`.
+ * Kept module-level (not React state) so store mutators can fire it like the
+ * existing fire-and-forget file writes.
+ */
+const tabsChangedListeners = new Set<() => void>()
+export const onTabsChanged = (fn: () => void): (() => void) => {
+  tabsChangedListeners.add(fn)
+  return () => {
+    tabsChangedListeners.delete(fn)
+  }
+}
+export const notifyTabsChanged = (): void => {
+  for (const fn of tabsChangedListeners) fn()
+}
+
 type KlankState = {
   /** Active tab directory chosen by the user. Not persisted. */
   baseDirectory?: string
@@ -93,6 +136,12 @@ type KlankState = {
    * Does not touch the file system — callers delete the file via FileService first.
    */
   deleteTab: (path: string) => void
+  /** @persisted Auto-sync cadence (interval, debounce, on/off). */
+  syncSettings: SyncSettings
+  setSyncSettings: (partial: Partial<SyncSettings>) => void
+  /** Live sync status for the Settings UI. Not persisted. */
+  syncStatus: SyncStatus
+  setSyncStatus: (status: Partial<SyncStatus>) => void
 }
 
 /** All valid scroll speed levels (0–9, displayed as 1–10). */
@@ -102,7 +151,7 @@ export type ScrollSpeeds = typeof SCROLL_SPEEDS[number]
 /** The slice of KlankState saved to localStorage — must match what `partialize` returns. */
 type PersistedKlankState = Pick<
   KlankState,
-  'tab' | 'theme' | 'ui' | 'baseDirectory' | 'activePlaylistId' | 'activePlaylistIndex'
+  'tab' | 'theme' | 'ui' | 'baseDirectory' | 'activePlaylistId' | 'activePlaylistIndex' | 'syncSettings'
 >
 
 /** Fire-and-forget write of all playlists to `.klank-settings.json`. No-op until a directory and FileService are set. */
@@ -110,7 +159,10 @@ const persistPlaylists = (
   state: Pick<KlankState, 'fileService' | 'baseDirectory'>,
   playlists: Playlist[],
 ) => {
-  if (state.baseDirectory) state.fileService?.writePlaylists(playlists, state.baseDirectory)
+  if (state.baseDirectory) {
+    state.fileService?.writePlaylists(playlists, state.baseDirectory)
+    notifyTabsChanged()
+  }
 }
 
 const clampFontSize = (size: number) => {
@@ -161,6 +213,10 @@ export const useKlankStore = create<KlankState>()(
         setMenuWidth: (menuWidth) => set((state) => ({...state, ui: {...state.ui, menuWidth}})),
         setTheme: (theme) => set((state) => ({...state, theme})),
         setInstrument: (instrument) => set((state) => ({...state, instrument})),
+        syncSettings: DEFAULT_SYNC_SETTINGS,
+        setSyncSettings: (partial) => set((state) => ({...state, syncSettings: {...state.syncSettings, ...partial}})),
+        syncStatus: { state: 'idle', lastSyncedAt: null, message: '' },
+        setSyncStatus: (status) => set((state) => ({...state, syncStatus: {...state.syncStatus, ...status}})),
         setTabPath: (path) => set((state) => {
           const saved = state.tabSettingByPath[path]
           const tab: TabSetting = {
@@ -178,6 +234,7 @@ export const useKlankStore = create<KlankState>()(
               transpose: state.tab.transpose,
               scrollSpeed: state.tab.scrollSpeed,
             }, state.baseDirectory)
+            notifyTabsChanged()
           }
           const tabSettingByPath = state.tab.path
             ? {
@@ -198,8 +255,10 @@ export const useKlankStore = create<KlankState>()(
           const tabSettingByPath = state.tab.path
             ? { ...state.tabSettingByPath, [state.tab.path]: entry }
             : state.tabSettingByPath
-          if (state.tab.path && state.baseDirectory)
+          if (state.tab.path && state.baseDirectory) {
             state.fileService?.writeTabSetting(state.tab.path, entry, state.baseDirectory)
+            notifyTabsChanged()
+          }
           return { ...state, tab, tabSettingByPath }
         }),
         setTabTranspose: (transpose) => set((state) => {
@@ -208,8 +267,10 @@ export const useKlankStore = create<KlankState>()(
           const tabSettingByPath = state.tab.path
             ? { ...state.tabSettingByPath, [state.tab.path]: entry }
             : state.tabSettingByPath
-          if (state.tab.path && state.baseDirectory)
+          if (state.tab.path && state.baseDirectory) {
             state.fileService?.writeTabSetting(state.tab.path, entry, state.baseDirectory)
+            notifyTabsChanged()
+          }
           return { ...state, tab, tabSettingByPath }
         }),
         setTabScrollSpeed: (scrollSpeed) => set((state) => {
@@ -218,8 +279,10 @@ export const useKlankStore = create<KlankState>()(
           const tabSettingByPath = state.tab.path
             ? { ...state.tabSettingByPath, [state.tab.path]: entry }
             : state.tabSettingByPath
-          if (state.tab.path && state.baseDirectory)
+          if (state.tab.path && state.baseDirectory) {
             state.fileService?.writeTabSetting(state.tab.path, entry, state.baseDirectory)
+            notifyTabsChanged()
+          }
           return { ...state, tab, tabSettingByPath }
         }),
         setTabIsScrolling: (isScrolling) => set((state) => ({...state, tab: {...state.tab, isScrolling}})),
@@ -389,13 +452,17 @@ export const useKlankStore = create<KlankState>()(
       }),
       {
         name: 'klank-storage',
-        version: 1,
+        version: 2,
         // v0 persisted playlists in localStorage; they now live in
         // .klank-settings.json, so stale localStorage copies are dropped.
+        // v2 adds syncSettings; defaults fill in for older persisted state.
         migrate: (persistedState) => {
           const state = { ...((persistedState ?? {}) as Record<string, unknown>) }
           delete state['playlists']
-          return state as unknown as PersistedKlankState
+          return {
+            ...state,
+            syncSettings: { ...DEFAULT_SYNC_SETTINGS, ...(state.syncSettings as Partial<SyncSettings> | undefined) },
+          } as unknown as PersistedKlankState
         },
         partialize: (state) => ({
           tab: { ...state.tab, isScrolling: false },
@@ -404,6 +471,7 @@ export const useKlankStore = create<KlankState>()(
           baseDirectory: state.baseDirectory,
           activePlaylistId: state.activePlaylistId,
           activePlaylistIndex: state.activePlaylistIndex,
+          syncSettings: state.syncSettings,
         }),
       }
     )

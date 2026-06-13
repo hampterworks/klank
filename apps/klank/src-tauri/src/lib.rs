@@ -47,7 +47,10 @@ pub fn run() {
             git::git_unpushed,
             git::git_clone,
             git::git_set_token,
-            git::git_has_token
+            git::git_has_token,
+            git::git_sync,
+            git::git_list_branches,
+            git::git_checkout_branch
         ]);
     #[cfg(not(desktop))]
     let builder = builder.invoke_handler(tauri::generate_handler![
@@ -60,7 +63,10 @@ pub fn run() {
         git::git_unpushed,
         git::git_clone,
         git::git_set_token,
-        git::git_has_token
+        git::git_has_token,
+        git::git_sync,
+        git::git_list_branches,
+        git::git_checkout_branch
     ]);
 
     builder

@@ -53,9 +53,17 @@ describe('klank-storage migration and shape', () => {
     const raw = localStorageData['klank-storage']
     expect(raw).toBeDefined()
     const parsed = JSON.parse(raw) as { version: number; state: Record<string, unknown> }
-    expect(parsed.version).toBe(1)
+    expect(parsed.version).toBe(2)
     expect(parsed.state).not.toHaveProperty('playlists')
     expect(parsed.state).toHaveProperty('activePlaylistId')
     expect(parsed.state).toHaveProperty('activePlaylistIndex')
+    // Sync cadence is persisted so it survives reloads.
+    expect(parsed.state).toHaveProperty('syncSettings')
+  })
+
+  it('migrate fills in default sync settings for older persisted state', async () => {
+    const { useKlankStore } = await import('./store.js')
+    const { syncSettings } = useKlankStore.getState()
+    expect(syncSettings).toEqual({ enabled: true, intervalMinutes: 30, debounceMinutes: 5 })
   })
 })
