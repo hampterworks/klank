@@ -1,0 +1,295 @@
+.section {
+  border-bottom: 1px solid var(--klank-color-border);
+  font-size: 0.875rem;
+  color: var(--klank-color-text);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* Section header — NOT a button itself; contains two separate buttons */
+.header {
+  display: flex;
+  align-items: center;
+  background: var(--klank-color-highlight);
+  border-bottom: 1px solid var(--klank-color-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.headerToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex: 1;
+  padding: 0.3rem 0.5rem;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  color: var(--klank-color-text);
+  text-align: left;
+
+  &:hover {
+    background: var(--klank-color-selected);
+  }
+
+  svg {
+    flex-shrink: 0;
+    transition: transform 150ms;
+  }
+}
+
+.rotated {
+  transform: rotate(-90deg);
+}
+
+
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.playlistRow {
+  position: relative;
+  background: var(--klank-color-background);
+  border-bottom: 1px solid var(--klank-color-border);
+}
+
+.playlistRowHeader {
+  display: flex;
+  align-items: center;
+}
+
+/* ● / ○ indicator — tap to activate / deactivate */
+.activateButton {
+  flex-shrink: 0;
+  padding: 0.375rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.625rem;
+  line-height: 1;
+  color: var(--klank-color-text);
+  opacity: 0.4;
+  transition: opacity 100ms;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.activateButton.isActive {
+  opacity: 1;
+  color: var(--klank-color-success);
+}
+
+/* Playlist name — tap to expand song list */
+.nameButton {
+  flex: 1;
+  padding: 0.375rem 0.25rem;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  color: var(--klank-color-text);
+  min-width: 0;
+
+  &:hover {
+    background: var(--klank-color-highlight);
+  }
+}
+
+.playlistNameInput {
+  flex: 1;
+  background: var(--klank-color-secondary-background);
+  border: 1px solid var(--klank-color-border);
+  border-radius: 3px;
+  padding: 0.2rem 0.35rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  color: var(--klank-color-text);
+  min-width: 0;
+  margin: 0.2rem 0.25rem;
+}
+
+.menuButton {
+  padding: 0.375rem 0.5rem;
+  cursor: pointer;
+  color: var(--klank-color-text);
+  opacity: 0.5;
+  font-size: 1rem;
+  line-height: 1;
+
+  &:hover {
+    background: var(--klank-color-highlight);
+    opacity: 1;
+  }
+}
+
+.contextMenu {
+  z-index: 9999;
+  background: var(--klank-color-background);
+  border: 1px solid var(--klank-color-border);
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  min-width: 9rem;
+  overflow: hidden;
+
+  button {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    cursor: pointer;
+    color: var(--klank-color-text);
+    font-size: 0.8125rem;
+    font-family: inherit;
+
+    &:hover {
+      background: var(--klank-color-highlight);
+    }
+  }
+
+  .dangerAction:hover {
+    background: var(--klank-color-fail);
+    color: #fff;
+  }
+}
+
+.songList {
+  display: flex;
+  flex-direction: column;
+  background: var(--klank-color-background);
+  padding-bottom: 0.25rem;
+}
+
+.songItem {
+  display: flex;
+  align-items: center;
+
+  &:hover {
+    background: var(--klank-color-highlight);
+  }
+
+  &.activeSong {
+    background: var(--klank-color-selected);
+  }
+
+  &.dragging {
+    opacity: 0.4;
+  }
+
+  &.dragOver {
+    border-top: 2px solid var(--klank-color-text);
+  }
+}
+
+.dragHandle {
+  display: flex;
+  align-items: center;
+  padding: 0 0.25rem 0 0.5rem;
+  opacity: 0;
+  cursor: grab;
+  touch-action: none;
+  color: var(--klank-color-text);
+  flex-shrink: 0;
+  transition: opacity 100ms;
+
+  .songItem:hover & {
+    opacity: 0.4;
+  }
+
+  &:hover {
+    opacity: 0.8 !important;
+  }
+
+  svg {
+    width: 0.625rem;
+    height: 0.875rem;
+  }
+}
+
+.songButton {
+  flex: 1;
+  padding: 0.35rem 0.5rem 0.35rem 1.5rem;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  color: var(--klank-color-text);
+  min-width: 0;
+}
+
+.removeButton {
+  flex-shrink: 0;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+  opacity: 0;
+  font-size: 0.875rem;
+  color: var(--klank-color-text);
+  transition: opacity 100ms;
+
+  .songItem:hover & {
+    opacity: 0.6;
+  }
+
+  &:hover {
+    opacity: 1 !important;
+    color: var(--klank-color-fail);
+  }
+}
+
+.dropSentinel {
+  height: 8px;
+  list-style: none;
+
+  &.dragOver {
+    border-top: 2px solid var(--klank-color-text);
+  }
+}
+
+.addSongRow {
+  padding: 0.25rem 0.5rem 0.125rem 0.5rem;
+}
+
+.addSongButton {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  border: 1px dashed var(--klank-color-border);
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--klank-color-text);
+  opacity: 0.7;
+  font-family: inherit;
+
+  svg {
+    width: 0.625rem;
+    height: 0.625rem;
+    flex-shrink: 0;
+  }
+
+  &:hover:not(:disabled) {
+    opacity: 1;
+    background: var(--klank-color-highlight);
+    border-style: solid;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.35;
+  }
+}
+
+.empty {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--klank-color-text);
+  opacity: 0.45;
+  font-style: italic;
+}

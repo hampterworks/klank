@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "importHelpers": true,
+    "isolatedModules": true,
+    "lib": ["es2022"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmitOnError": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "es2022",
+    "customConditions": ["@klank/source"],
+    "baseUrl": ".",
+    "paths": {
+      "@klank/ui": ["libs/ui/src/index.ts"],
+      "@klank/store": ["libs/store/src/index.ts"],
+      "@klank/platform-api": ["libs/platform-api/src/index.ts"],
+    }
+  }
+}

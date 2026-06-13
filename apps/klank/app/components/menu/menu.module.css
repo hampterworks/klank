@@ -1,0 +1,303 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--klank-color-border);
+  overflow: hidden;
+  font-size: 14px;
+  color: var(--klank-color-text);
+  height: 100dvh;
+
+  > li:first-of-type {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    height: 34px;
+    padding: 0 8px;
+    border-bottom: 1px solid var(--klank-color-border);
+  }
+
+  > .treeWrapper {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+}
+
+.container[data-collapsed="true"] .logoText {
+  display: none;
+}
+
+.container[data-collapsed="true"] > li:first-of-type {
+  justify-content: center;
+}
+
+.logoText {}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--klank-color-secondary-background);
+  border: 1px solid var(--klank-color-border);
+  border-radius: 6px;
+  width: min(400px, 90vw);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  svg {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+}
+
+.modalTitle {
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.modalBody {
+  padding: 0 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modalInput {
+  width: 100%;
+  box-sizing: border-box;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  background: var(--klank-color-background);
+  color: var(--klank-color-text);
+  border: 1px solid var(--klank-color-border);
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.modalInput:focus {
+  border-color: var(--klank-color-text);
+}
+
+.modalHint {
+  font-size: 0.6875rem;
+  opacity: 0.45;
+  padding: 0 2px;
+}
+
+.modalActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 12px 20px;
+  border-top: 1px solid var(--klank-color-border);
+}
+
+.btnCancel {
+  height: 30px;
+  padding: 0 16px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+  border: 1px solid var(--klank-color-border);
+  background: transparent;
+  color: var(--klank-color-text);
+  transition: background 0.15s;
+}
+
+.btnCancel:hover {
+  background: var(--klank-color-highlight);
+}
+
+.btnDownload {
+  height: 30px;
+  padding: 0 16px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+  border: none;
+  background: var(--klank-color-text);
+  color: var(--klank-color-background);
+  transition: opacity 0.15s;
+}
+
+.btnDownload:hover:not(:disabled) {
+  opacity: 0.8;
+}
+
+.btnDownload:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.btnCreate {
+  height: 30px;
+  padding: 0 16px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+  border: none;
+  background: var(--klank-color-text);
+  color: var(--klank-color-background);
+  transition: opacity 0.15s;
+}
+
+.btnCreate:hover:not(:disabled) {
+  opacity: 0.8;
+}
+
+.btnCreate:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.tabMenu {
+  display: flex;
+  gap: 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--klank-color-border);
+  button {
+    width: 100%;
+    padding: 2px;
+    &:nth-child(even) {
+      border-left: 1px solid var(--klank-color-border);
+      border-right: 1px solid var(--klank-color-border);
+    }
+  }
+
+}
+
+.btnDanger {
+  height: 30px;
+  padding: 0 16px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+  border: none;
+  background: var(--klank-color-fail);
+  color: #fff;
+  transition: opacity 0.15s;
+}
+
+.btnDanger:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.btnDanger:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.modalText {
+  font-size: 0.8125rem;
+  color: var(--klank-color-text);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.toastError {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--klank-color-fail);
+  color: #fff;
+  padding: 0.5rem 1.25rem;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+  z-index: 2000;
+  white-space: nowrap;
+}
+
+/* --- Import progress + manual-paste fallback (download modal) --- */
+.importStatus {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.6875rem;
+  opacity: 0.55;
+  padding: 0 2px;
+}
+
+.spinner {
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: klank-spin 0.7s linear infinite;
+  flex: 0 0 auto;
+}
+
+@keyframes klank-spin {
+  to { transform: rotate(360deg); }
+}
+
+.triedList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.6875rem;
+  opacity: 0.5;
+  padding: 0 2px;
+}
+
+.triedItem {
+  display: flex;
+  gap: 6px;
+}
+
+.manualLabel {
+  font-size: 0.6875rem;
+  opacity: 0.6;
+  padding: 4px 2px 0;
+}
+
+.textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 120px;
+  padding: 8px 12px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  resize: vertical;
+  border: 1px solid color-mix(in srgb, var(--klank-color-text) 25%, transparent);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+}
+
+.textarea:focus {
+  border-color: var(--klank-color-text);
+}

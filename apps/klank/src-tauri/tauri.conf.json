@@ -1,0 +1,38 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "klank",
+  "version": "2.0.0",
+  "identifier": "io.github.hampterworks.klank",
+  "build": {
+    "frontendDist": "../build/client",
+    "devUrl": "http://localhost:4200",
+    "beforeDevCommand": "pnpm nx dev klank",
+    "beforeBuildCommand": "pnpm nx build klank"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "klank",
+        "width": 1280,
+        "height": 1024,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset: https://asset.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

@@ -1,0 +1,132 @@
+.container {}
+
+.menuItem {
+  background: var(--klank-color-highlight);
+
+  button {
+    cursor: pointer;
+  }
+}
+
+.noItems {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.artistName {
+  display: flex;
+  align-items: center;
+  text-transform: capitalize;
+  font-weight: 700;
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+
+  svg {
+    margin-left: auto;
+  }
+
+  &:hover {
+    background: var(--klank-color-selected);
+  }
+}
+
+.songList {
+  display: flex;
+  flex-direction: column;
+  background: var(--klank-color-background);
+
+  li {
+    display: flex;
+    align-items: center;
+
+    &:hover {
+      background: var(--klank-color-highlight);
+    }
+
+    &:nth-child(even) {
+      border-top: 1px solid var(--klank-color-divider);
+      border-bottom: 1px solid var(--klank-color-divider);
+    }
+
+    > button:first-child {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 8px;
+      overflow: hidden;
+
+      span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+}
+
+.addToPlaylistButton {
+  flex-shrink: 0;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  line-height: 1;
+  color: var(--klank-color-text);
+  opacity: 0;
+  transition: opacity 100ms;
+
+  .songList li:hover & {
+    opacity: 0.5;
+  }
+
+  &:hover {
+    opacity: 1 !important;
+    color: var(--klank-color-success);
+  }
+}
+
+.active {
+  background: var(--klank-color-selected);
+}
+
+.rotated {
+  transform: rotate(180deg);
+}
+
+.contextMenu {
+  z-index: 9999;
+  background: var(--klank-color-background);
+  border: 1px solid var(--klank-color-border);
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  min-width: 9rem;
+  overflow: hidden;
+
+  button {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    cursor: pointer;
+    color: var(--klank-color-text);
+    font-size: 0.8125rem;
+    font-family: inherit;
+    background: transparent;
+    border: none;
+    outline: none;
+
+    &:hover,
+    &:focus {
+      background: var(--klank-color-highlight);
+    }
+  }
+
+  .dangerAction:hover,
+  .dangerAction:focus {
+    background: var(--klank-color-fail);
+    color: #fff;
+  }
+}

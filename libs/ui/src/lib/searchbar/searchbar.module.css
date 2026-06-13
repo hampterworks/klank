@@ -1,0 +1,31 @@
+.container {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  gap: 8px;
+  box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.1);
+  > div {
+    flex: 1;
+    svg:last-of-type {
+      cursor: pointer;
+    }
+  }
+
+  button {
+    margin-left: auto;
+    flex-shrink: 0;
+    svg {
+      transition: transform 100ms;
+      transform: rotate(0deg);
+    }
+    &.rotated svg {
+      transform: rotate(180deg);
+    }
+  }
+}
+
+.collapsed {
+  box-shadow: none;
+  justify-content: center;
+  margin-top: auto;
+}

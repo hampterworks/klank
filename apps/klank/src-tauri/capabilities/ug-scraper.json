@@ -1,0 +1,19 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "ug-scraper",
+  "description": "Permissions for the hidden window that scrapes Ultimate Guitar pages.",
+  "windows": ["ug-scraper-*"],
+  "remote": {
+    "urls": [
+      "https://tabs.ultimate-guitar.com/*",
+      "https://www.ultimate-guitar.com/*",
+      "https://*.ultimate-guitar.com/*",
+      "https://challenges.cloudflare.com/*"
+    ]
+  },
+  "permissions": [
+    "core:default",
+    "allow-deliver-ug-html",
+    "allow-report-ug-challenge"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./apps/klank"
+    },
+    {
+      "path": "./libs/ui"
+    },
+    {
+      "path": "./libs/store"
+    },
+    {
+      "path": "./libs/platform-api"
+    }
+  ]
+}
