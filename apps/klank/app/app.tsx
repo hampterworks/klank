@@ -81,18 +81,26 @@ export function App() {
     return () => { cancelled = true }
   }, [baseDirectory, serverMode, setBaseDirectory, setFileService, setTabSettings, setPlaylists])
 
+  // Keep a ref so the ResizeObserver callback always reads the latest value
+  // without needing isMenuExtended in the effect's dependency array.
+  // If isMenuExtended were in deps, the effect would re-run every time the
+  // menu opens, the fresh ResizeObserver would fire immediately on .observe(),
+  // and it would close the menu before the drawer ever paints on mobile.
+  const isMenuExtendedRef = useRef(isMenuExtended)
+  isMenuExtendedRef.current = isMenuExtended
+
   useEffect(() => {
     const container = containerRef.current
     if (!container || typeof ResizeObserver === 'undefined') return
     const ro = new ResizeObserver(([entry]) => {
       if (entry.contentRect.width === 0) return
-      if (entry.contentRect.width < 600 && isMenuExtended) {
+      if (entry.contentRect.width < 600 && isMenuExtendedRef.current) {
         toggleMenu(false)
       }
     })
     ro.observe(container)
     return () => ro.disconnect()
-  }, [isMenuExtended, toggleMenu])
+  }, [toggleMenu])
 
   useEffect(() => {
     if (needsUpdate && baseDirectory) {
