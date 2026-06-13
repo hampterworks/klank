@@ -6,6 +6,11 @@
   font-size: 14px;
   color: var(--klank-color-text);
   height: 100dvh;
+  /* On desktop env() resolves to 0px — no visual change.
+     On Android (Fold, tablet) these protect against status/nav bars. */
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
 
   > li:first-of-type {
     display: flex;
