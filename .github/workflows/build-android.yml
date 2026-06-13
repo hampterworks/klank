@@ -1,0 +1,69 @@
+name: Build Android
+
+# SHA-pinning of actions can be applied later per the ci-pipeline-optimize convention.
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-build:
+    runs-on: ubuntu-latest
+    continue-on-error: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # JDK 17 is required by the Android Gradle toolchain.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # Installs the Android SDK command-line tools; NDK 27 is installed below.
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK 27
+        run: |
+          sdkmanager "ndk;27.0.12077973"
+          NDK_PATH="${ANDROID_SDK_ROOT}/ndk/27.0.12077973"
+          echo "ANDROID_NDK_HOME=${NDK_PATH}" >> "$GITHUB_ENV"
+          echo "NDK_HOME=${NDK_PATH}" >> "$GITHUB_ENV"
+
+      # Reads the pnpm version from packageManager in package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # Stable Rust with all four Android cross-compilation targets.
+      - name: Set up Rust with Android targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      # Cache Cargo registry and the Tauri crate build artifacts.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/klank/src-tauri -> target
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # pnpm tauri android build --debug performs the frontend build
+      # (via Tauri's beforeBuildCommand) and then cross-compiles the Rust
+      # core for all four Android ABIs before assembling the APK.
+      - name: Build Android (debug)
+        run: pnpm tauri android build --debug
+        working-directory: apps/klank
