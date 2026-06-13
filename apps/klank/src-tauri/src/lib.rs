@@ -26,7 +26,8 @@ pub fn run() {
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_http::init());
+        .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_ug_scraper::init());
 
     // The hidden-webview import stage (and its IPC) is desktop-only; Android
     // uses the mobile API / website stages and (next) a dedicated plugin. Git

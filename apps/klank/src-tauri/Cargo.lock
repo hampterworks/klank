@@ -22,6 +22,7 @@ dependencies = [
  "tauri-plugin-fs",
  "tauri-plugin-http",
  "tauri-plugin-log",
+ "tauri-plugin-ug-scraper",
  "tokio",
 ]
 
@@ -4000,6 +4001,16 @@ dependencies = [
  "tauri-plugin",
  "thiserror 2.0.18",
  "time",
+]
+
+[[package]]
+name = "tauri-plugin-ug-scraper"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

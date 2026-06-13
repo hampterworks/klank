@@ -38,3 +38,5 @@ html-escape = "0.2"
 # Git sync (Workstream B). Vendored so it cross-compiles to Android without a
 # system libgit2/openssl; https only (PAT auth), ssh dropped.
 git2 = { version = "0.19", default-features = false, features = ["https", "vendored-libgit2", "vendored-openssl"] }
+# Android-only scraper plugin (self-owned WebView). No-op shell on desktop.
+tauri-plugin-ug-scraper = { path = "tauri-plugin-ug-scraper" }

@@ -10,7 +10,7 @@
 //! - Android: a self-owned 1×1 `android.webkit.WebView` in a Kotlin plugin
 //!   (wired in a follow-up; `can_handle` is false off-desktop until then).
 
-#[cfg(desktop)]
+#[cfg(any(desktop, target_os = "android"))]
 use super::is_ug_url;
 use super::super::{ImportStage, StageOutcome};
 use std::time::Duration;
@@ -109,7 +109,7 @@ pub(crate) const SHARED_SCRIPT: &str = r#"
 "#;
 
 pub struct UgWebview {
-    #[cfg_attr(not(desktop), allow(dead_code))]
+    #[cfg_attr(all(not(desktop), not(target_os = "android")), allow(dead_code))]
     app: tauri::AppHandle,
     url: String,
 }
@@ -129,13 +129,12 @@ impl ImportStage for UgWebview {
         "Ultimate Guitar (browser)"
     }
     fn can_handle(&self) -> bool {
-        // Desktop only for now; the Android Kotlin-plugin impl lands next and
-        // will extend this to `target_os = "android"`.
-        #[cfg(desktop)]
+        // Desktop (hidden WRY window) and Android (self-owned WebView plugin).
+        #[cfg(any(desktop, target_os = "android"))]
         {
             is_ug_url(&self.url)
         }
-        #[cfg(not(desktop))]
+        #[cfg(not(any(desktop, target_os = "android")))]
         {
             false
         }
@@ -145,12 +144,43 @@ impl ImportStage for UgWebview {
     }
     async fn run(&self) -> StageOutcome {
         #[cfg(desktop)]
-        {
-            desktop::scrape(&self.app, &self.url).await
-        }
-        #[cfg(not(desktop))]
-        {
-            StageOutcome::Skip
+        return desktop::scrape(&self.app, &self.url).await;
+        #[cfg(target_os = "android")]
+        return android::scrape(&self.app, &self.url).await;
+        #[cfg(not(any(desktop, target_os = "android")))]
+        return StageOutcome::Skip;
+    }
+}
+
+/// Android implementation: a self-owned offscreen `android.webkit.WebView` in
+/// the `ug-scraper` plugin (outside WRY). `run_mobile_plugin` blocks, so it runs
+/// on a blocking thread.
+#[cfg(target_os = "android")]
+mod android {
+    use super::super::super::{StageError, StageOutcome};
+    use super::super::ug_website::parse_store;
+    use super::SHARED_SCRIPT;
+    use tauri_plugin_ug_scraper::UgScraperExt;
+
+    pub async fn scrape(app: &tauri::AppHandle, url: &str) -> StageOutcome {
+        let app = app.clone();
+        let url = url.to_string();
+        let result = tokio::task::spawn_blocking(move || {
+            app.ug_scraper().scrape(url, SHARED_SCRIPT.to_string())
+        })
+        .await;
+
+        match result {
+            Ok(Ok(resp)) => match resp.html {
+                Some(html) => match parse_store(&html, "ug-webview") {
+                    Some(tab) => StageOutcome::Success(tab),
+                    None => StageOutcome::RetryNext(StageError::Parse("could not parse tab data".into())),
+                },
+                // No html → timeout / unsolved challenge.
+                None => StageOutcome::RetryNext(StageError::Challenged),
+            },
+            Ok(Err(e)) => StageOutcome::RetryNext(StageError::Network(e)),
+            Err(e) => StageOutcome::RetryNext(StageError::Network(e.to_string())),
         }
     }
 }
