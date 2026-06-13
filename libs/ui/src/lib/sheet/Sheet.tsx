@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import styles from './sheet.module.css'
 import {
   classifySheetLine,
@@ -142,6 +142,58 @@ const renderChordLyricPair = (
   )
 }
 
+/**
+ * Reflow a tablature block (consecutive string lines) into stacked "systems"
+ * that fit `cols` characters wide, so the tab reads top-to-bottom and stays
+ * playable under vertical auto-scroll instead of overflowing sideways. Each
+ * line keeps its string-label prefix (everything up to and including the first
+ * `|`); the body is split in sync across all strings, preferring a measure-bar
+ * (`|`) boundary and otherwise a column that is blank on every string so a fret
+ * number is never cut in half.
+ */
+const reflowTablature = (rawLines: string[], cols: number): string[][] => {
+  if (!Number.isFinite(cols) || cols <= 0 || rawLines.length === 0) return [rawLines]
+
+  const prefixes = rawLines.map(l => {
+    const bar = l.indexOf('|')
+    return bar >= 0 ? l.slice(0, bar + 1) : ''
+  })
+  const bodies = rawLines.map((l, i) => l.slice(prefixes[i].length))
+  const prefixLen = Math.max(0, ...prefixes.map(p => p.length))
+  const bodyCols = Math.max(4, cols - prefixLen)
+  const bodyMax = Math.max(0, ...bodies.map(b => b.length))
+  if (bodyMax <= bodyCols) return [rawLines]
+
+  const isClean = (k: number) =>
+    bodies.every(b => { const ch = b[k]; return ch === undefined || ch === '-' || ch === ' ' })
+  const barCount = (k: number) => bodies.reduce((n, b) => n + (b[k] === '|' ? 1 : 0), 0)
+
+  const systems: string[][] = []
+  let pos = 0
+  while (pos < bodyMax) {
+    const hardEnd = Math.min(pos + bodyCols, bodyMax)
+    let end = hardEnd
+    if (hardEnd < bodyMax) {
+      const need = Math.ceil(rawLines.length / 2)
+      let cut = -1
+      // Prefer cutting just after a measure bar shared by most strings.
+      for (let k = hardEnd - 1; k > pos + 3; k--) {
+        if (barCount(k) >= need) { cut = k + 1; break }
+      }
+      // Otherwise snap back to a column blank on every string.
+      if (cut < 0) {
+        for (let k = hardEnd; k > pos + 3; k--) {
+          if (isClean(k)) { cut = k; break }
+        }
+      }
+      if (cut > pos) end = cut
+    }
+    systems.push(rawLines.map((l, i) => prefixes[i] + bodies[i].slice(pos, end)))
+    pos = end
+  }
+  return systems
+}
+
 type SheetProps = {
   tabData: string
   transpose: number
@@ -168,6 +220,30 @@ export const Sheet: React.FC<SheetProps> = ({
   const contentRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const virtualY = useRef(0)
+  const measureRef = useRef<HTMLSpanElement>(null)
+  // How many monospace characters fit across the sheet, used to reflow tab.
+  const [colsPerRow, setColsPerRow] = useState<number>(Number.POSITIVE_INFINITY)
+
+  useEffect(() => {
+    const container = containerRef.current
+    const measure = measureRef.current
+    if (!container || !measure) return
+    const recompute = () => {
+      const charWidth = measure.getBoundingClientRect().width / 100
+      const cs = getComputedStyle(container)
+      const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)
+      const avail = container.clientWidth - (Number.isFinite(padX) ? padX : 0)
+      if (charWidth > 0 && avail > 0) {
+        // Leave ~1 char of slack so nothing kisses the right edge.
+        setColsPerRow(Math.max(8, Math.floor(avail / charWidth) - 1))
+      }
+    }
+    recompute()
+    const ro = new ResizeObserver(recompute)
+    ro.observe(container)
+    ro.observe(measure)
+    return () => ro.disconnect()
+  }, [])
 
   useEffect(() => {
     const container = containerRef.current
@@ -293,21 +369,27 @@ export const Sheet: React.FC<SheetProps> = ({
         const isTablature = classified.tokens.some(t => t.kind === 'string-indicator')
 
         if (isTablature) {
-          // Tablature is fixed-width ASCII art that must not wrap. Group the run
-          // of consecutive tab lines into one horizontally-scrollable block so
-          // every string stays column-aligned and the block scrolls as a unit.
-          const block: React.ReactNode[] = []
+          // Tablature is fixed-width ASCII art. Collect the run of consecutive
+          // tab lines, then reflow it into stacked systems that fit the screen
+          // so it reads top-to-bottom and stays playable under vertical
+          // auto-scroll instead of overflowing sideways.
+          const rawBlock: string[] = []
           let j = i
           while (j < lines.length) {
             const c = classifySheetLine(lines[j], transpose)
             const tab = c.kind === 'chord-line' && c.tokens.some(t => t.kind === 'string-indicator')
             if (!tab) break
-            block.push(renderLine(lines[j], j, transpose, isScrolling, instrument))
+            rawBlock.push(lines[j])
             j++
           }
+          const systems = reflowTablature(rawBlock, colsPerRow)
           result.push(
             <div key={`tab-${i}`} className={styles.tablatureBlock}>
-              {block}
+              {systems.map((sys, s) => (
+                <div key={s} className={styles.tablatureSystem}>
+                  {sys.map((ln, k) => renderLine(ln, k, transpose, isScrolling, instrument))}
+                </div>
+              ))}
             </div>
           )
           i = j
@@ -328,10 +410,24 @@ export const Sheet: React.FC<SheetProps> = ({
       i++
     }
     return result
-  }, [tabData, transpose, isScrolling, instrument, isMobile])
+  }, [tabData, transpose, isScrolling, instrument, isMobile, colsPerRow])
 
   return (
     <pre ref={containerRef} className={styles.container} {...props}>
+      <span
+        ref={measureRef}
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          visibility: 'hidden',
+          whiteSpace: 'pre',
+          pointerEvents: 'none',
+        }}
+      >
+        {'0'.repeat(100)}
+      </span>
       <div ref={contentRef} className={styles.content}>
         {renderedLines}
         <div ref={sentinelRef}>&nbsp;</div>
