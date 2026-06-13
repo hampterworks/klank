@@ -3,7 +3,7 @@ import * as React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router'
-import { FileEntry, getSheetFromUG, ImportProgress, sortByArtist } from '@klank/platform-api'
+import { FileEntry, getSheetFromUG, ImportProgress, isMobileDevice, sortByArtist } from '@klank/platform-api'
 import {
   DownloadIcon,
   FileTreeView,
@@ -433,7 +433,7 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
           <LogoIcon /> <span className={styles.logoText}>KLANK</span>
         </li>
         <Toolbar
-          getDirectoryPath={fileService?.getDirectoryPath}
+          getDirectoryPath={isMobileDevice() ? undefined : fileService?.getDirectoryPath}
           setNeedsUpdate={setNeedsUpdate}
           setBaseDirectory={setBaseDirectory}
           setTabPath={handleSelectSong}

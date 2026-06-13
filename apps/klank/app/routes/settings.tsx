@@ -1,7 +1,7 @@
 import styles from './settings.module.css'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { createGitService, getAppVersion, type GitChangedFile, type GitResult, type GitService } from '@klank/platform-api'
+import { createGitService, getAppVersion, isMobileDevice, type GitChangedFile, type GitResult, type GitService } from '@klank/platform-api'
 import { useKlankStore } from '@klank/store'
 
 type Status = { ok: boolean; message: string } | null
@@ -118,9 +118,13 @@ export default function Settings() {
             <span className={styles.dirPath} title={baseDirectory ?? ''}>
               {baseDirectory ?? 'Not set'}
             </span>
-            <button className={styles.button} onClick={handleChangeFolder} disabled={!fileService}>
-              Change
-            </button>
+            {/* The native folder picker isn't available on mobile, where tabs
+                live in app-private storage. */}
+            {!isMobileDevice() && (
+              <button className={styles.button} onClick={handleChangeFolder} disabled={!fileService}>
+                Change
+              </button>
+            )}
           </div>
 
           <div className={styles.row}>
