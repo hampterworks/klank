@@ -181,6 +181,23 @@ export default function Settings() {
     }
   }
 
+  const tokenRow = (
+    <div className={styles.row}>
+      <span className={styles.label}>Token</span>
+      <input
+        className={styles.commitInput}
+        type="password"
+        placeholder={hasToken ? '•••••••• (saved)' : 'HTTPS access token'}
+        value={token}
+        onChange={(e) => setTokenValue(e.target.value)}
+        disabled={busy}
+      />
+      <button className={styles.button} onClick={handleSaveToken} disabled={busy || (!token.trim() && !hasToken)}>
+        {token.trim() ? 'Save' : 'Clear'}
+      </button>
+    </div>
+  )
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -265,21 +282,9 @@ export default function Settings() {
             </div>
           )}
 
+          {/* Mobile has no credential helper, so the token is the primary control. */}
           {isMobile ? (
-            <div className={styles.row}>
-              <span className={styles.label}>Token</span>
-              <input
-                className={styles.commitInput}
-                type="password"
-                placeholder={hasToken ? '•••••••• (saved)' : 'HTTPS access token'}
-                value={token}
-                onChange={(e) => setTokenValue(e.target.value)}
-                disabled={busy}
-              />
-              <button className={styles.button} onClick={handleSaveToken} disabled={busy || (!token.trim() && !hasToken)}>
-                {token.trim() ? 'Save' : 'Clear'}
-              </button>
-            </div>
+            tokenRow
           ) : (
             <>
               <div className={styles.row}>
@@ -287,22 +292,7 @@ export default function Settings() {
                   {showAdvanced ? 'Hide advanced' : 'Advanced'}
                 </button>
               </div>
-              {showAdvanced && (
-                <div className={styles.row}>
-                  <span className={styles.label}>Token</span>
-                  <input
-                    className={styles.commitInput}
-                    type="password"
-                    placeholder={hasToken ? '•••••••• (saved)' : 'HTTPS access token'}
-                    value={token}
-                    onChange={(e) => setTokenValue(e.target.value)}
-                    disabled={busy}
-                  />
-                  <button className={styles.button} onClick={handleSaveToken} disabled={busy || (!token.trim() && !hasToken)}>
-                    {token.trim() ? 'Save' : 'Clear'}
-                  </button>
-                </div>
-              )}
+              {showAdvanced && tokenRow}
             </>
           )}
 

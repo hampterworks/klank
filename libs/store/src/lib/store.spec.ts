@@ -14,7 +14,7 @@ vi.stubGlobal('localStorage', {
 })
 
 import type { FileService } from '@klank/platform-api'
-import { useKlankStore, type Playlist } from './store.js'
+import { notifyTabsChanged, onTabsChanged, useKlankStore, type Playlist } from './store.js'
 
 const makePlaylist = (overrides: Partial<Playlist> = {}): Playlist => ({
   id: crypto.randomUUID(),
@@ -506,5 +506,41 @@ describe('setPlaylists hydration', () => {
 
     expect(useKlankStore.getState().activePlaylistId).toBe(playlist.id)
     expect(useKlankStore.getState().activePlaylistIndex).toBeNull()
+  })
+})
+
+describe('tab change signal', () => {
+  it('notifies subscribers and stops after unsubscribe', () => {
+    const fn = vi.fn()
+    const unsubscribe = onTabsChanged(fn)
+    notifyTabsChanged()
+    expect(fn).toHaveBeenCalledTimes(1)
+    unsubscribe()
+    notifyTabsChanged()
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  it('fires when a tab-setting write happens', () => {
+    useKlankStore.setState({
+      baseDirectory: '/tabs',
+      tab: { ...useKlankStore.getState().tab, path: '/tabs/a.tab.txt' },
+    })
+    const fn = vi.fn()
+    const unsubscribe = onTabsChanged(fn)
+    useKlankStore.getState().setTabFontSize(15)
+    expect(fn).toHaveBeenCalled()
+    unsubscribe()
+  })
+})
+
+describe('syncSettings', () => {
+  it('merges partial updates without disturbing other fields', () => {
+    useKlankStore.getState().setSyncSettings({ intervalMinutes: 10 })
+    expect(useKlankStore.getState().syncSettings.intervalMinutes).toBe(10)
+    expect(useKlankStore.getState().syncSettings.enabled).toBe(true)
+
+    useKlankStore.getState().setSyncSettings({ enabled: false })
+    expect(useKlankStore.getState().syncSettings.enabled).toBe(false)
+    expect(useKlankStore.getState().syncSettings.intervalMinutes).toBe(10)
   })
 })

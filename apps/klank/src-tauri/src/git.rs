@@ -500,19 +500,15 @@ fn sync_inner(app: &tauri::AppHandle, dir: &str) -> Result<SyncResult, Error> {
 
         let (ahead, _behind) = repo.graph_ahead_behind(head_oid(&repo)?, upstream)?;
         if ahead == 0 {
-            result.success = true;
             result.up_to_date = !committed && result.pulled == 0;
-            result.changed = result.pulled > 0 || result.conflicts_resolved > 0;
-            result.message = sync_message(&result);
+            finalize_sync(&mut result);
             return Ok(result);
         }
 
         match push_branch(app, &repo, &branch) {
             Ok(()) => {
                 result.pushed = ahead;
-                result.success = true;
-                result.changed = result.pulled > 0 || result.conflicts_resolved > 0;
-                result.message = sync_message(&result);
+                finalize_sync(&mut result);
                 return Ok(result);
             }
             Err(e) => {
@@ -537,6 +533,13 @@ fn sync_inner(app: &tauri::AppHandle, dir: &str) -> Result<SyncResult, Error> {
 
 fn head_oid(repo: &Repository) -> Result<Oid, Error> {
     repo.head()?.target().ok_or_else(|| Error::from_str("no HEAD"))
+}
+
+/// Marks a sync successful and fills in the derived `changed` flag and summary.
+fn finalize_sync(result: &mut SyncResult) {
+    result.success = true;
+    result.changed = result.pulled > 0 || result.conflicts_resolved > 0;
+    result.message = sync_message(result);
 }
 
 fn sync_message(r: &SyncResult) -> String {
@@ -992,6 +995,13 @@ mod tests {
         repo.commit(Some("HEAD"), &sig, &sig, msg, &tree, &parents).unwrap()
     }
 
+    /// Checks out the `local` branch and resets the working tree to it.
+    fn switch_to_local(repo: &Repository) {
+        repo.set_head("refs/heads/local").unwrap();
+        let obj = repo.revparse_single("refs/heads/local").unwrap();
+        repo.reset(&obj, git2::ResetType::Hard, None).unwrap();
+    }
+
     // ── Pure JSON 3-way merge ───────────────────────────────────────────────
 
     #[test]
@@ -1081,9 +1091,7 @@ mod tests {
         let main_oid = commit_all(&repo, "A", 3000);
 
         // Local side (commit B) — older (secs 2000), diverged.
-        repo.set_head("refs/heads/local").unwrap();
-        let local_obj = repo.revparse_single("refs/heads/local").unwrap();
-        repo.reset(&local_obj, git2::ResetType::Hard, None).unwrap();
+        switch_to_local(&repo);
         write(&dir, "song.tab.txt", "B_VERSION");
         write(
             &dir,
@@ -1121,9 +1129,7 @@ mod tests {
         write(&dir, "song.tab.txt", "REMOTE");
         let main_oid = commit_all(&repo, "remote", 2000);
 
-        repo.set_head("refs/heads/local").unwrap();
-        let local_obj = repo.revparse_single("refs/heads/local").unwrap();
-        repo.reset(&local_obj, git2::ResetType::Hard, None).unwrap();
+        switch_to_local(&repo);
         write(&dir, "song.tab.txt", "LOCAL");
         commit_all(&repo, "local", 5000); // newer than remote
 
@@ -1133,5 +1139,114 @@ mod tests {
         assert_eq!(tab, "LOCAL", "local commit newer → local wins");
 
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn rebase_clean_merge_keeps_both_sides() {
+        let (dir, repo) = temp_repo();
+        write(&dir, "a.tab.txt", "A0");
+        write(&dir, "b.tab.txt", "B0");
+        let base = commit_all(&repo, "base", 1000);
+        repo.branch("local", &repo.find_commit(base).unwrap(), false).unwrap();
+
+        // Remote edits a different file than local → no conflict.
+        write(&dir, "b.tab.txt", "B-REMOTE");
+        let main_oid = commit_all(&repo, "remote", 2000);
+
+        switch_to_local(&repo);
+        write(&dir, "a.tab.txt", "A-LOCAL");
+        commit_all(&repo, "local", 3000);
+
+        let mut result = SyncResult::default();
+        rebase_onto_upstream(&repo, "local", main_oid, &mut result).unwrap();
+        assert_eq!(result.conflicts_resolved, 0, "disjoint edits must not conflict");
+        assert_eq!(std::fs::read_to_string(dir.join("a.tab.txt")).unwrap(), "A-LOCAL");
+        assert_eq!(std::fs::read_to_string(dir.join("b.tab.txt")).unwrap(), "B-REMOTE");
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn rebase_produces_linear_fast_forwardable_history() {
+        let (dir, repo) = temp_repo();
+        write(&dir, "song.tab.txt", "BASE");
+        let base = commit_all(&repo, "base", 1000);
+        repo.branch("local", &repo.find_commit(base).unwrap(), false).unwrap();
+        write(&dir, "song.tab.txt", "REMOTE");
+        let main_oid = commit_all(&repo, "remote", 2000);
+        switch_to_local(&repo);
+        write(&dir, "song.tab.txt", "LOCAL");
+        commit_all(&repo, "local", 3000);
+
+        let mut result = SyncResult::default();
+        rebase_onto_upstream(&repo, "local", main_oid, &mut result).unwrap();
+
+        // The integrated tip has exactly one parent: the upstream tip → the remote
+        // can fast-forward to it (no merge commit, linear history).
+        let tip = repo.find_commit(head_oid(&repo).unwrap()).unwrap();
+        assert_eq!(tip.parent_count(), 1);
+        assert_eq!(tip.parent_id(0).unwrap(), main_oid);
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn rebase_fast_forwards_when_no_local_commits() {
+        let (dir, repo) = temp_repo();
+        write(&dir, "song.tab.txt", "BASE");
+        let base = commit_all(&repo, "base", 1000);
+        repo.branch("local", &repo.find_commit(base).unwrap(), false).unwrap();
+        write(&dir, "song.tab.txt", "REMOTE");
+        let main_oid = commit_all(&repo, "remote", 2000);
+        switch_to_local(&repo); // local is purely behind, no local commits
+
+        let mut result = SyncResult::default();
+        let integrated = rebase_onto_upstream(&repo, "local", main_oid, &mut result).unwrap();
+        assert_eq!(integrated, 1);
+        assert_eq!(result.conflicts_resolved, 0);
+        // Pure fast-forward: local now points exactly at the upstream tip.
+        assert_eq!(repo.refname_to_id("refs/heads/local").unwrap(), main_oid);
+        assert_eq!(std::fs::read_to_string(dir.join("song.tab.txt")).unwrap(), "REMOTE");
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn rebase_delete_modify_latest_wins() {
+        let (dir, repo) = temp_repo();
+        write(&dir, "song.tab.txt", "BASE");
+        let base = commit_all(&repo, "base", 1000);
+        repo.branch("local", &repo.find_commit(base).unwrap(), false).unwrap();
+
+        // Remote modifies the file (older); local deletes it (newer) → deletion wins.
+        write(&dir, "song.tab.txt", "REMOTE-EDIT");
+        let main_oid = commit_all(&repo, "remote", 2000);
+        switch_to_local(&repo);
+        std::fs::remove_file(dir.join("song.tab.txt")).unwrap();
+        commit_all(&repo, "local-delete", 5000);
+
+        let mut result = SyncResult::default();
+        rebase_onto_upstream(&repo, "local", main_oid, &mut result).unwrap();
+        assert!(result.conflicts_resolved >= 1);
+        assert!(!dir.join("song.tab.txt").exists(), "newer side deleted → file removed");
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn json_merge_key_deleted_by_newer_side_is_removed() {
+        let base = br#"{"k":{"fontSize":1}}"#.as_slice();
+        let local = br#"{}"#.as_slice(); // local removed k
+        let remote = br#"{"k":{"fontSize":1}}"#.as_slice();
+
+        // Local (deletion) is newer → key removed.
+        let removed = merge_settings_json(Some(base), Some(local), Some(remote), true).unwrap();
+        let v: Value = serde_json::from_slice(&removed).unwrap();
+        assert!(v.get("k").is_none(), "newer deletion removes the key");
+
+        // Remote (unchanged) is newer → deletion still wins because remote == base.
+        let kept = merge_settings_json(Some(base), Some(local), Some(remote), false).unwrap();
+        let v: Value = serde_json::from_slice(&kept).unwrap();
+        assert!(v.get("k").is_none(), "remote unchanged from base → local deletion applies");
     }
 }
