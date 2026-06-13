@@ -3,20 +3,35 @@ name: Build Android
 # SHA-pinning of actions can be applied later per the ci-pipeline-optimize convention.
 
 on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  release:
+    types: [published]
   push:
     branches:
       - main
       - master
-  pull_request:
   workflow_dispatch:
+    inputs:
+      debug_build:
+        description: "Build a debug APK (true) or release APK (false)"
+        required: false
+        default: "true"
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
 
 jobs:
-  android-build:
+  # -----------------------------------------------------------------------
+  # Debug build — opt-in via the 'build-android' PR label or workflow_dispatch
+  # -----------------------------------------------------------------------
+  android-debug:
+    name: Android debug APK
     runs-on: ubuntu-latest
-    continue-on-error: false
+    if: >
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.debug_build != 'false') ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'build-android'))
 
     steps:
       - uses: actions/checkout@v4
@@ -61,9 +76,136 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # pnpm tauri android build --debug performs the frontend build
+      # pnpm tauri android build --debug --apk performs the frontend build
       # (via Tauri's beforeBuildCommand) and then cross-compiles the Rust
-      # core for all four Android ABIs before assembling the APK.
+      # core for all four Android ABIs before assembling the debug APK.
       - name: Build Android (debug)
-        run: pnpm tauri android build --debug
+        run: pnpm tauri android build --debug --apk
         working-directory: apps/klank
+
+      - name: Upload debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: klank-debug-apk
+          path: apps/klank/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+
+      # Post or update a sticky PR comment so the APK is easy to find.
+      - name: Post PR comment with artifact link
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              '### Android debug APK',
+              '',
+              `A **debug APK** was built for this PR and is attached as the \`klank-debug-apk\` artifact on the workflow run.`,
+              '',
+              `**Workflow run:** ${runUrl}`,
+              '',
+              '_Download the artifact from the run page linked above (requires GitHub login)._',
+            ].join('\n');
+
+            const marker = '<!-- klank-android-build-comment -->';
+            const fullBody = `${marker}\n${body}`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body && c.body.startsWith(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: fullBody,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: fullBody,
+              });
+            }
+
+  # -----------------------------------------------------------------------
+  # Release build — on push to main/master, published release, or
+  # workflow_dispatch with debug_build set to 'false'
+  # -----------------------------------------------------------------------
+  android-release:
+    name: Android release APK
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'release' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.debug_build == 'false')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # JDK 17 is required by the Android Gradle toolchain.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # Installs the Android SDK command-line tools; NDK 27 is installed below.
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK 27
+        run: |
+          sdkmanager "ndk;27.0.12077973"
+          NDK_PATH="${ANDROID_SDK_ROOT}/ndk/27.0.12077973"
+          echo "ANDROID_NDK_HOME=${NDK_PATH}" >> "$GITHUB_ENV"
+          echo "NDK_HOME=${NDK_PATH}" >> "$GITHUB_ENV"
+
+      # Reads the pnpm version from packageManager in package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # Stable Rust with all four Android cross-compilation targets.
+      - name: Set up Rust with Android targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      # Cache Cargo registry and the Tauri crate build artifacts.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/klank/src-tauri -> target
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # pnpm tauri android build --apk performs the frontend build
+      # (via Tauri's beforeBuildCommand) and then cross-compiles the Rust
+      # core for all four Android ABIs before assembling the release APK.
+      - name: Build Android (release)
+        run: pnpm tauri android build --apk
+        working-directory: apps/klank
+
+      - name: Upload release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: klank-release-apk
+          path: apps/klank/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+
+      # On a published release event, attach the APK(s) to the GitHub Release assets.
+      - name: Attach APK to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apps/klank/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
