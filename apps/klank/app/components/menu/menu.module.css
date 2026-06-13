@@ -304,9 +304,16 @@
 
 @media (max-width: 599px) {
   /* The first <li> (logo row) has a desktop border-bottom; on mobile the
-     container already draws border-bottom, so remove the inner one. */
+     container already draws border-bottom, so remove the inner one.
+     Height is also raised to 44px to match the Toolbar and Searchbar. */
   .container > li:first-of-type {
     border-bottom: none;
+    height: 44px;
+  }
+
+  /* KLANK text has no room in the horizontal top bar */
+  .logoText {
+    display: none;
   }
 
   /* ── Top bar (the <ul> / .container) ─────────────────────────── */
@@ -377,7 +384,14 @@
   /* ── Mobile drawer ─────────────────────────────────────────────── */
   .mobileDrawer {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    /* Use height:100dvh instead of inset:0 / bottom:0 so the drawer tracks
+       the visual viewport, which shrinks when the virtual keyboard opens.
+       Same pattern as .overlay above — keeps the sheet above the keyboard. */
+    bottom: auto;
+    height: 100dvh;
     z-index: 200;
     display: flex;
     flex-direction: column;
