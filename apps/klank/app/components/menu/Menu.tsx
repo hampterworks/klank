@@ -3,7 +3,7 @@ import * as React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router'
-import { FileEntry, getSheetFromUG, sortByArtist } from '@klank/platform-api'
+import { FileEntry, getSheetFromUG, ImportProgress, sortByArtist } from '@klank/platform-api'
 import {
   DownloadIcon,
   FileTreeView,
@@ -87,6 +87,14 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
   const [urlValue, setUrlValue] = useState('')
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState<string | null>(null)
+  // Live import-pipeline status shown nonintrusively in the download modal.
+  const [importStage, setImportStage] = useState<{ label: string; index: number; total: number } | null>(null)
+  const [importTried, setImportTried] = useState<{ label: string; reason: string }[]>([])
+  // Manual-paste fallback, revealed only when every automated stage fails.
+  const [showManualPaste, setShowManualPaste] = useState(false)
+  const [manualArtist, setManualArtist] = useState('')
+  const [manualSong, setManualSong] = useState('')
+  const [manualContent, setManualContent] = useState('')
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false)
   const [newPlaylistName, setNewPlaylistName] = useState('')
   const [pathToConfirmDelete, setPathToConfirmDelete] = useState<string | null>(null)
@@ -118,43 +126,90 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
     setIsCreatingPlaylist(false)
   }
 
+  const resetImportState = () => {
+    setImportStage(null)
+    setImportTried([])
+    setShowManualPaste(false)
+    setManualArtist('')
+    setManualSong('')
+    setManualContent('')
+    setDownloadError(null)
+  }
+
   const handleRequestDownload = () => {
     setUrlValue('')
+    resetImportState()
     setIsEnteringUrl(true)
   }
 
   const handleCancel = () => {
     setIsEnteringUrl(false)
+    resetImportState()
+  }
+
+  // Writes a successfully-obtained tab to disk and opens it. Returns true on
+  // success so callers can close the modal.
+  const saveTab = async (filename: string, data: string): Promise<boolean> => {
+    if (!fileService) return false
+    const writtenPath = await fileService.writeTabFile(filename, baseDirectory ?? '', data)
+    // writeTabFile returns an error message string on failure — only a real
+    // path (always ending in .tab.txt) may become the active tab.
+    if (!writtenPath.endsWith('.tab.txt')) {
+      throw new Error(writtenPath)
+    }
+    setTabPath(writtenPath)
+    setNeedsUpdate(true)
+    return true
   }
 
   const handleSubmitUrl = async () => {
     const trimmed = urlValue.trim()
-    setIsEnteringUrl(false)
-    if (!trimmed) return
+    if (!trimmed || isDownloading) return
     setIsDownloading(true)
     setDownloadError(null)
+    setImportTried([])
+    setShowManualPaste(false)
     try {
-      const sheet = await getSheetFromUG(trimmed)
-      if (!sheet || !fileService) return
-      const writtenPath = await fileService.writeTabFile(
-        sheet.filename,
-        baseDirectory ?? '',
-        sheet.data
-      )
-      // writeTabFile returns an error message string on failure — only a real
-      // path (always ending in .tab.txt) may become the active tab.
-      if (!writtenPath.endsWith('.tab.txt')) {
-        throw new Error(writtenPath)
+      const onProgress = (p: ImportProgress) => {
+        if (p.type === 'StageStart') {
+          setImportStage({ label: p.label, index: p.index, total: p.total })
+        } else if (p.type === 'StageFailed') {
+          setImportTried((prev) => [...prev, { label: p.label, reason: p.reason }])
+        } else if (p.type === 'Succeeded') {
+          setImportStage(null)
+        }
       }
-      setTabPath(writtenPath)
-      setNeedsUpdate(true)
+      const sheet = await getSheetFromUG(trimmed, onProgress)
+      if (!sheet) {
+        // Nothing parseable came back — offer manual paste rather than failing.
+        setShowManualPaste(true)
+        return
+      }
+      if (await saveTab(sheet.filename, sheet.data)) {
+        setIsEnteringUrl(false)
+        resetImportState()
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Download failed'
       setDownloadError(message)
-      if (downloadErrorTimerRef.current) clearTimeout(downloadErrorTimerRef.current)
-      downloadErrorTimerRef.current = setTimeout(() => setDownloadError(null), 4000)
+      setShowManualPaste(true)
     } finally {
       setIsDownloading(false)
+      setImportStage(null)
+    }
+  }
+
+  const handleManualSave = async () => {
+    const content = manualContent.trim()
+    if (!content) return
+    try {
+      const filename = `${manualArtist.trim()} - ${manualSong.trim()}.tab.txt`
+      if (await saveTab(filename, content)) {
+        setIsEnteringUrl(false)
+        resetImportState()
+      }
+    } catch (error) {
+      setDownloadError(error instanceof Error ? error.message : 'Could not save tab')
     }
   }
 
@@ -269,13 +324,68 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
               if (e.key === 'Enter') handleSubmitUrl()
               if (e.key === 'Escape') handleCancel()
             }}
+            disabled={isDownloading}
             autoFocus
           />
           <span className={styles.modalHint}>Paste an Ultimate Guitar tab URL and press Download</span>
+
+          {isDownloading && importStage && (
+            <div className={styles.importStatus} role="status" aria-live="polite">
+              <span className={styles.spinner} aria-hidden="true" />
+              <span>Trying {importStage.label}… ({importStage.index}/{importStage.total})</span>
+            </div>
+          )}
+
+          {importTried.length > 0 && (
+            <div className={styles.triedList}>
+              {importTried.map((t, i) => (
+                <div key={i} className={styles.triedItem}>
+                  <span aria-hidden="true">✕</span>
+                  <span>{t.label} — {t.reason}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {showManualPaste && (
+            <>
+              <span className={styles.manualLabel}>
+                Automatic import didn’t work. Paste the tab text below to save it manually.
+              </span>
+              <input
+                className={styles.modalInput}
+                type="text"
+                placeholder="Artist"
+                value={manualArtist}
+                onChange={(e) => setManualArtist(e.target.value)}
+              />
+              <input
+                className={styles.modalInput}
+                type="text"
+                placeholder="Song"
+                value={manualSong}
+                onChange={(e) => setManualSong(e.target.value)}
+              />
+              <textarea
+                className={styles.textarea}
+                placeholder="Paste tab / chords text here"
+                value={manualContent}
+                onChange={(e) => setManualContent(e.target.value)}
+              />
+            </>
+          )}
         </div>
         <div className={styles.modalActions}>
           <button className={styles.btnCancel} onClick={handleCancel}>Cancel</button>
-          <button className={styles.btnDownload} onClick={handleSubmitUrl} disabled={!urlValue.trim()}>Download</button>
+          {showManualPaste ? (
+            <button className={styles.btnDownload} onClick={handleManualSave} disabled={!manualContent.trim()}>
+              Save tab
+            </button>
+          ) : (
+            <button className={styles.btnDownload} onClick={handleSubmitUrl} disabled={!urlValue.trim() || isDownloading}>
+              {isDownloading ? 'Importing…' : 'Download'}
+            </button>
+          )}
         </div>
       </div>
     </div>,

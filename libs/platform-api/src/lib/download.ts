@@ -1,40 +1,56 @@
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, Channel } from '@tauri-apps/api/core'
 
 /**
- * Downloads a guitar tab from an Ultimate Guitar URL.
+ * Progress events streamed by the `scrape_ug` import pipeline, one per stage
+ * attempt. Mirrors the Rust `ImportProgress` enum (`#[serde(tag = "type")]`).
+ */
+export type ImportProgress =
+  | { type: 'StageStart'; id: string; label: string; index: number; total: number }
+  | { type: 'StageFailed'; id: string; label: string; reason: string }
+  | { type: 'Succeeded'; id: string; label: string }
+
+/** Normalised tab payload returned by the `scrape_ug` command on success. */
+type NormalizedTab = { content: string; artist: string; song: string }
+
+/**
+ * Imports a guitar tab from an Ultimate Guitar URL.
  *
- * Opens a hidden Tauri webview via the `scrape_ug` Rust command, which loads the
- * UG page in real Chromium (required for Cloudflare JS challenges). The webview
- * extracts the `.js-store` JSON and returns it to Rust; this function then parses
- * out the tab content and strips UG's `[ch]`/`[tab]` markup tags.
+ * Delegates to the Rust `scrape_ug` command, which runs a layered import
+ * pipeline (mobile API → website scrape → real-browser webview) and returns a
+ * normalised `{ content, artist, song }` payload. This function strips UG's
+ * `[ch]`/`[tab]` markup and builds the `Artist - Song.tab.txt` filename.
  *
  * @param url A valid Ultimate Guitar tab URL.
- * @returns `{ data, filename }` where `data` is the plain-text tab content and
- *          `filename` follows the `Artist - Song.tab.txt` convention, or
- *          `undefined` if `url` is falsy or parsing fails.
+ * @param onProgress Optional callback invoked for each pipeline stage, used to
+ *   show a nonintrusive "which method is running" status in the UI.
+ * @returns `{ data, filename }`, or `undefined` if `url` is falsy or the
+ *   response can't be parsed. Throws (rejects) if every import stage fails.
  */
-export const getSheetFromUG = async (url: string) => {
+export const getSheetFromUG = async (
+  url: string,
+  onProgress?: (progress: ImportProgress) => void,
+) => {
   if (!url) return
 
-  const dataContent = await invoke<string>('scrape_ug', { url })
-  if (!dataContent) return
+  let channel: Channel<ImportProgress> | undefined
+  if (onProgress) {
+    channel = new Channel<ImportProgress>()
+    channel.onmessage = onProgress
+  }
+
+  const raw = await invoke<string>('scrape_ug', { url, onProgress: channel })
+  if (!raw) return
 
   try {
-    const json = JSON.parse(dataContent)
+    const tab = JSON.parse(raw) as NormalizedTab
+    if (!tab.content) return
 
-    const content = json?.store?.page?.data?.tab_view?.wiki_tab?.content
-    if (content === undefined || content === null) return
-
-    const data = content.toString().replace(/\[\/?(ch|tab)\]/g, '')
-
-    const artist = json.store.page.data.tab?.artist_name ?? ''
-    const title = json.store.page.data.tab?.song_name ?? ''
-
-    const filename = `${artist} - ${title}.tab.txt`
+    const data = tab.content.replace(/\[\/?(ch|tab)\]/g, '')
+    const filename = `${tab.artist ?? ''} - ${tab.song ?? ''}.tab.txt`
     return { data, filename }
   } catch (error) {
-    // UG page shape changed or Cloudflare served an HTML challenge page
-    console.error('Failed to parse UG response:', error)
+    // Shape changed unexpectedly — surface nothing rather than a broken file.
+    console.error('Failed to parse UG import response:', error)
     return
   }
 }

@@ -28,3 +28,11 @@ tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2.0"
 tauri-plugin-http = "2.5.9"
 tauri-plugin-shell = "2"
+# Tab import pipeline (Workstream A).
+# rustls avoids cross-compiling OpenSSL for Android.
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "gzip", "brotli"] }
+async-trait = "0.1"
+md5 = "0.7"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+rand = "0.8"
+html-escape = "0.2"
