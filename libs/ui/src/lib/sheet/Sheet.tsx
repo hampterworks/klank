@@ -3,6 +3,7 @@ import styles from './sheet.module.css'
 import {
   classifySheetLine,
   type Instrument,
+  type SheetLine,
 } from '@klank/platform-api'
 import { ChordDiagramTooltip } from '../chordDiagramTooltip/ChordDiagramTooltip.js'
 
@@ -68,6 +69,68 @@ const renderLine = (
   }
 }
 
+/**
+ * Mobile-only: renders a chord-line + following plain-line as a flex row
+ * of segments so the whole unit wraps while keeping each chord above the
+ * lyric characters it annotates.
+ */
+const renderChordLyricPair = (
+  chordLine: Extract<SheetLine, { kind: 'chord-line' }>,
+  lyricText: string,
+  index: number,
+): React.ReactNode => {
+  // Compute character position of each chord token by summing preceding raw lengths
+  let charPos = 0
+  const chords: Array<{ pos: number; display: string }> = []
+
+  for (const token of chordLine.tokens) {
+    if (token.kind === 'chord') {
+      chords.push({ pos: charPos, display: token.display })
+    }
+    charPos += token.raw.length
+  }
+
+  type Segment = { chordDisplay?: string; text: string }
+  const segments: Segment[] = []
+
+  if (chords.length === 0) {
+    // No chords — treat like a plain pair
+    segments.push({ text: lyricText })
+  } else {
+    // Text before the first chord (if the first chord isn't at position 0)
+    if (chords[0].pos > 0) {
+      segments.push({ text: lyricText.slice(0, chords[0].pos) })
+    }
+    // Each chord followed by the lyric characters up to the next chord (or end)
+    for (let i = 0; i < chords.length; i++) {
+      const start = chords[i].pos
+      const end = chords[i + 1]?.pos ?? lyricText.length
+      segments.push({
+        chordDisplay: chords[i].display,
+        text: lyricText.slice(start, end),
+      })
+    }
+  }
+
+  return (
+    <div key={index} className={styles.chordLyricPair}>
+      {segments.map((seg, i) => (
+        <span key={i} className={styles.chordLyricSegment}>
+          {/* Invisible placeholder keeps lyric baseline aligned when no chord */}
+          <span
+            className={styles.chord}
+            style={{ visibility: seg.chordDisplay ? 'visible' : 'hidden' }}
+            aria-hidden={!seg.chordDisplay}
+          >
+            {seg.chordDisplay ?? ' '}
+          </span>
+          <span className={styles.lyricText}>{seg.text || ' '}</span>
+        </span>
+      ))}
+    </div>
+  )
+}
+
 type SheetProps = {
   tabData: string
   transpose: number
@@ -75,6 +138,9 @@ type SheetProps = {
   isScrolling: boolean
   setTabIsScrolling: (isScrolling: boolean) => void
   instrument?: Instrument
+  /** When true, chord-line + lyric-line pairs are rendered as wrappable
+   *  inline segments instead of two separate block lines. */
+  isMobile?: boolean
 } & React.ComponentPropsWithRef<'pre'>
 
 export const Sheet: React.FC<SheetProps> = ({
@@ -84,6 +150,7 @@ export const Sheet: React.FC<SheetProps> = ({
   isScrolling,
   setTabIsScrolling,
   instrument,
+  isMobile = false,
   ...props
 }) => {
   const containerRef = useRef<HTMLPreElement>(null)
@@ -199,8 +266,35 @@ export const Sheet: React.FC<SheetProps> = ({
   // so toolbar-driven re-renders don't re-parse large sheets.
   const renderedLines = useMemo(() => {
     const lines = tabData.split(/\r?\n|\r/g)
-    return lines.map((line, index) => renderLine(line, index, transpose, isScrolling, instrument))
-  }, [tabData, transpose, isScrolling, instrument])
+
+    if (!isMobile) {
+      return lines.map((line, index) => renderLine(line, index, transpose, isScrolling, instrument))
+    }
+
+    // Mobile: detect chord-line immediately followed by a plain lyric line and
+    // render them as a single wrappable unit so chords stay above their lyrics.
+    const result: React.ReactNode[] = []
+    let i = 0
+    while (i < lines.length) {
+      const classified = classifySheetLine(lines[i], transpose)
+
+      if (classified.kind === 'chord-line') {
+        const isTablature = classified.tokens.some(t => t.kind === 'string-indicator')
+        if (!isTablature && i + 1 < lines.length) {
+          const next = classifySheetLine(lines[i + 1], transpose)
+          if (next.kind === 'plain') {
+            result.push(renderChordLyricPair(classified, next.text, i))
+            i += 2
+            continue
+          }
+        }
+      }
+
+      result.push(renderLine(lines[i], i, transpose, isScrolling, instrument))
+      i++
+    }
+    return result
+  }, [tabData, transpose, isScrolling, instrument, isMobile])
 
   return (
     <pre ref={containerRef} className={styles.container} {...props}>

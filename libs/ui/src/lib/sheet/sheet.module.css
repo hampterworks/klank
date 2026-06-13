@@ -41,6 +41,29 @@
   user-select: none;
 }
 
+/* ── Mobile chord+lyric pair ──────────────────────────────────── */
+
+/* Wrapping flex row: each segment is a (chord-above, lyric-below) column.
+   Segments wrap as atomic units so the chord stays above its lyric text. */
+.chordLyricPair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-top: 1em;
+}
+
+.chordLyricSegment {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+/* Lyric text within a segment — pre so spaces are preserved */
+.lyricText {
+  white-space: pre;
+}
+
 @media (max-width: 599px) {
   .container {
     /* Sheet fills remaining space above the bottom SheetToolbar */
@@ -50,5 +73,7 @@
     overflow-y: auto;
     height: auto;
     padding-bottom: 16px;
+    /* Allow wrapping for the chord+lyric pair segments */
+    white-space: normal;
   }
 }

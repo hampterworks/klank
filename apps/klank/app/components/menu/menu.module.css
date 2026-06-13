@@ -303,6 +303,12 @@
 }
 
 @media (max-width: 599px) {
+  /* The first <li> (logo row) has a desktop border-bottom; on mobile the
+     container already draws border-bottom, so remove the inner one. */
+  .container > li:first-of-type {
+    border-bottom: none;
+  }
+
   /* ── Top bar (the <ul> / .container) ─────────────────────────── */
   .container {
     flex-direction: row !important;
