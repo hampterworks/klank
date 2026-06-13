@@ -188,7 +188,8 @@ const reflowTablature = (rawLines: string[], cols: number): string[][] => {
       }
       if (cut > pos) end = cut
     }
-    systems.push(rawLines.map((l, i) => prefixes[i] + bodies[i].slice(pos, end)))
+    const segStart = pos, segEnd = end
+    systems.push(rawLines.map((l, i) => prefixes[i] + bodies[i].slice(segStart, segEnd)))
     pos = end
   }
   return systems
@@ -239,6 +240,7 @@ export const Sheet: React.FC<SheetProps> = ({
       }
     }
     recompute()
+    if (typeof ResizeObserver === 'undefined') return
     const ro = new ResizeObserver(recompute)
     ro.observe(container)
     ro.observe(measure)
