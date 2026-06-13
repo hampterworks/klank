@@ -48,6 +48,18 @@ export type GitService = {
   setToken: (token: string) => Promise<void>
   /** Whether a PAT is currently stored. */
   hasToken: () => Promise<boolean>
+  /** Whether sync has usable auth: a stored PAT or the opted-in OS credential helper. */
+  isAuthenticated: () => Promise<boolean>
+  /** Whether the user has opted into the OS git credential helper. */
+  systemCredentialsEnabled: () => Promise<boolean>
+  /**
+   * Desktop one-click sign-in: verifies the OS git credential helper can
+   * authenticate against `origin` (triggering GCM's interactive login if needed)
+   * and, on success, records that auth is configured. Not available on mobile.
+   */
+  useSystemCredentials: (dir: string) => Promise<GitResult>
+  /** Turns off the system-credential opt-in (leaves any stored PAT untouched). */
+  disableSystemCredentials: () => Promise<void>
 }
 
 /** Rust `SyncResult` (snake_case) → TS `SyncResult` (camelCase). */
@@ -128,6 +140,22 @@ const createTauriGitService = async (): Promise<GitService> => ({
   cloneRepo: (url, dir) => invoke<GitResult>('git_clone', { url, dir }),
   setToken: (token) => invoke<void>('git_set_token', { token }),
   hasToken: () => invoke<boolean>('git_has_token'),
+  async isAuthenticated() {
+    try {
+      return await invoke<boolean>('git_is_authenticated')
+    } catch {
+      return false
+    }
+  },
+  async systemCredentialsEnabled() {
+    try {
+      return await invoke<boolean>('git_system_credentials_enabled')
+    } catch {
+      return false
+    }
+  },
+  useSystemCredentials: (dir) => invoke<GitResult>('git_use_system_credentials', { dir }),
+  disableSystemCredentials: () => invoke<void>('git_disable_system_credentials'),
 })
 
 export const createGitService = async (): Promise<GitService> => createTauriGitService()

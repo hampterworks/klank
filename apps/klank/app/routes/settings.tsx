@@ -41,7 +41,10 @@ export default function Settings() {
   const [version, setVersion] = useState<string>('')
   const [token, setTokenValue] = useState('')
   const [hasToken, setHasToken] = useState(false)
+  const [systemCreds, setSystemCreds] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [cloneUrl, setCloneUrl] = useState('')
+  const isMobile = isMobileDevice()
 
   const refreshBranches = async (dir: string, git: GitService) => {
     const list = await git.listBranches(dir)
@@ -66,13 +69,15 @@ export default function Settings() {
         const git = await createGitService()
         gitRef.current = git
         if (!baseDirectory) return
-        const [repo, tokenStored] = await Promise.all([
+        const [repo, tokenStored, sysCreds] = await Promise.all([
           git.isGitRepo(baseDirectory),
           git.hasToken(),
+          git.systemCredentialsEnabled(),
         ])
         if (cancelled) return
         setIsRepo(repo)
         setHasToken(tokenStored)
+        setSystemCreds(sysCreds)
         if (repo) await refreshBranches(baseDirectory, git)
       } catch {
         // not in Tauri context (server render)
@@ -102,6 +107,30 @@ export default function Settings() {
       setStatus({ ok: true, message: token.trim() ? 'Token saved.' : 'Token cleared.' })
     } catch (e) {
       setStatus({ ok: false, message: e instanceof Error ? e.message : 'Could not save token' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleUseSystemCreds = async () => {
+    if (!gitRef.current || !baseDirectory || busy) return
+    setBusy(true)
+    try {
+      const result = await gitRef.current.useSystemCredentials(baseDirectory)
+      setStatus({ ok: result.success, message: result.output || result.error || '' })
+      if (result.success) setSystemCreds(true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleDisconnectSystemCreds = async () => {
+    if (!gitRef.current || busy) return
+    setBusy(true)
+    try {
+      await gitRef.current.disableSystemCredentials()
+      setSystemCreds(false)
+      setStatus({ ok: true, message: 'Disconnected system Git credentials.' })
     } finally {
       setBusy(false)
     }
@@ -216,20 +245,66 @@ export default function Settings() {
         <section className={styles.section}>
           <h2>Sync</h2>
 
-          <div className={styles.row}>
-            <span className={styles.label}>Token</span>
-            <input
-              className={styles.commitInput}
-              type="password"
-              placeholder={hasToken ? '•••••••• (saved)' : 'HTTPS access token'}
-              value={token}
-              onChange={(e) => setTokenValue(e.target.value)}
-              disabled={busy}
-            />
-            <button className={styles.button} onClick={handleSaveToken} disabled={busy || (!token.trim() && !hasToken)}>
-              {token.trim() ? 'Save' : 'Clear'}
-            </button>
-          </div>
+          {/* Access: desktop gets one-click system credentials; PAT is the
+              cross-platform fallback (and the only option on mobile). */}
+          {!isMobile && (
+            <div className={styles.row}>
+              <span className={styles.label}>Account</span>
+              {systemCreds ? (
+                <>
+                  <span className={styles.dirPath}>Using system Git credentials ✓</span>
+                  <button className={styles.button} onClick={handleDisconnectSystemCreds} disabled={busy}>
+                    Disconnect
+                  </button>
+                </>
+              ) : (
+                <button className={styles.button} onClick={handleUseSystemCreds} disabled={busy}>
+                  Use system Git credentials
+                </button>
+              )}
+            </div>
+          )}
+
+          {isMobile ? (
+            <div className={styles.row}>
+              <span className={styles.label}>Token</span>
+              <input
+                className={styles.commitInput}
+                type="password"
+                placeholder={hasToken ? '•••••••• (saved)' : 'HTTPS access token'}
+                value={token}
+                onChange={(e) => setTokenValue(e.target.value)}
+                disabled={busy}
+              />
+              <button className={styles.button} onClick={handleSaveToken} disabled={busy || (!token.trim() && !hasToken)}>
+                {token.trim() ? 'Save' : 'Clear'}
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className={styles.row}>
+                <button className={styles.button} onClick={() => setShowAdvanced((v) => !v)} disabled={busy}>
+                  {showAdvanced ? 'Hide advanced' : 'Advanced'}
+                </button>
+              </div>
+              {showAdvanced && (
+                <div className={styles.row}>
+                  <span className={styles.label}>Token</span>
+                  <input
+                    className={styles.commitInput}
+                    type="password"
+                    placeholder={hasToken ? '•••••••• (saved)' : 'HTTPS access token'}
+                    value={token}
+                    onChange={(e) => setTokenValue(e.target.value)}
+                    disabled={busy}
+                  />
+                  <button className={styles.button} onClick={handleSaveToken} disabled={busy || (!token.trim() && !hasToken)}>
+                    {token.trim() ? 'Save' : 'Clear'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
 
           {isRepo === null && (
             <span className={styles.infoMessage}>Checking repository…</span>

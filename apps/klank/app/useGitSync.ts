@@ -17,9 +17,9 @@ export async function runGitSync(
 ): Promise<void> {
   const { setSyncStatus, setTabSettings, setPlaylists } = useKlankStore.getState()
   try {
-    const [isRepo, hasToken] = await Promise.all([git.isGitRepo(baseDirectory), git.hasToken()])
-    if (!isRepo || !hasToken) {
-      setSyncStatus({ state: 'offline', message: isRepo ? 'No access token' : 'No repository' })
+    const [isRepo, authed] = await Promise.all([git.isGitRepo(baseDirectory), git.isAuthenticated()])
+    if (!isRepo || !authed) {
+      setSyncStatus({ state: 'offline', message: isRepo ? 'Not signed in' : 'No repository' })
       return
     }
     setSyncStatus({ state: 'syncing', message: 'Syncing…' })

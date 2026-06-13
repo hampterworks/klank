@@ -54,6 +54,32 @@ fn read_token(app: &tauri::AppHandle) -> Option<String> {
     }
 }
 
+/// Marker file recording that the user opted into the OS git credential helper
+/// (desktop). It carries no secret — `callbacks()` already resolves the helper —
+/// it just tells the app that auth is configured so sync stops asking for a PAT.
+const CRED_MODE_FILE: &str = "git_cred_mode";
+
+fn cred_mode_path(app: &tauri::AppHandle) -> Option<std::path::PathBuf> {
+    app.path().app_config_dir().ok().map(|d| d.join(CRED_MODE_FILE))
+}
+
+fn system_credentials_enabled(app: &tauri::AppHandle) -> bool {
+    cred_mode_path(app).map(|p| p.exists()).unwrap_or(false)
+}
+
+fn set_system_credentials(app: &tauri::AppHandle, enabled: bool) -> Result<(), String> {
+    let path = cred_mode_path(app).ok_or("no config directory")?;
+    if !enabled {
+        let _ = std::fs::remove_file(&path);
+        return Ok(());
+    }
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    }
+    std::fs::write(&path, "system").map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 /// Stores (or, when empty, clears) the HTTPS Personal Access Token used for
 /// push/pull/clone. Written app-private with `0600` perms on unix.
 #[tauri::command]
@@ -83,6 +109,62 @@ pub fn git_has_token(app: tauri::AppHandle) -> bool {
     read_token(&app).is_some()
 }
 
+/// Whether sync has any usable authentication: a stored PAT, or the user has opted
+/// into the OS credential helper. The frontend gates sync on this (not on the PAT
+/// alone) so a configured helper works with no token.
+#[tauri::command]
+pub fn git_is_authenticated(app: tauri::AppHandle) -> bool {
+    read_token(&app).is_some() || system_credentials_enabled(&app)
+}
+
+/// Whether the user has opted into the OS credential helper.
+#[tauri::command]
+pub fn git_system_credentials_enabled(app: tauri::AppHandle) -> bool {
+    system_credentials_enabled(&app)
+}
+
+/// Desktop one-click sign-in: verifies the OS git credential helper can authenticate
+/// against the repo's `origin` (this is what triggers Git Credential Manager's
+/// interactive login on first use), and on success records that auth is configured.
+#[tauri::command]
+pub fn git_use_system_credentials(app: tauri::AppHandle, dir: String) -> GitResult {
+    match probe_system_credentials(&dir) {
+        Ok(()) => match set_system_credentials(&app, true) {
+            Ok(()) => GitResult::ok("Using system Git credentials"),
+            Err(e) => GitResult { success: false, output: String::new(), error: Some(e) },
+        },
+        Err(e) => GitResult::err(e),
+    }
+}
+
+/// Turns off the system-credential opt-in (does not touch any stored PAT).
+#[tauri::command]
+pub fn git_disable_system_credentials(app: tauri::AppHandle) -> Result<(), String> {
+    set_system_credentials(&app, false)
+}
+
+fn probe_system_credentials(dir: &str) -> Result<(), Error> {
+    let repo = Repository::discover(dir)?;
+    let mut remote = repo.find_remote("origin")?;
+    if let Some(url) = remote.url() {
+        if !url.starts_with("http://") && !url.starts_with("https://") {
+            return Err(Error::from_str(
+                "origin is not an HTTPS remote — the credential helper only applies to HTTPS",
+            ));
+        }
+    }
+    // Auth-only handshake using the helper exclusively (no stored PAT).
+    remote
+        .connect_auth(git2::Direction::Fetch, Some(callbacks_system_only()), None)
+        .map_err(|_| {
+            Error::from_str(
+                "no system Git credentials found — configure a credential helper (e.g. Git Credential Manager) or set a token under Advanced",
+            )
+        })?;
+    let _ = remote.disconnect();
+    Ok(())
+}
+
 /// Builds credential callbacks: PAT first (Android + as an override), then the
 /// system credential helper (desktop).
 fn callbacks(app: tauri::AppHandle) -> RemoteCallbacks<'static> {
@@ -109,6 +191,26 @@ fn callbacks(app: tauri::AppHandle) -> RemoteCallbacks<'static> {
         Err(Error::from_str(
             "no usable git credentials — set a token in Settings",
         ))
+    });
+    cb
+}
+
+/// Credential callbacks that use ONLY the OS credential helper (no stored PAT), so
+/// the "Use system Git credentials" probe genuinely tests the helper.
+fn callbacks_system_only() -> RemoteCallbacks<'static> {
+    let mut cb = RemoteCallbacks::new();
+    cb.credentials(move |url, username, allowed| {
+        if allowed.contains(CredentialType::USER_PASS_PLAINTEXT) {
+            if let Ok(config) = git2::Config::open_default() {
+                if let Ok(cred) = Cred::credential_helper(&config, url, username) {
+                    return Ok(cred);
+                }
+            }
+        }
+        if allowed.contains(CredentialType::DEFAULT) {
+            return Cred::default();
+        }
+        Err(Error::from_str("no system git credentials"))
     });
     cb
 }

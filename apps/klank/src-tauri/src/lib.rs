@@ -50,7 +50,11 @@ pub fn run() {
             git::git_has_token,
             git::git_sync,
             git::git_list_branches,
-            git::git_checkout_branch
+            git::git_checkout_branch,
+            git::git_is_authenticated,
+            git::git_system_credentials_enabled,
+            git::git_use_system_credentials,
+            git::git_disable_system_credentials
         ]);
     #[cfg(not(desktop))]
     let builder = builder.invoke_handler(tauri::generate_handler![
@@ -66,7 +70,11 @@ pub fn run() {
         git::git_has_token,
         git::git_sync,
         git::git_list_branches,
-        git::git_checkout_branch
+        git::git_checkout_branch,
+        git::git_is_authenticated,
+        git::git_system_credentials_enabled,
+        git::git_use_system_credentials,
+        git::git_disable_system_credentials
     ]);
 
     builder
