@@ -511,6 +511,7 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
             </div>
             <div className={styles.mobileDrawerSearch}>
               <Searchbar
+                inDrawer
                 toggleMenu={toggleMenu}
                 isMenuExtended={isMenuExtended}
                 searchFilter={searchFilter}

@@ -44,7 +44,14 @@
   }
 
   /* Never show the search Input in the top bar — it lives in the drawer only */
-  .container > div {
+  .container:not(.inDrawer) > div {
     display: none !important;
+  }
+
+  /* In the drawer the Input must be fully visible and fill available width */
+  .container.inDrawer {
+    height: auto;
+    padding: 0;
+    justify-content: flex-start;
   }
 }
