@@ -37,6 +37,8 @@ type ToolbarProps = {
   onSettingsClick?: () => void
   tree: TreeEntry[]
   isCollapsed?: boolean
+  /** When true the "Go to Tab" button is hidden (it lives in the mobile drawer instead). */
+  hideGoToTab?: boolean
 } & React.ComponentPropsWithRef<'li'>
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -51,6 +53,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onSettingsClick,
   tree,
   isCollapsed,
+  hideGoToTab,
   ...props
 }) => {
   const handleBaseDirectoryChange = () => {
@@ -87,13 +90,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       <ToolTip message="Settings">
         <Button iconButton={true} icon={<SettingsIcon />} onClick={onSettingsClick} />
       </ToolTip>
-      <ToolTip message="Go to Tab">
-        <Button
-          onClick={() => goToActiveTab()}
-          iconButton={true}
-          icon={<TargetIcon />}
-        />
-      </ToolTip>
+      {!hideGoToTab && (
+        <ToolTip message="Go to Tab">
+          <Button
+            onClick={() => goToActiveTab()}
+            iconButton={true}
+            icon={<TargetIcon />}
+          />
+        </ToolTip>
+      )}
       <ToolTip message="Go to Random Tab">
         <Button
           onClick={() => handleRandomPathUpdate()}
@@ -101,13 +106,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           icon={<ShuffleIcon />}
         />
       </ToolTip>
-      <ToolTip message="New Playlist">
-        <Button
-          onClick={() => onRequestCreatePlaylist?.()}
-          iconButton={true}
-          icon={<NewPlaylistIcon />}
-        />
-      </ToolTip>
+      {onRequestCreatePlaylist && (
+        <ToolTip message="New Playlist">
+          <Button
+            onClick={() => onRequestCreatePlaylist()}
+            iconButton={true}
+            icon={<NewPlaylistIcon />}
+          />
+        </ToolTip>
+      )}
       {downloadError && (
         <span className={styles.downloadError} title={downloadError}>
           Error

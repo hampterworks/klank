@@ -454,12 +454,13 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
           setBaseDirectory={setBaseDirectory}
           setTabPath={handleSelectSong}
           tree={tree}
-          onRequestCreatePlaylist={handleRequestCreatePlaylist}
+          onRequestCreatePlaylist={isMobile ? undefined : handleRequestCreatePlaylist}
           onRequestDownload={handleRequestDownload}
           isDownloading={isDownloading}
           downloadError={downloadError}
           onSettingsClick={() => navigate('/settings')}
           isCollapsed={!isMenuExtended}
+          hideGoToTab={isMobile}
         />
         {!isMobile && isMenuExtended && (
           <>
@@ -517,6 +518,13 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
                   handleSelectSong(randomItem.path)
                   toggleMenu(false)
                 }}
+              />
+              <Button
+                iconButton
+                icon={<NewPlaylistIcon />}
+                title="New playlist"
+                aria-label="New playlist"
+                onClick={handleRequestCreatePlaylist}
               />
             </div>
             <div className={styles.mobileDrawerContent}>
