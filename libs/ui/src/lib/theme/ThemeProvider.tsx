@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { getThemeVariables, Theme } from './theme';
 
 type ThemeProviderProps = {
@@ -14,6 +15,14 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   children,
 }) => {
   const themeVariables = getThemeVariables(theme)
+
+  useEffect(() => {
+    const variables = getThemeVariables(theme);
+    for (const [key, value] of Object.entries(variables)) {
+      document.body.style.setProperty(key, String(value));
+    }
+    document.body.style.colorScheme = theme === 'Dark' ? 'dark' : 'light';
+  }, [theme]);
 
   return <body
     className={className ?? ''}

@@ -70,32 +70,19 @@ const renderLine = (
 }
 
 /**
- * Snap a character position to the start of the word it falls inside.
- * If pos is already at a word boundary (space or start), return it unchanged.
- * This prevents chord splits from breaking words across lines.
- */
-const snapToWordStart = (pos: number, text: string): number => {
-  if (pos <= 0 || pos >= text.length) return pos
-  if (text[pos - 1] === ' ') return pos   // already at a word start
-  let i = pos
-  while (i > 0 && text[i - 1] !== ' ') i--
-  return i
-}
-
-/**
- * Mobile-only: renders a chord-line + following plain-line as a flex row
- * of segments so the whole unit wraps while keeping each chord above the
- * lyric characters it annotates.
+ * Mobile-only: renders a chord-line + following plain-line as a flex row of
+ * per-word units. Each word is its own column (chord cell above, word below),
+ * so the row wraps between whole words - never mid-word and never off-screen -
+ * while each chord stays anchored above the word it annotates.
  */
 const renderChordLyricPair = (
   chordLine: Extract<SheetLine, { kind: 'chord-line' }>,
   lyricText: string,
   index: number,
 ): React.ReactNode => {
-  // Compute character position of each chord token by summing preceding raw lengths
+  // Character position of each chord token (sum of preceding raw lengths).
   let charPos = 0
   const chords: Array<{ pos: number; display: string }> = []
-
   for (const token of chordLine.tokens) {
     if (token.kind === 'chord') {
       chords.push({ pos: charPos, display: token.display })
@@ -103,50 +90,52 @@ const renderChordLyricPair = (
     charPos += token.raw.length
   }
 
-  type Segment = { chordDisplay?: string; text: string }
-  const segments: Segment[] = []
+  // Split the lyric into word units: each non-space run plus its trailing
+  // spaces. Trailing spaces ride along so monospace spacing is preserved and
+  // each unit stays a single, unbreakable word.
+  type Unit = { text: string; start: number; chord?: string }
+  const units: Unit[] = []
+  const wordRe = /\S+\s*/g
+  let m: RegExpExecArray | null
+  while ((m = wordRe.exec(lyricText)) !== null) {
+    units.push({ text: m[0], start: m.index })
+  }
+  if (units.length === 0) {
+    units.push({ text: lyricText.length ? lyricText : ' ', start: 0 })
+  } else if (units[0].start > 0) {
+    // Fold any leading whitespace into the first word unit.
+    units[0] = { text: lyricText.slice(0, units[0].start) + units[0].text, start: 0 }
+  }
 
-  if (chords.length === 0) {
-    // No chords — treat like a plain pair
-    segments.push({ text: lyricText })
-  } else {
-    // Snap chord positions to word boundaries so splits never occur mid-word,
-    // then ensure positions are still strictly increasing.
-    const snapped = chords.map(c => ({ ...c, pos: snapToWordStart(c.pos, lyricText) }))
-    for (let i = 1; i < snapped.length; i++) {
-      if (snapped[i].pos <= snapped[i - 1].pos) {
-        snapped[i].pos = snapped[i - 1].pos
-      }
+  // Anchor each chord above the word it sits over (the last word starting at or
+  // before the chord position). On collision push right so no chord is dropped
+  // and their left-to-right order is preserved.
+  let lastIdx = -1
+  for (const c of chords) {
+    let idx = 0
+    for (let u = 0; u < units.length; u++) {
+      if (units[u].start <= c.pos) idx = u
+      else break
     }
-
-    // Text before the first chord (if the first chord isn't at position 0)
-    if (snapped[0].pos > 0) {
-      segments.push({ text: lyricText.slice(0, snapped[0].pos) })
-    }
-    // Each chord followed by the lyric characters up to the next chord (or end)
-    for (let i = 0; i < snapped.length; i++) {
-      const start = snapped[i].pos
-      const end = snapped[i + 1]?.pos ?? lyricText.length
-      segments.push({
-        chordDisplay: snapped[i].display,
-        text: lyricText.slice(start, end),
-      })
-    }
+    if (idx <= lastIdx) idx = lastIdx + 1
+    if (idx >= units.length) break // no room left
+    units[idx].chord = c.display
+    lastIdx = idx
   }
 
   return (
     <div key={index} className={styles.chordLyricPair}>
-      {segments.map((seg, i) => (
+      {units.map((u, i) => (
         <span key={i} className={styles.chordLyricSegment}>
-          {/* Invisible placeholder keeps lyric baseline aligned when no chord */}
+          {/* Invisible placeholder keeps the lyric baseline aligned when no chord */}
           <span
             className={styles.chord}
-            style={{ visibility: seg.chordDisplay ? 'visible' : 'hidden' }}
-            aria-hidden={!seg.chordDisplay}
+            style={{ visibility: u.chord ? 'visible' : 'hidden' }}
+            aria-hidden={!u.chord}
           >
-            {seg.chordDisplay ?? ' '}
+            {u.chord ?? ' '}
           </span>
-          <span className={styles.lyricText}>{seg.text || ' '}</span>
+          <span className={styles.lyricText}>{u.text}</span>
         </span>
       ))}
     </div>
