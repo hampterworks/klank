@@ -70,6 +70,19 @@ const renderLine = (
 }
 
 /**
+ * Snap a character position to the start of the word it falls inside.
+ * If pos is already at a word boundary (space or start), return it unchanged.
+ * This prevents chord splits from breaking words across lines.
+ */
+const snapToWordStart = (pos: number, text: string): number => {
+  if (pos <= 0 || pos >= text.length) return pos
+  if (text[pos - 1] === ' ') return pos   // already at a word start
+  let i = pos
+  while (i > 0 && text[i - 1] !== ' ') i--
+  return i
+}
+
+/**
  * Mobile-only: renders a chord-line + following plain-line as a flex row
  * of segments so the whole unit wraps while keeping each chord above the
  * lyric characters it annotates.
@@ -97,16 +110,25 @@ const renderChordLyricPair = (
     // No chords — treat like a plain pair
     segments.push({ text: lyricText })
   } else {
+    // Snap chord positions to word boundaries so splits never occur mid-word,
+    // then ensure positions are still strictly increasing.
+    const snapped = chords.map(c => ({ ...c, pos: snapToWordStart(c.pos, lyricText) }))
+    for (let i = 1; i < snapped.length; i++) {
+      if (snapped[i].pos <= snapped[i - 1].pos) {
+        snapped[i].pos = snapped[i - 1].pos
+      }
+    }
+
     // Text before the first chord (if the first chord isn't at position 0)
-    if (chords[0].pos > 0) {
-      segments.push({ text: lyricText.slice(0, chords[0].pos) })
+    if (snapped[0].pos > 0) {
+      segments.push({ text: lyricText.slice(0, snapped[0].pos) })
     }
     // Each chord followed by the lyric characters up to the next chord (or end)
-    for (let i = 0; i < chords.length; i++) {
-      const start = chords[i].pos
-      const end = chords[i + 1]?.pos ?? lyricText.length
+    for (let i = 0; i < snapped.length; i++) {
+      const start = snapped[i].pos
+      const end = snapped[i + 1]?.pos ?? lyricText.length
       segments.push({
-        chordDisplay: chords[i].display,
+        chordDisplay: snapped[i].display,
         text: lyricText.slice(start, end),
       })
     }

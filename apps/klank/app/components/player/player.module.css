@@ -36,4 +36,12 @@
     overflow: clip;
     height: auto;
   }
+
+  /* Cancel the desktop z-index:2 on the SheetToolbar (direct div child).
+     Without this, SheetToolbar creates a stacking context that can paint
+     above the mobile drawer overlay (z-index: 200). */
+  .container > div {
+    position: static;
+    z-index: auto;
+  }
 }

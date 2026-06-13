@@ -149,7 +149,7 @@ export const useKlankStore = create<KlankState>()(
         },
         tabSettingByPath: {},
         mode: "Read",
-        theme: "Light",
+        theme: (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'Dark' : 'Light',
         instrument: "guitar" as Instrument,
         playlists: [],
         activePlaylistId: null,
