@@ -15,6 +15,7 @@ import {
   ShuffleIcon,
   TargetIcon,
   Toolbar,
+  ToolTip,
 } from '@klank/ui'
 import { useKlankStore } from '@klank/store'
 import { PlaylistSection } from './PlaylistSection'
@@ -504,49 +505,54 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
             <div className={styles.mobileDrawerActions}>
               {/* Utility — act on tree state, keep drawer open */}
               <div className={styles.mobileDrawerActionsGroup}>
-                <Button
-                  iconButton
-                  icon={<TargetIcon />}
-                  title="Go to current tab"
-                  aria-label="Go to current tab"
-                  onClick={() => document.getElementById('active')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-                />
-                <Button
-                  iconButton
-                  icon={<RefreshIcon />}
-                  title="Refresh"
-                  aria-label="Refresh"
-                  onClick={() => setNeedsUpdate(true)}
-                />
+                <ToolTip message="Go to Tab">
+                  <Button
+                    iconButton
+                    icon={<TargetIcon />}
+                    aria-label="Go to current tab"
+                    onClick={() => document.getElementById('active')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                  />
+                </ToolTip>
+                <ToolTip message="Refresh">
+                  <Button
+                    iconButton
+                    icon={<RefreshIcon />}
+                    aria-label="Refresh"
+                    onClick={() => setNeedsUpdate(true)}
+                  />
+                </ToolTip>
               </div>
               {/* Creation / navigation — may close drawer or open a modal */}
               <div className={styles.mobileDrawerActionsGroup}>
-                <Button
-                  iconButton
-                  icon={<ShuffleIcon />}
-                  title="Go to random tab"
-                  aria-label="Go to random tab"
-                  onClick={() => {
-                    if (!tree.length) return
-                    const randomItem = tree[Math.floor(Math.random() * tree.length)]
-                    handleSelectSong(randomItem.path)
-                    toggleMenu(false)
-                  }}
-                />
-                <Button
-                  iconButton
-                  icon={<NewPlaylistIcon />}
-                  title="New playlist"
-                  aria-label="New playlist"
-                  onClick={handleRequestCreatePlaylist}
-                />
-                <Button
-                  iconButton
-                  icon={<DownloadIcon />}
-                  title="Download tab"
-                  aria-label="Download tab"
-                  onClick={handleRequestDownload}
-                />
+                <ToolTip message="Go to Random Tab">
+                  <Button
+                    iconButton
+                    icon={<ShuffleIcon />}
+                    aria-label="Go to random tab"
+                    onClick={() => {
+                      if (!tree.length) return
+                      const randomItem = tree[Math.floor(Math.random() * tree.length)]
+                      handleSelectSong(randomItem.path)
+                      toggleMenu(false)
+                    }}
+                  />
+                </ToolTip>
+                <ToolTip message="New Playlist">
+                  <Button
+                    iconButton
+                    icon={<NewPlaylistIcon />}
+                    aria-label="New playlist"
+                    onClick={handleRequestCreatePlaylist}
+                  />
+                </ToolTip>
+                <ToolTip message="Download Tab">
+                  <Button
+                    iconButton
+                    icon={<DownloadIcon />}
+                    aria-label="Download tab"
+                    onClick={handleRequestDownload}
+                  />
+                </ToolTip>
               </div>
             </div>
             <div className={styles.mobileDrawerContent}>
