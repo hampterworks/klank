@@ -54,6 +54,20 @@ jobs:
           echo "ANDROID_NDK_HOME=${NDK_PATH}" >> "$GITHUB_ENV"
           echo "NDK_HOME=${NDK_PATH}" >> "$GITHUB_ENV"
 
+      # Vendored OpenSSL (pulled in by git2) cross-compiles with the NDK, but its
+      # makefile invokes legacy per-target tool names (e.g.
+      # aarch64-linux-android-ranlib) that NDK r23+ replaced with llvm-ranlib /
+      # llvm-ar. Put the NDK llvm bin on PATH and alias the legacy names so the
+      # OpenSSL `install_dev` step succeeds.
+      - name: Alias NDK toolchain for vendored OpenSSL
+        run: |
+          NDK_BIN="${ANDROID_SDK_ROOT}/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          echo "$NDK_BIN" >> "$GITHUB_PATH"
+          for prefix in aarch64-linux-android armv7a-linux-androideabi arm-linux-androideabi i686-linux-android x86_64-linux-android; do
+            ln -sf "$NDK_BIN/llvm-ranlib" "$NDK_BIN/${prefix}-ranlib"
+            ln -sf "$NDK_BIN/llvm-ar" "$NDK_BIN/${prefix}-ar"
+          done
+
       # Reads the pnpm version from packageManager in package.json.
       - uses: pnpm/action-setup@v4
 
@@ -166,6 +180,20 @@ jobs:
           NDK_PATH="${ANDROID_SDK_ROOT}/ndk/27.0.12077973"
           echo "ANDROID_NDK_HOME=${NDK_PATH}" >> "$GITHUB_ENV"
           echo "NDK_HOME=${NDK_PATH}" >> "$GITHUB_ENV"
+
+      # Vendored OpenSSL (pulled in by git2) cross-compiles with the NDK, but its
+      # makefile invokes legacy per-target tool names (e.g.
+      # aarch64-linux-android-ranlib) that NDK r23+ replaced with llvm-ranlib /
+      # llvm-ar. Put the NDK llvm bin on PATH and alias the legacy names so the
+      # OpenSSL `install_dev` step succeeds.
+      - name: Alias NDK toolchain for vendored OpenSSL
+        run: |
+          NDK_BIN="${ANDROID_SDK_ROOT}/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          echo "$NDK_BIN" >> "$GITHUB_PATH"
+          for prefix in aarch64-linux-android armv7a-linux-androideabi arm-linux-androideabi i686-linux-android x86_64-linux-android; do
+            ln -sf "$NDK_BIN/llvm-ranlib" "$NDK_BIN/${prefix}-ranlib"
+            ln -sf "$NDK_BIN/llvm-ar" "$NDK_BIN/${prefix}-ar"
+          done
 
       # Reads the pnpm version from packageManager in package.json.
       - uses: pnpm/action-setup@v4
