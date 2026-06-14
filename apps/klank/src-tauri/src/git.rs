@@ -5,6 +5,14 @@
 //! in the app-private config dir when set (required on Android), otherwise the
 //! system credential helper (desktop). The token is never logged and never
 //! written into remote URLs.
+//!
+//! Every command here is declared `#[tauri::command(async)]`. A plain
+//! `#[tauri::command]` runs on the main (UI) thread, so its blocking work —
+//! libgit2 network I/O (fetch/push/clone) and the `SYNC_LOCK` mutex — freezes
+//! the whole app. `(async)` runs the (synchronous) body on a worker thread
+//! instead, keeping the UI responsive. Keep the `(async)` on all of them: the
+//! local-only ones cost nothing off-thread, and it stops a future network call
+//! added to any command from silently reintroducing the freeze.
 
 use git2::{
     build::{CheckoutBuilder, RepoBuilder},
@@ -82,7 +90,7 @@ fn set_system_credentials(app: &tauri::AppHandle, enabled: bool) -> Result<(), S
 
 /// Stores (or, when empty, clears) the HTTPS Personal Access Token used for
 /// push/pull/clone. Written app-private with `0600` perms on unix.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_set_token(app: tauri::AppHandle, token: String) -> Result<(), String> {
     let path = token_path(&app).ok_or("no config directory")?;
     if let Some(dir) = path.parent() {
@@ -104,7 +112,7 @@ pub fn git_set_token(app: tauri::AppHandle, token: String) -> Result<(), String>
 
 /// Whether a PAT is currently stored (so the UI can show its state without
 /// exposing the token).
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_has_token(app: tauri::AppHandle) -> bool {
     read_token(&app).is_some()
 }
@@ -112,13 +120,13 @@ pub fn git_has_token(app: tauri::AppHandle) -> bool {
 /// Whether sync has any usable authentication: a stored PAT, or the user has opted
 /// into the OS credential helper. The frontend gates sync on this (not on the PAT
 /// alone) so a configured helper works with no token.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_is_authenticated(app: tauri::AppHandle) -> bool {
     read_token(&app).is_some() || system_credentials_enabled(&app)
 }
 
 /// Whether the user has opted into the OS credential helper.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_system_credentials_enabled(app: tauri::AppHandle) -> bool {
     system_credentials_enabled(&app)
 }
@@ -126,7 +134,7 @@ pub fn git_system_credentials_enabled(app: tauri::AppHandle) -> bool {
 /// Desktop one-click sign-in: verifies the OS git credential helper can authenticate
 /// against the repo's `origin` (this is what triggers Git Credential Manager's
 /// interactive login on first use), and on success records that auth is configured.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_use_system_credentials(app: tauri::AppHandle, dir: String) -> GitResult {
     match probe_system_credentials(&dir) {
         Ok(()) => match set_system_credentials(&app, true) {
@@ -138,7 +146,7 @@ pub fn git_use_system_credentials(app: tauri::AppHandle, dir: String) -> GitResu
 }
 
 /// Turns off the system-credential opt-in (does not touch any stored PAT).
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_disable_system_credentials(app: tauri::AppHandle) -> Result<(), String> {
     set_system_credentials(&app, false)
 }
@@ -215,12 +223,12 @@ fn callbacks_system_only() -> RemoteCallbacks<'static> {
     cb
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_is_repo(dir: String) -> bool {
     Repository::discover(&dir).is_ok()
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_status(dir: String) -> Result<Vec<GitChangedFile>, String> {
     let repo = Repository::discover(&dir).map_err(|e| e.message().to_string())?;
     let mut opts = StatusOptions::new();
@@ -251,7 +259,7 @@ fn status_code(s: git2::Status) -> String {
     }
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_commit(dir: String, message: String) -> GitResult {
     match commit_inner(&dir, &message) {
         Ok(()) => GitResult::ok("committed"),
@@ -283,7 +291,7 @@ fn signature(repo: &Repository) -> Result<Signature<'static>, Error> {
     Signature::now(&name, &email)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_pull(app: tauri::AppHandle, dir: String) -> GitResult {
     match pull_inner(app, &dir) {
         Ok(msg) => GitResult::ok(msg),
@@ -321,7 +329,7 @@ fn pull_inner(app: tauri::AppHandle, dir: &str) -> Result<String, Error> {
     ))
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_push(app: tauri::AppHandle, dir: String) -> GitResult {
     match push_inner(app, &dir) {
         Ok(msg) => GitResult::ok(msg),
@@ -340,7 +348,7 @@ fn push_inner(app: tauri::AppHandle, dir: &str) -> Result<String, Error> {
     Ok(format!("Pushed {branch}"))
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_unpushed(dir: String) -> Result<Vec<String>, String> {
     unpushed_inner(&dir).map_err(|e| e.message().to_string())
 }
@@ -372,7 +380,7 @@ fn unpushed_inner(dir: &str) -> Result<Vec<String>, Error> {
     Ok(out)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_clone(app: tauri::AppHandle, url: String, dir: String) -> GitResult {
     match clone_inner(app, &url, &dir) {
         Ok(()) => GitResult::ok("Cloned"),
@@ -458,7 +466,7 @@ fn classify_error(e: &Error) -> &'static str {
 
 /// Auto-commit → fetch → rebase (auto-resolving conflicts) → push. Never prompts;
 /// returns a structured summary of what happened.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_sync(app: tauri::AppHandle, dir: String) -> SyncResult {
     match sync_inner(&app, &dir) {
         Ok(r) => r,
@@ -472,12 +480,12 @@ pub fn git_sync(app: tauri::AppHandle, dir: String) -> SyncResult {
     }
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_list_branches(dir: String) -> Result<Vec<BranchInfo>, String> {
     list_branches_inner(&dir).map_err(|e| e.message().to_string())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_checkout_branch(dir: String, branch: String) -> GitResult {
     match checkout_branch_inner(&dir, &branch) {
         Ok(msg) => GitResult::ok(msg),
