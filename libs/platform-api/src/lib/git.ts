@@ -3,6 +3,9 @@ import { invoke } from '@tauri-apps/api/core'
 export type GitChangedFile = { status: string; path: string }
 export type GitResult = { success: boolean; output: string; error?: string }
 
+/** Coarse failure category for actionable UI feedback. */
+export type SyncErrorKind = 'auth' | 'network' | 'other'
+
 /** Structured outcome of an auto-sync (commit → pull-rebase → push). */
 export type SyncResult = {
   success: boolean
@@ -16,6 +19,8 @@ export type SyncResult = {
   changed: boolean
   message: string
   error?: string
+  /** Failure category (only set when `success` is false). */
+  errorKind?: SyncErrorKind
 }
 
 export type BranchInfo = {
@@ -74,6 +79,7 @@ type RawSyncResult = {
   changed: boolean
   message: string
   error?: string
+  error_kind?: SyncErrorKind
 }
 
 type RawBranchInfo = { name: string; is_head: boolean; is_remote: boolean; upstream?: string }
@@ -121,6 +127,7 @@ const createTauriGitService = async (): Promise<GitService> => ({
       changed: r.changed,
       message: r.message,
       error: r.error,
+      errorKind: r.error_kind,
     }
   },
   async listBranches(dir) {

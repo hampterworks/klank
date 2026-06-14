@@ -181,6 +181,40 @@
   font-style: italic;
 }
 
+.syncStatus {
+  font-size: 0.8rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.statusOk {
+  color: var(--klank-color-success);
+}
+
+.statusWarn {
+  color: var(--klank-color-fail);
+  opacity: 0.85;
+}
+
+.statusError {
+  color: var(--klank-color-fail);
+}
+
+.linkButton {
+  background: none;
+  border: none;
+  color: var(--klank-color-text);
+  opacity: 0.7;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 4px 6px;
+  text-decoration: underline;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
 @media (max-width: 599px) {
   .page {
     padding-top: var(--safe-top);

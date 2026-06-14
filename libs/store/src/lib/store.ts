@@ -1,7 +1,7 @@
 import {create} from 'zustand'
 import {devtools, persist} from 'zustand/middleware'
 import type {} from '@redux-devtools/extension'
-import { FileService, PerTabSettings, type Instrument, type Playlist } from '@klank/platform-api'
+import { FileService, PerTabSettings, type Instrument, type Playlist, type SyncErrorKind } from '@klank/platform-api'
 
 export type { Instrument, Playlist }
 
@@ -57,6 +57,8 @@ export type SyncStatus = {
   /** Epoch ms of the last successful sync, or null if never. */
   lastSyncedAt: number | null
   message: string
+  /** Failure category for actionable feedback (set on error/offline). */
+  kind?: SyncErrorKind
 }
 
 /**

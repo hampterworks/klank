@@ -419,6 +419,9 @@ pub struct SyncResult {
     pub changed: bool,
     pub message: String,
     pub error: Option<String>,
+    /// Coarse failure category for actionable UI feedback: `"auth"`, `"network"`,
+    /// or `"other"`. Only set when `success` is false.
+    pub error_kind: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -427,6 +430,30 @@ pub struct BranchInfo {
     pub is_head: bool,
     pub is_remote: bool,
     pub upstream: Option<String>,
+}
+
+/// Buckets a libgit2 error so the UI can say whether sync failed on authentication
+/// or connectivity (vs. something else) without parsing raw messages on the frontend.
+fn classify_error(e: &Error) -> &'static str {
+    use git2::ErrorClass;
+    let msg = e.message().to_lowercase();
+    let auth = matches!(e.class(), ErrorClass::Callback)
+        || e.code() == ErrorCode::Auth
+        || ["credential", "authentication", "unauthorized", "401", "403"]
+            .iter()
+            .any(|s| msg.contains(s));
+    if auth {
+        return "auth";
+    }
+    let network = matches!(e.class(), ErrorClass::Net | ErrorClass::Http | ErrorClass::Ssl)
+        || ["connect", "resolve", "timed out", "timeout", "network", "failed to send"]
+            .iter()
+            .any(|s| msg.contains(s));
+    if network {
+        "network"
+    } else {
+        "other"
+    }
 }
 
 /// Auto-commit → fetch → rebase (auto-resolving conflicts) → push. Never prompts;
@@ -439,6 +466,7 @@ pub fn git_sync(app: tauri::AppHandle, dir: String) -> SyncResult {
             success: false,
             message: e.message().to_string(),
             error: Some(e.message().to_string()),
+            error_kind: Some(classify_error(&e).into()),
             ..Default::default()
         },
     }
@@ -1231,6 +1259,25 @@ mod tests {
         assert!(!dir.join("song.tab.txt").exists(), "newer side deleted → file removed");
 
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn classify_error_buckets_auth_network_and_other() {
+        use git2::{ErrorClass, ErrorCode};
+        let auth_code = Error::new(ErrorCode::Auth, ErrorClass::None, "denied");
+        assert_eq!(classify_error(&auth_code), "auth");
+        let auth_cb = Error::new(ErrorCode::GenericError, ErrorClass::Callback, "no usable git credentials");
+        assert_eq!(classify_error(&auth_cb), "auth");
+        let auth_msg = Error::from_str("remote: Authentication failed for repo");
+        assert_eq!(classify_error(&auth_msg), "auth");
+
+        let net_class = Error::new(ErrorCode::GenericError, ErrorClass::Net, "boom");
+        assert_eq!(classify_error(&net_class), "network");
+        let net_msg = Error::from_str("failed to connect to github.com: could not resolve host");
+        assert_eq!(classify_error(&net_msg), "network");
+
+        let other = Error::from_str("some merge weirdness");
+        assert_eq!(classify_error(&other), "other");
     }
 
     #[test]

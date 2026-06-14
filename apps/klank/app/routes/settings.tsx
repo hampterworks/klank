@@ -2,7 +2,7 @@ import styles from './settings.module.css'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { createGitService, getAppVersion, isMobileDevice, type BranchInfo, type GitService } from '@klank/platform-api'
-import { useKlankStore } from '@klank/store'
+import { useKlankStore, type SyncStatus } from '@klank/store'
 import { runGitSync } from '../useGitSync'
 
 type Status = { ok: boolean; message: string } | null
@@ -15,6 +15,42 @@ const formatSince = (ts: number | null): string => {
   const hours = Math.floor(mins / 60)
   if (hours < 24) return `${hours}h ago`
   return `${Math.floor(hours / 24)}d ago`
+}
+
+type SyncTone = 'ok' | 'warn' | 'error' | 'neutral'
+
+/**
+ * Maps the raw sync status to one concise, actionable line (and an optional raw
+ * detail), so the user can tell auth from connectivity issues at a glance without
+ * the section being flooded with libgit2 output.
+ */
+export const describeSyncStatus = (status: SyncStatus): { text: string; tone: SyncTone; detail?: string } => {
+  switch (status.state) {
+    case 'syncing':
+      return { text: 'Syncing…', tone: 'neutral' }
+    case 'offline':
+      return status.kind === 'auth'
+        ? { text: '⚠ Not signed in — connect an account below', tone: 'warn' }
+        : { text: status.message || 'Not syncing', tone: 'neutral' }
+    case 'error':
+      if (status.kind === 'auth')
+        return { text: '✕ Sign-in needed — check your token or system credentials', tone: 'error', detail: status.message }
+      if (status.kind === 'network')
+        return { text: '✕ Can’t reach the remote — check your connection', tone: 'error', detail: status.message }
+      return { text: '✕ Sync failed', tone: 'error', detail: status.message }
+    case 'idle':
+    default:
+      return status.lastSyncedAt
+        ? { text: `✓ Synced · ${formatSince(status.lastSyncedAt)}`, tone: 'ok' }
+        : { text: 'Not synced yet', tone: 'neutral' }
+  }
+}
+
+const toneClass: Record<SyncTone, string> = {
+  ok: 'statusOk',
+  warn: 'statusWarn',
+  error: 'statusError',
+  neutral: '',
 }
 
 export default function Settings() {
@@ -43,8 +79,10 @@ export default function Settings() {
   const [hasToken, setHasToken] = useState(false)
   const [systemCreds, setSystemCreds] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showSyncDetail, setShowSyncDetail] = useState(false)
   const [cloneUrl, setCloneUrl] = useState('')
   const isMobile = isMobileDevice()
+  const sync = describeSyncStatus(syncStatus)
 
   const refreshBranches = async (dir: string, git: GitService) => {
     const list = await git.listBranches(dir)
@@ -342,19 +380,24 @@ export default function Settings() {
 
               <div className={styles.row}>
                 <span className={styles.label}>Status</span>
-                <span className={styles.dirPath}>
-                  {syncStatus.state === 'syncing'
-                    ? 'Syncing…'
-                    : syncStatus.state === 'error'
-                      ? `Error: ${syncStatus.message}`
-                      : syncStatus.state === 'offline'
-                        ? syncStatus.message
-                        : `Last synced ${formatSince(syncStatus.lastSyncedAt)}`}
+                <span
+                  className={`${styles.syncStatus} ${toneClass[sync.tone] ? styles[toneClass[sync.tone]] : ''}`}
+                  title={syncStatus.message || undefined}
+                >
+                  {sync.text}
                 </span>
+                {sync.detail && (
+                  <button className={styles.linkButton} onClick={() => setShowSyncDetail((v) => !v)}>
+                    {showSyncDetail ? 'Hide' : 'Details'}
+                  </button>
+                )}
                 <button className={styles.button} onClick={handleSyncNow} disabled={busy}>
                   Sync now
                 </button>
               </div>
+              {sync.detail && showSyncDetail && (
+                <div className={`${styles.statusLine} ${styles.error}`}>{sync.detail}</div>
+              )}
 
               <div className={styles.row}>
                 <span className={styles.label}>Auto-sync</span>

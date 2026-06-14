@@ -19,16 +19,24 @@ export async function runGitSync(
   try {
     const [isRepo, authed] = await Promise.all([git.isGitRepo(baseDirectory), git.isAuthenticated()])
     if (!isRepo || !authed) {
-      setSyncStatus({ state: 'offline', message: isRepo ? 'Not signed in' : 'No repository' })
+      setSyncStatus(
+        isRepo
+          ? { state: 'offline', message: 'Not signed in', kind: 'auth' }
+          : { state: 'offline', message: 'No repository', kind: undefined },
+      )
       return
     }
-    setSyncStatus({ state: 'syncing', message: 'Syncing…' })
+    setSyncStatus({ state: 'syncing', message: 'Syncing…', kind: undefined })
     const result = await git.sync(baseDirectory)
     if (!result.success) {
-      setSyncStatus({ state: 'error', message: result.error || result.message || 'Sync failed' })
+      setSyncStatus({
+        state: 'error',
+        message: result.error || result.message || 'Sync failed',
+        kind: result.errorKind ?? 'other',
+      })
       return
     }
-    setSyncStatus({ state: 'idle', lastSyncedAt: Date.now(), message: result.message })
+    setSyncStatus({ state: 'idle', lastSyncedAt: Date.now(), message: result.message, kind: undefined })
     if (result.changed && fileService) {
       const [settings, playlists] = await Promise.all([
         fileService.readTabSettings(baseDirectory),
@@ -39,7 +47,7 @@ export async function runGitSync(
       onChanged?.()
     }
   } catch (e) {
-    setSyncStatus({ state: 'error', message: e instanceof Error ? e.message : 'Sync failed' })
+    setSyncStatus({ state: 'error', message: e instanceof Error ? e.message : 'Sync failed', kind: 'other' })
   }
 }
 
