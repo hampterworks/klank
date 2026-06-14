@@ -491,6 +491,64 @@ describe('createMetronomeEngine', () => {
     expect(fakeCtx.close).not.toHaveBeenCalled();
   });
 
+  it('isAvailable() returns false after dispose() and the factory is not called again', () => {
+    const engine = createMetronomeEngine(makeFactory());
+    engine.start(defaultConfig());
+    expect(factoryCallCount).toBe(1);
+    engine.dispose();
+    // Engine must stay permanently dead: isAvailable() returns false and the
+    // factory is never invoked again (no new AudioContext is built).
+    expect(engine.isAvailable()).toBe(false);
+    expect(factoryCallCount).toBe(1);
+  });
+
+  it('start() is a no-op after dispose() (factory not called again)', () => {
+    const engine = createMetronomeEngine(makeFactory());
+    engine.start(defaultConfig());
+    engine.dispose();
+    const countAfterDispose = factoryCallCount;
+    engine.start(defaultConfig());
+    expect(factoryCallCount).toBe(countAfterDispose);
+    expect(engine.isRunning()).toBe(false);
+  });
+
+  // -------------------------------------------------------------------------
+  // Catch-up clamp — no burst scheduling after throttled background tab
+  // -------------------------------------------------------------------------
+
+  it('schedules at most one look-ahead window of clicks when audio clock jumps forward', () => {
+    const engine = createMetronomeEngine(makeFactory());
+    // 120 BPM quarter notes: one click every 0.5 s.
+    engine.start(defaultConfig({ bpm: 120, timeSignatureTop: 4, subdivision: 1 }));
+
+    // Initial schedule fires at currentTime=0; first click at t=0 is scheduled.
+    const countAfterStart = fakeCtx._oscillators.length;
+
+    // Simulate a throttled background tab: audio clock jumps 10 s ahead while
+    // the JS scheduler was paused.  Without the clamp the scheduler would try
+    // to fill in ~20 past-dated clicks in a single tick.
+    fakeCtx.currentTime = 10;
+    vi.advanceTimersByTime(25); // one scheduler interval
+
+    const newClicks = fakeCtx._oscillators.length - countAfterStart;
+
+    // With the catch-up clamp, nextPulseAudioTime is re-anchored to
+    // ctx.currentTime (10 s) so the look-ahead window [10, 10.1] contains at
+    // most one pulse — never a burst of many past-dated clicks.
+    expect(newClicks).toBeLessThanOrEqual(2); // at most one look-ahead window worth
+
+    // Also verify no click was scheduled far in the past (all start times must
+    // be >= the audio time at the moment the scheduler tick ran, i.e. >= 10 s).
+    const allStartTimes = fakeCtx._oscillators
+      .slice(countAfterStart)
+      .map((osc) => osc.start.mock.calls[0][0] as number);
+    for (const t of allStartTimes) {
+      expect(t).toBeGreaterThanOrEqual(10);
+    }
+
+    engine.stop();
+  });
+
   // -------------------------------------------------------------------------
   // Restart: calling start() again resets state
   // -------------------------------------------------------------------------

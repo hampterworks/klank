@@ -318,15 +318,24 @@ describe('createTunerEngine', () => {
     expect(fakeCtx.close).not.toHaveBeenCalled();
   });
 
-  it('isAvailable() returns false after dispose()', () => {
+  it('isAvailable() returns false after dispose() and the factory is not called again', () => {
+    const engine = createTunerEngine(makeFactory());
+    engine.playFrequency(440);
+    expect(factoryCallCount).toBe(1);
+    engine.dispose();
+    // Engine must stay permanently dead: isAvailable() returns false and the
+    // factory is never called again (no new AudioContext is built).
+    expect(engine.isAvailable()).toBe(false);
+    expect(factoryCallCount).toBe(1);
+  });
+
+  it('playFrequency is a no-op after dispose() (factory not called again)', () => {
     const engine = createTunerEngine(makeFactory());
     engine.playFrequency(440);
     engine.dispose();
-    // After dispose, available is reset to null; next isAvailable re-evaluates
-    // by trying to build a new context. The factory will build a new one.
-    // But we don't assert the second context — just ensure no throw and the
-    // returned value is boolean.
-    expect(typeof engine.isAvailable()).toBe('boolean');
+    const countAfterDispose = factoryCallCount;
+    engine.playFrequency(880);
+    expect(factoryCallCount).toBe(countAfterDispose);
   });
 
   // -------------------------------------------------------------------------

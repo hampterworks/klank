@@ -158,8 +158,9 @@ export function createTunerEngine(
       if (ctx) {
         ctx.close().catch(() => undefined);
         ctx = null;
-        available = null;
       }
+      // Permanently latch the engine dead so getContext() never rebuilds a context.
+      available = false;
     },
   };
 }

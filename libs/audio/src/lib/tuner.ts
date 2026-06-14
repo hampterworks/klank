@@ -1,5 +1,5 @@
 import { midiNoteToFrequency } from './audio.js';
-import { pitchName } from '@klank/platform-api';
+import { pitchName, GUITAR_TUNING, BASS_TUNING } from '@klank/platform-api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -27,19 +27,39 @@ export type TuningDef = {
 // Accidentals: Eb=3, Ab=8, Db=1, Gb=6, Bb=10
 // ---------------------------------------------------------------------------
 
+/**
+ * Derive TuningString[] from a list of pitch classes and a starting octave.
+ * Each string steps up from the previous one; when the next pitch class is
+ * lower-or-equal (mod 12) to the previous (wraps around), the octave increments.
+ */
+function pitchClassesToStrings(
+  pitchClasses: readonly number[],
+  startOctave: number,
+): TuningString[] {
+  const result: TuningString[] = [];
+  let octave = startOctave;
+  for (let i = 0; i < pitchClasses.length; i++) {
+    if (i > 0 && pitchClasses[i] <= pitchClasses[i - 1]) {
+      octave++;
+    }
+    result.push({ pitchClass: pitchClasses[i], octave });
+  }
+  return result;
+}
+
+// guitar-standard and bass-standard derive from @klank/platform-api constants
+// (GUITAR_TUNING = [4,9,2,7,11,4], BASS_TUNING = [4,9,2,7]) so the source of
+// truth lives in one place. Octave numbers are tuner-local (platform-api has
+// no octave information).
+const GUITAR_STANDARD_STRINGS = pitchClassesToStrings(GUITAR_TUNING, 2);
+const BASS_STANDARD_STRINGS = pitchClassesToStrings(BASS_TUNING, 1);
+
 export const TUNINGS: Record<TuningName, TuningDef> = {
   'guitar-standard': {
     name: 'guitar-standard',
     instrument: 'guitar',
     label: 'Guitar — Standard (E A D G B E)',
-    strings: [
-      { pitchClass: 4, octave: 2 },  // E2
-      { pitchClass: 9, octave: 2 },  // A2
-      { pitchClass: 2, octave: 3 },  // D3
-      { pitchClass: 7, octave: 3 },  // G3
-      { pitchClass: 11, octave: 3 }, // B3
-      { pitchClass: 4, octave: 4 },  // E4
-    ],
+    strings: GUITAR_STANDARD_STRINGS,
   },
   'guitar-drop-d': {
     name: 'guitar-drop-d',
@@ -71,12 +91,7 @@ export const TUNINGS: Record<TuningName, TuningDef> = {
     name: 'bass-standard',
     instrument: 'bass',
     label: 'Bass — Standard (E A D G)',
-    strings: [
-      { pitchClass: 4, octave: 1 },  // E1
-      { pitchClass: 9, octave: 1 },  // A1
-      { pitchClass: 2, octave: 2 },  // D2
-      { pitchClass: 7, octave: 2 },  // G2
-    ],
+    strings: BASS_STANDARD_STRINGS,
   },
   'bass-5-string': {
     name: 'bass-5-string',

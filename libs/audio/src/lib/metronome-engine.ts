@@ -215,6 +215,16 @@ export function createMetronomeEngine(
     const lookAheadUntil = ctx.currentTime + SCHEDULE_AHEAD_S;
     const { bpm, subdivision, accent } = config;
 
+    // Catch-up clamp: if the scheduler was throttled (e.g. background tab) and
+    // nextPulseAudioTime has fallen well behind ctx.currentTime, re-anchor it
+    // to now so we never schedule a burst of past-dated clicks on resume.
+    // We only clamp when the lag exceeds several look-ahead windows so that
+    // fast subdivisions (whose next pulse may land just behind currentTime
+    // between normal ticks) are scheduled without an artificial gap.
+    if (nextPulseAudioTime < ctx.currentTime - 3 * SCHEDULE_AHEAD_S) {
+      nextPulseAudioTime = ctx.currentTime;
+    }
+
     while (nextPulseAudioTime < lookAheadUntil) {
       const kind = currentPattern[pulseIndex];
 
@@ -294,8 +304,9 @@ export function createMetronomeEngine(
       if (ctx) {
         ctx.close().catch(() => undefined);
         ctx = null;
-        available = null;
       }
+      // Permanently latch the engine dead so getContext() never rebuilds a context.
+      available = false;
     },
   };
 }
