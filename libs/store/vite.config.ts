@@ -18,6 +18,11 @@ export default defineConfig(() => ({
   // },
   // Configuration for building your library.
   // See: https://vitejs.dev/guide/build.html#library-mode
+  resolve: {
+    // Allow the test runner to resolve workspace packages via their source
+    // (the "@klank/source" export condition defined in each package.json).
+    conditions: ['@klank/source'],
+  },
   build: {
     outDir: './dist',
     emptyOutDir: true,

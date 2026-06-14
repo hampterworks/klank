@@ -238,6 +238,9 @@ importers:
 
   libs/store:
     dependencies:
+      '@klank/audio':
+        specifier: workspace:*
+        version: link:../audio
       '@klank/platform-api':
         specifier: workspace:*
         version: link:../platform-api

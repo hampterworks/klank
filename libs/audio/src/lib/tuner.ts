@@ -22,6 +22,13 @@ export type TuningName =
 
 export type TuningString = { pitchClass: number; octave: number };
 
+export type CustomTuning = {
+  id: string;
+  name: string;
+  instrument: 'guitar' | 'bass';
+  strings: TuningString[];
+};
+
 export type TuningDef = {
   name: TuningName;
   instrument: 'guitar' | 'bass';

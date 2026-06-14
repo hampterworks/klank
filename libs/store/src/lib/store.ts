@@ -2,8 +2,9 @@ import {create} from 'zustand'
 import {devtools, persist} from 'zustand/middleware'
 import type {} from '@redux-devtools/extension'
 import { FileService, PerTabSettings, type Instrument, type Playlist, type SyncErrorKind } from '@klank/platform-api'
+import type { CustomTuning } from '@klank/audio'
 
-export type { Instrument, Playlist }
+export type { Instrument, Playlist, CustomTuning }
 
 export type Mode = "Read" | "Edit"
 export type Theme = "Light" | "Dark"
@@ -172,6 +173,10 @@ type KlankState = {
   /** Live sync status for the Settings UI. Not persisted. */
   syncStatus: SyncStatus
   setSyncStatus: (status: Partial<SyncStatus>) => void
+  /** @persisted User-defined custom tunings for the tuner. */
+  customTunings: CustomTuning[]
+  addCustomTuning: (tuning: CustomTuning) => void
+  deleteCustomTuning: (id: string) => void
 }
 
 /** All valid scroll speed levels (0–9, displayed as 1–10). */
@@ -181,7 +186,7 @@ export type ScrollSpeeds = typeof SCROLL_SPEEDS[number]
 /** The slice of KlankState saved to localStorage — must match what `partialize` returns. */
 type PersistedKlankState = Pick<
   KlankState,
-  'tab' | 'theme' | 'ui' | 'baseDirectory' | 'activePlaylistId' | 'activePlaylistIndex' | 'syncSettings' | 'instrument' | 'harmony'
+  'tab' | 'theme' | 'ui' | 'baseDirectory' | 'activePlaylistId' | 'activePlaylistIndex' | 'syncSettings' | 'instrument' | 'harmony' | 'customTunings'
 >
 
 /** Fire-and-forget write of all playlists to `.klank-settings.json`. No-op until a directory and FileService are set. */
@@ -249,6 +254,9 @@ export const useKlankStore = create<KlankState>()(
         setSyncSettings: (partial) => set((state) => ({...state, syncSettings: {...state.syncSettings, ...partial}})),
         syncStatus: { state: 'idle', lastSyncedAt: null, message: '' },
         setSyncStatus: (status) => set((state) => ({...state, syncStatus: {...state.syncStatus, ...status}})),
+        customTunings: [],
+        addCustomTuning: (tuning) => set((state) => ({...state, customTunings: [...state.customTunings, tuning]})),
+        deleteCustomTuning: (id) => set((state) => ({...state, customTunings: state.customTunings.filter((t) => t.id !== id)})),
         setTabPath: (path) => set((state) => {
           const saved = state.tabSettingByPath[path]
           const tab: TabSetting = {
@@ -484,12 +492,12 @@ export const useKlankStore = create<KlankState>()(
       }),
       {
         name: 'klank-storage',
-        version: 3,
+        version: 4,
         // v0 persisted playlists in localStorage; they now live in
         // .klank-settings.json, so stale localStorage copies are dropped.
         // v2 adds syncSettings; defaults fill in for older persisted state.
-        // v3 persists instrument and the Harmony section settings; defaults
-        // fill in for older persisted state.
+        // v3 persists instrument and the Harmony section settings.
+        // v4 adds customTunings; older persisted state gets customTunings: [].
         migrate: (persistedState) => {
           const state = { ...((persistedState ?? {}) as Record<string, unknown>) }
           delete state['playlists']
@@ -498,6 +506,7 @@ export const useKlankStore = create<KlankState>()(
             syncSettings: { ...DEFAULT_SYNC_SETTINGS, ...(state.syncSettings as Partial<SyncSettings> | undefined) },
             instrument: (state.instrument as Instrument | undefined) ?? 'guitar',
             harmony: { ...DEFAULT_HARMONY_SETTINGS, ...(state.harmony as Partial<HarmonySettings> | undefined) },
+            customTunings: (state.customTunings as CustomTuning[] | undefined) ?? [],
           } as unknown as PersistedKlankState
         },
         partialize: (state) => ({
@@ -510,6 +519,7 @@ export const useKlankStore = create<KlankState>()(
           syncSettings: state.syncSettings,
           instrument: state.instrument,
           harmony: state.harmony,
+          customTunings: state.customTunings,
         }),
       }
     )
