@@ -10,7 +10,7 @@ const DEFAULT_PROPS = {
   transpose: 0,
   tabScrollSpeed: 3,
   isScrolling: false,
-  mode: 'Read' as const,
+  mode: 'Read' as 'Read' | 'Edit',
   setTabFontSize: vi.fn(),
   setTabTranspose: vi.fn(),
   setTabScrollSpeed: vi.fn(),
