@@ -22,6 +22,7 @@
       "@klank/ui": ["libs/ui/src/index.ts"],
       "@klank/store": ["libs/store/src/index.ts"],
       "@klank/platform-api": ["libs/platform-api/src/index.ts"],
+      "@klank/audio": ["libs/audio/src/index.ts"],
     }
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@klank/store",
+  "name": "@klank/audio",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -16,9 +16,6 @@
     }
   },
   "dependencies": {
-    "@klank/audio": "workspace:*",
-    "@klank/platform-api": "workspace:*",
-    "@redux-devtools/extension": "^3.3.0",
-    "zustand": "^5.0.14"
+    "@klank/platform-api": "workspace:*"
   }
 }

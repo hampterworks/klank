@@ -28,6 +28,27 @@
   flex-shrink: 0;
 }
 
+/* Metronome / Tuner icon buttons */
+.toolButtons {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-left: 1px solid var(--klank-color-border);
+  padding-left: 0.5rem;
+
+  button {
+    height: 2rem;
+    width: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    svg {
+      height: 1.25rem;
+      width: 1.25rem;
+    }
+  }
+}
+
 /* Play / Edit buttons */
 .actionButtons {
   display: flex;

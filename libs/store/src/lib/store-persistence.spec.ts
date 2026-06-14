@@ -53,7 +53,7 @@ describe('klank-storage migration and shape', () => {
     const raw = localStorageData['klank-storage']
     expect(raw).toBeDefined()
     const parsed = JSON.parse(raw) as { version: number; state: Record<string, unknown> }
-    expect(parsed.version).toBe(3)
+    expect(parsed.version).toBe(4)
     expect(parsed.state).not.toHaveProperty('playlists')
     expect(parsed.state).toHaveProperty('activePlaylistId')
     expect(parsed.state).toHaveProperty('activePlaylistIndex')
@@ -62,6 +62,8 @@ describe('klank-storage migration and shape', () => {
     // Instrument and Harmony settings are persisted so they survive reloads.
     expect(parsed.state).toHaveProperty('instrument')
     expect(parsed.state).toHaveProperty('harmony')
+    // Custom tunings are persisted.
+    expect(parsed.state).toHaveProperty('customTunings')
   })
 
   it('migrate fills in default sync settings for older persisted state', async () => {
@@ -75,5 +77,43 @@ describe('klank-storage migration and shape', () => {
     const { instrument, harmony } = useKlankStore.getState()
     expect(instrument).toBe('guitar')
     expect(harmony).toEqual({ rootPitch: 0, scaleId: 'ionian', quality: '', tab: 'scales' })
+  })
+
+  it('migrate fills in customTunings: [] for v0 state that has no customTunings', async () => {
+    const { useKlankStore } = await import('./store.js')
+    const { customTunings } = useKlankStore.getState()
+    // The seed state was a v0 blob with no customTunings — migrate must default to [].
+    expect(customTunings).toEqual([])
+  })
+})
+
+describe('klank-storage v2 migration', () => {
+  it('a v2 persisted blob (no customTunings) migrates to include customTunings: [] with all other fields intact', async () => {
+    // Seed a v2 blob (syncSettings present, customTunings absent)
+    const v2State = {
+      version: 2,
+      state: {
+        theme: 'Light',
+        activePlaylistId: 'pl-abc',
+        activePlaylistIndex: 2,
+        syncSettings: { enabled: false, intervalMinutes: 15, debounceMinutes: 3 },
+        tab: { path: '/tabs/song.tab.txt', fontSize: 14, transpose: 1, scrollSpeed: 3, isScrolling: false, details: '', link: '' },
+      },
+    }
+    // Wipe localStorage and reseed with the v2 blob
+    Object.keys(localStorageData).forEach((k) => delete localStorageData[k])
+    localStorageData['klank-storage'] = JSON.stringify(v2State)
+
+    const { useKlankStore } = await import('./store.js')
+    await useKlankStore.persist.rehydrate()
+
+    const state = useKlankStore.getState()
+    // customTunings must be filled in with [] by the migration
+    expect(state.customTunings).toEqual([])
+    // All pre-existing v2 fields must survive untouched
+    expect(state.theme).toBe('Light')
+    expect(state.activePlaylistId).toBe('pl-abc')
+    expect(state.activePlaylistIndex).toBe(2)
+    expect(state.syncSettings).toEqual({ enabled: false, intervalMinutes: 15, debounceMinutes: 3 })
   })
 })

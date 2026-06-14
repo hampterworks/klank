@@ -13,7 +13,13 @@
   },
   "references": [
     {
+      "path": "../store/tsconfig.lib.json"
+    },
+    {
       "path": "../platform-api/tsconfig.lib.json"
+    },
+    {
+      "path": "../audio/tsconfig.lib.json"
     }
   ],
   "exclude": [

@@ -8,8 +8,11 @@ export default defineConfig(({ mode }) => ({
   root: __dirname,
   cacheDir: '../../node_modules/.vite/libs/ui',
   resolve: {
+    conditions: ['@klank/source'],
     alias: {
       '@klank/platform-api': path.resolve(__dirname, '../../libs/platform-api/src/index.ts'),
+      '@klank/store': path.resolve(__dirname, '../../libs/store/src/index.ts'),
+      '@klank/audio': path.resolve(__dirname, '../../libs/audio/src/index.ts'),
     },
   },
   plugins: [

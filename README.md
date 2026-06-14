@@ -14,6 +14,8 @@ Klank is a Tauri desktop application for viewing, downloading, and editing guita
 - Right-click context menu on file tree entries for tab deletion (with confirmation modal)
 - Light and Dark theme including icons and native chrome
 - App version displayed on the Settings page
+- Metronome — look-ahead Web Audio scheduler with BPM control, tap-tempo, time signature, accent, and subdivisions; beat indicator updates live. Press `m` to open, arrow keys to nudge BPM, `Esc` to close.
+- Tuner — plays reference tones for each open string (guitar standard / drop-D / half-step-down, bass standard / 5-string); listen-only, no microphone required. Press `t` to open.
 - Keyboard shortcuts for navigation and playback
 
 ## Tech Stack
