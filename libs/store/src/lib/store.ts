@@ -49,6 +49,31 @@ export const DEFAULT_SYNC_SETTINGS: SyncSettings = {
   debounceMinutes: 5,
 }
 
+/** Which tab of the Harmony browser is active. */
+export type HarmonyTab = 'chords' | 'scales' | 'chord-scales'
+
+/**
+ * Persisted UI memory for the Harmony section (scale/chord browser).
+ * Additive slice — safe to extend; never rename existing fields.
+ */
+export type HarmonySettings = {
+  /** Selected root pitch class, C=0. */
+  rootPitch: number
+  /** Selected scale id (see SCALES in @klank/platform-api). */
+  scaleId: string
+  /** Selected chord quality suffix (see CHORD_QUALITIES); '' = major. */
+  quality: string
+  /** Active browser tab. */
+  tab: HarmonyTab
+}
+
+export const DEFAULT_HARMONY_SETTINGS: HarmonySettings = {
+  rootPitch: 0,
+  scaleId: 'ionian',
+  quality: '',
+  tab: 'scales',
+}
+
 export type SyncRunState = 'idle' | 'syncing' | 'error' | 'offline'
 
 /** Live status of the background sync loop, surfaced in Settings. Not persisted. */
@@ -107,9 +132,12 @@ type KlankState = {
   setTabDetails: (details: string) => void
   setTabLink: (link: string) => void
   setServerMode: (serverMode: boolean) => void
-  /** @persisted Instrument used for chord diagram tooltips. */
+  /** @persisted Instrument used for chord diagram tooltips and the Harmony section. */
   instrument: Instrument
   setInstrument: (instrument: Instrument) => void
+  /** @persisted Harmony section (scale/chord browser) UI memory. */
+  harmony: HarmonySettings
+  setHarmony: (partial: Partial<HarmonySettings>) => void
   /** Named playlists — persisted to `.klank-settings.json` in the tab directory. */
   playlists: Playlist[]
   /** ID of the currently active playlist, or null when none is active. Persisted to localStorage. */
@@ -153,7 +181,7 @@ export type ScrollSpeeds = typeof SCROLL_SPEEDS[number]
 /** The slice of KlankState saved to localStorage — must match what `partialize` returns. */
 type PersistedKlankState = Pick<
   KlankState,
-  'tab' | 'theme' | 'ui' | 'baseDirectory' | 'activePlaylistId' | 'activePlaylistIndex' | 'syncSettings'
+  'tab' | 'theme' | 'ui' | 'baseDirectory' | 'activePlaylistId' | 'activePlaylistIndex' | 'syncSettings' | 'instrument' | 'harmony'
 >
 
 /** Fire-and-forget write of all playlists to `.klank-settings.json`. No-op until a directory and FileService are set. */
@@ -215,6 +243,8 @@ export const useKlankStore = create<KlankState>()(
         setMenuWidth: (menuWidth) => set((state) => ({...state, ui: {...state.ui, menuWidth}})),
         setTheme: (theme) => set((state) => ({...state, theme})),
         setInstrument: (instrument) => set((state) => ({...state, instrument})),
+        harmony: DEFAULT_HARMONY_SETTINGS,
+        setHarmony: (partial) => set((state) => ({...state, harmony: {...state.harmony, ...partial}})),
         syncSettings: DEFAULT_SYNC_SETTINGS,
         setSyncSettings: (partial) => set((state) => ({...state, syncSettings: {...state.syncSettings, ...partial}})),
         syncStatus: { state: 'idle', lastSyncedAt: null, message: '' },
@@ -454,16 +484,20 @@ export const useKlankStore = create<KlankState>()(
       }),
       {
         name: 'klank-storage',
-        version: 2,
+        version: 3,
         // v0 persisted playlists in localStorage; they now live in
         // .klank-settings.json, so stale localStorage copies are dropped.
         // v2 adds syncSettings; defaults fill in for older persisted state.
+        // v3 persists instrument and the Harmony section settings; defaults
+        // fill in for older persisted state.
         migrate: (persistedState) => {
           const state = { ...((persistedState ?? {}) as Record<string, unknown>) }
           delete state['playlists']
           return {
             ...state,
             syncSettings: { ...DEFAULT_SYNC_SETTINGS, ...(state.syncSettings as Partial<SyncSettings> | undefined) },
+            instrument: (state.instrument as Instrument | undefined) ?? 'guitar',
+            harmony: { ...DEFAULT_HARMONY_SETTINGS, ...(state.harmony as Partial<HarmonySettings> | undefined) },
           } as unknown as PersistedKlankState
         },
         partialize: (state) => ({
@@ -474,6 +508,8 @@ export const useKlankStore = create<KlankState>()(
           activePlaylistId: state.activePlaylistId,
           activePlaylistIndex: state.activePlaylistIndex,
           syncSettings: state.syncSettings,
+          instrument: state.instrument,
+          harmony: state.harmony,
         }),
       }
     )
