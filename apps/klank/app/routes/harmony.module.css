@@ -146,11 +146,6 @@
   width: 160px;
 }
 
-.positionLabel {
-  font-size: 0.75rem;
-  opacity: 0.7;
-}
-
 /* ── Chord diagram grid ──────────────────────────────────────────────────── */
 
 .chordGrid {

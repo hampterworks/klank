@@ -281,18 +281,14 @@ export function getDegreeByPitch(rootPitch: number, scale: ScaleDefinition): Map
 
 /** Look up a scale by its stable kebab id. */
 export function getScaleById(id: string): ScaleDefinition | undefined {
-  return (SCALES as readonly ScaleDefinition[]).find((s) => s.id === id)
+  return SCALES.find((s) => s.id === id)
 }
 
 /** All ScaleDefinitions recommended for a given chord quality suffix. */
 export function scalesForQuality(quality: string): ScaleDefinition[] {
-  const ids = CHORD_SCALE_MAP[quality] ?? []
-  const result: ScaleDefinition[] = []
-  for (const id of ids) {
-    const scale = getScaleById(id)
-    if (scale !== undefined) result.push(scale)
-  }
-  return result
+  return (CHORD_SCALE_MAP[quality] ?? [])
+    .map(getScaleById)
+    .filter((scale): scale is ScaleDefinition => scale !== undefined)
 }
 
 /**
@@ -328,32 +324,20 @@ export function getScaleFretboard(
 }
 
 /**
- * Return candidate position start frets for a scale, based on where the root
- * lands on the lowest string within frets 0..11.
- *
- * Each entry has { startFret, label } where label is `${startFret}fr`.
- * Results are deduped and sorted ascending.
+ * Candidate position start frets for a scale: the frets (0..11, ascending)
+ * where the root lands on the lowest string. Each marks a playable hand
+ * position anchored on the root; the renderer labels the window itself.
  */
 export function getScalePositions(
   rootPitch: number,
-  scale: ScaleDefinition,
   tuning: readonly number[],
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  windowFrets = 5,
-): { startFret: number; label: string }[] {
+): number[] {
   const root = MOD12(rootPitch)
   const lowestOpen = tuning[0]
-  const seen = new Set<number>()
-  const positions: { startFret: number; label: string }[] = []
+  const positions: number[] = []
   for (let fret = 0; fret <= 11; fret++) {
-    if (MOD12(lowestOpen + fret) === root) {
-      if (!seen.has(fret)) {
-        seen.add(fret)
-        positions.push({ startFret: fret, label: `${fret}fr` })
-      }
-    }
+    if (MOD12(lowestOpen + fret) === root) positions.push(fret)
   }
-  positions.sort((a, b) => a.startFret - b.startFret)
   return positions
 }
 
@@ -388,10 +372,9 @@ export function getDiatonicTriads(
     else if (thirdInterval === 3 && fifthInterval === 6) quality = 'dim'
     else if (thirdInterval === 4 && fifthInterval === 8) quality = 'aug'
 
-    const rootName = NOTE_NAMES[MOD12(root)]
     result.push({
       degree: scale.degrees[i],
-      chordKey: quality !== null ? rootName + quality : null,
+      chordKey: quality !== null ? NOTE_NAMES[root] + quality : null,
     })
   }
 

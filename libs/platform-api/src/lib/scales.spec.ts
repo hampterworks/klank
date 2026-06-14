@@ -214,48 +214,39 @@ describe('getScaleFretboard', () => {
 // ── 5. getScalePositions ──────────────────────────────────────────────────────
 
 describe('getScalePositions', () => {
-  it('each startFret is in 0..11', () => {
-    fc.assert(
-      fc.property(rootArb, scaleArb, (root, scale) => {
-        const positions = getScalePositions(root, scale, GUITAR_TUNING)
-        for (const pos of positions) {
-          expect(pos.startFret).toBeGreaterThanOrEqual(0)
-          expect(pos.startFret).toBeLessThanOrEqual(11)
-        }
-      }),
-    )
-  })
+  const tuningArb = fc.constantFrom(GUITAR_TUNING, BASS_TUNING)
 
-  it('label === `${startFret}fr` for every position', () => {
+  it('every start fret is in 0..11 and anchors the root on the lowest string', () => {
     fc.assert(
-      fc.property(rootArb, scaleArb, (root, scale) => {
-        const positions = getScalePositions(root, scale, GUITAR_TUNING)
-        for (const pos of positions) {
-          expect(pos.label).toBe(`${pos.startFret}fr`)
-        }
-      }),
-    )
-  })
-
-  it('(tuning[0] + startFret) % 12 === root % 12 for every position', () => {
-    fc.assert(
-      fc.property(rootArb, scaleArb, (root, scale) => {
-        const positions = getScalePositions(root, scale, GUITAR_TUNING)
+      fc.property(rootArb, tuningArb, (root, tuning) => {
         const rootMod = ((root % 12) + 12) % 12
-        for (const pos of positions) {
-          expect((GUITAR_TUNING[0] + pos.startFret) % 12).toBe(rootMod)
+        for (const fret of getScalePositions(root, tuning)) {
+          expect(fret).toBeGreaterThanOrEqual(0)
+          expect(fret).toBeLessThanOrEqual(11)
+          expect((tuning[0] + fret) % 12).toBe(rootMod)
         }
       }),
     )
   })
 
-  it('positions are sorted ascending by startFret', () => {
+  it('positions are unique and sorted ascending', () => {
     fc.assert(
-      fc.property(rootArb, scaleArb, (root, scale) => {
-        const positions = getScalePositions(root, scale, GUITAR_TUNING)
+      fc.property(rootArb, tuningArb, (root, tuning) => {
+        const positions = getScalePositions(root, tuning)
+        expect(new Set(positions).size).toBe(positions.length)
         for (let i = 1; i < positions.length; i++) {
-          expect(positions[i].startFret).toBeGreaterThan(positions[i - 1].startFret)
+          expect(positions[i]).toBeGreaterThan(positions[i - 1])
         }
+      }),
+    )
+  })
+
+  it('returns exactly the frets in 0..11 whose lowest-string pitch is the root', () => {
+    fc.assert(
+      fc.property(rootArb, tuningArb, (root, tuning) => {
+        const rootMod = ((root % 12) + 12) % 12
+        const expected = [...Array(12).keys()].filter((fret) => (tuning[0] + fret) % 12 === rootMod)
+        expect(getScalePositions(root, tuning)).toEqual(expected)
       }),
     )
   })

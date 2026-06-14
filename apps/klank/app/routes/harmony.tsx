@@ -230,18 +230,17 @@ export default function Harmony() {
 
             {/* Position windows */}
             {(() => {
-              const positions = getScalePositions(rootPitch, scale, tuning)
+              const positions = getScalePositions(rootPitch, tuning)
               if (positions.length === 0) return null
               return (
                 <>
                   <h3 className={styles.subheading}>Position windows</h3>
                   <div className={styles.positionGrid}>
-                    {positions.map((pos) => (
-                      <div key={pos.startFret} className={styles.positionCard}>
-                        <span className={styles.positionLabel}>{pos.label}</span>
+                    {positions.map((startFret) => (
+                      <div key={startFret} className={styles.positionCard}>
                         <FretboardDiagram
                           grid={fullGrid}
-                          startFret={pos.startFret}
+                          startFret={startFret}
                           fretCount={5}
                           labelMode={labelMode}
                           noteNames={noteNames}
@@ -255,21 +254,19 @@ export default function Harmony() {
 
             {/* Diatonic triads */}
             {(() => {
-              const triads = getDiatonicTriads(rootPitch, scale)
-              const withChords = triads.filter((t) => t.chordKey !== null)
+              const withChords = getDiatonicTriads(rootPitch, scale)
+                .filter((t): t is { degree: string; chordKey: string } => t.chordKey !== null)
               if (withChords.length === 0) return null
               return (
                 <>
                   <h3 className={styles.subheading}>Diatonic triads</h3>
                   <div className={styles.chordGrid}>
-                    {withChords.map((t, i) => {
-                      const key = t.chordKey
-                      if (key === null) return null
-                      const variants = lookupChordDiagram(chordMap, key)
+                    {withChords.map((t) => {
+                      const variants = lookupChordDiagram(chordMap, t.chordKey)
                       if (variants.length === 0) return null
                       return (
-                        <div key={i} className={styles.chordCard}>
-                          <div className={styles.chordCaption}>{t.degree}: {key}</div>
+                        <div key={t.degree} className={styles.chordCard}>
+                          <div className={styles.chordCaption}>{t.degree}: {t.chordKey}</div>
                           <ChordDiagram variant={variants[0]} strings={variants[0].frets.length} />
                         </div>
                       )

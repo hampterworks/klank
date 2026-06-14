@@ -33,14 +33,16 @@
   fill: var(--klank-color-text);
 }
 
+/* Label on a non-root dot (light fill) — needs dark text to stay legible. */
 .dotLabel {
-  fill: var(--klank-color-background);
+  fill: var(--klank-color-text);
   font-size: 7px;
   text-anchor: middle;
   dominant-baseline: central;
   user-select: none;
 }
 
+/* Label on a root dot (filled with text colour) — needs light text. */
 .dotRootLabel {
   fill: var(--klank-color-background);
   font-size: 7px;

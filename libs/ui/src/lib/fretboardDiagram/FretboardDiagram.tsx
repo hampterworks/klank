@@ -57,12 +57,22 @@ export const FretboardDiagram: React.FC<FretboardDiagramProps> = ({
   // x-coordinate of the leftmost fret line (nut position or top fret line)
   const nutX = leftEdge
 
-  // Helper: get label text for a cell
-  const getCellLabel = (cell: FretCell): string => {
-    if (labelMode === 'note' && noteNames) {
-      return noteNames[((cell.pitch % 12) + 12) % 12] ?? cell.degree
-    }
-    return cell.degree
+  // A scale-tone dot (circle + centred label), shared by the open column and
+  // the fretted grid. Root and non-root use different fills, so the label
+  // colour must follow suit to stay legible.
+  const renderDot = (key: string, x: number, y: number, cell: FretCell) => {
+    const label =
+      labelMode === 'note' && noteNames
+        ? noteNames[((cell.pitch % 12) + 12) % 12] ?? cell.degree
+        : cell.degree
+    return (
+      <g key={key}>
+        <circle cx={x} cy={y} r={DOT_R} className={cell.isRoot ? styles.dotRoot : styles.dot} />
+        <text x={x} y={y} className={cell.isRoot ? styles.dotRootLabel : styles.dotLabel}>
+          {label}
+        </text>
+      </g>
+    )
   }
 
   // Collect which absolute frets are in the shown window for inlay rendering
@@ -156,26 +166,7 @@ export const FretboardDiagram: React.FC<FretboardDiagramProps> = ({
       {hasOpenCol && Array.from({ length: numStrings }, (_, s) => {
         const cell = grid[s]?.[0]
         if (!cell) return null
-        const x = nutX - OPEN_COL_W / 2
-        const y = stringY(s, numStrings)
-        const label = getCellLabel(cell)
-        return (
-          <g key={`open-dot-${s}`}>
-            <circle
-              cx={x}
-              cy={y}
-              r={DOT_R}
-              className={cell.isRoot ? styles.dotRoot : styles.dot}
-            />
-            <text
-              x={x}
-              y={y}
-              className={styles.dotLabel}
-            >
-              {label}
-            </text>
-          </g>
-        )
+        return renderDot(`open-dot-${s}`, nutX - OPEN_COL_W / 2, stringY(s, numStrings), cell)
       })}
 
       {/* Fretted dots */}
@@ -183,28 +174,13 @@ export const FretboardDiagram: React.FC<FretboardDiagramProps> = ({
         const row = grid[s]
         if (!row) return null
         return Array.from({ length: fretCount }, (_, fi) => {
-          const f = firstCellFret + fi
-          const cell = row[f]
+          const cell = row[firstCellFret + fi]
           if (!cell) return null
-          const x = nutX + fi * CELL_W + CELL_W / 2
-          const y = stringY(s, numStrings)
-          const label = getCellLabel(cell)
-          return (
-            <g key={`dot-${s}-${f}`}>
-              <circle
-                cx={x}
-                cy={y}
-                r={DOT_R}
-                className={cell.isRoot ? styles.dotRoot : styles.dot}
-              />
-              <text
-                x={x}
-                y={y}
-                className={styles.dotLabel}
-              >
-                {label}
-              </text>
-            </g>
+          return renderDot(
+            `dot-${s}-${firstCellFret + fi}`,
+            nutX + fi * CELL_W + CELL_W / 2,
+            stringY(s, numStrings),
+            cell,
           )
         })
       })}
