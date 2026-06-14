@@ -15,6 +15,7 @@
     }
   },
   "dependencies": {
-    "@klank/audio": "workspace:*"
+    "@klank/audio": "workspace:*",
+    "@klank/store": "workspace:*"
   }
 }

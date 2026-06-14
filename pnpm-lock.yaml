@@ -256,6 +256,9 @@ importers:
       '@klank/audio':
         specifier: workspace:*
         version: link:../audio
+      '@klank/store':
+        specifier: workspace:*
+        version: link:../store
 
 packages:
 
