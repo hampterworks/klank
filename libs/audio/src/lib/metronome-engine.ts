@@ -19,6 +19,12 @@ import {
 export type MetronomeConfig = {
   bpm: number;
   timeSignatureTop: number;
+  /**
+   * Time-signature denominator — the note value that receives the beat.
+   * Affects accent grouping (compound meters) but not pulse spacing.
+   * Defaults to 4 (quarter-note beat).
+   */
+  timeSignatureBottom: number;
   subdivision: Subdivision;
   /** When false, the downbeat uses the normal 'beat' tone instead of accent. */
   accent: boolean;
@@ -109,6 +115,7 @@ export function createMetronomeEngine(
   let config: MetronomeConfig = {
     bpm: 120,
     timeSignatureTop: 4,
+    timeSignatureBottom: 4,
     subdivision: 1,
     accent: true,
   };
@@ -135,9 +142,9 @@ export function createMetronomeEngine(
   // ---------------------------------------------------------------------------
 
   function getPattern(): BeatKind[] {
-    const key = `${config.timeSignatureTop}:${config.subdivision}`;
+    const key = `${config.timeSignatureTop}:${config.subdivision}:${config.timeSignatureBottom}`;
     if (key !== patternKey) {
-      pattern = beatPattern(config.timeSignatureTop, config.subdivision);
+      pattern = beatPattern(config.timeSignatureTop, config.subdivision, config.timeSignatureBottom);
       patternKey = key;
       // Keep pulseIndex in bounds.
       pulseIndex = pulseIndex % pattern.length;

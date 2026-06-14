@@ -60,15 +60,19 @@ describe('beatPattern properties', () => {
     );
   });
 
-  it('first sub-pulse of every non-downbeat main beat is "beat"', () => {
+  it('first sub-pulse of every non-downbeat main beat is "beat" or "accent" (never "sub")', () => {
     fc.assert(
       fc.property(
         fc.integer({ min: 2, max: 12 }),
         fcSubdivision,
-        (top, sub) => {
-          const pattern = beatPattern(top, sub);
+        // Test with both common denominators (4 = simple, 8 = may be compound)
+        fc.constantFrom(4, 8),
+        (top, sub, bottom) => {
+          const pattern = beatPattern(top, sub, bottom);
           for (let beat = 1; beat < top; beat++) {
-            if (pattern[beat * sub] !== 'beat') return false;
+            // In compound meters, group-start beats get 'accent'; all others get 'beat'.
+            // Either way, the first sub-pulse of a main beat is never 'sub'.
+            if (pattern[beat * sub] === 'sub') return false;
           }
           return true;
         },
@@ -127,6 +131,70 @@ describe('beatPattern unit tests', () => {
 
   it('1/4 (single beat): just [accent]', () => {
     expect(beatPattern(1, 1)).toEqual(['accent']);
+  });
+
+  // --- simple meter: denominator 4, quarter-note beat ---
+
+  it('3/4 bottom=4 quarter-note: accent only at index 0, beat elsewhere', () => {
+    // Not compound (bottom=4), so only the downbeat is 'accent'
+    expect(beatPattern(3, 1, 4)).toEqual(['accent', 'beat', 'beat']);
+  });
+
+  it('4/4 bottom=4 quarter-note: identical to default (no bottom arg)', () => {
+    expect(beatPattern(4, 1, 4)).toEqual(beatPattern(4, 1));
+  });
+
+  // --- compound meters: denominator 8 ---
+
+  it('6/8 sub=1: accents at indices 0 and 3; beats at 1,2,4,5', () => {
+    // 6 beats, groups of 3 → group starts at beats 0 and 3
+    expect(beatPattern(6, 1, 8)).toEqual([
+      'accent', 'beat', 'beat',
+      'accent', 'beat', 'beat',
+    ]);
+  });
+
+  it('6/8 sub=2: accent at index 0, sub at 1, beat at 2, sub at 3, accent at 6, sub at 7, beat at 8, sub at 9', () => {
+    // sub=2 means each of the 6 beats gets [first, sub] → total 12 pulses
+    // beat pattern for main beats: [accent, beat, beat, accent, beat, beat]
+    const p = beatPattern(6, 2, 8);
+    expect(p).toHaveLength(12);
+    expect(p[0]).toBe('accent');  // beat 0, sub 0
+    expect(p[1]).toBe('sub');     // beat 0, sub 1
+    expect(p[2]).toBe('beat');    // beat 1, sub 0
+    expect(p[3]).toBe('sub');     // beat 1, sub 1
+    expect(p[6]).toBe('accent');  // beat 3, sub 0 (group start)
+    expect(p[7]).toBe('sub');     // beat 3, sub 1
+    expect(p[8]).toBe('beat');    // beat 4, sub 0
+    expect(p[9]).toBe('sub');     // beat 4, sub 1
+  });
+
+  it('9/8 sub=1: accents at indices 0, 3, 6; beats at others', () => {
+    expect(beatPattern(9, 1, 8)).toEqual([
+      'accent', 'beat', 'beat',
+      'accent', 'beat', 'beat',
+      'accent', 'beat', 'beat',
+    ]);
+  });
+
+  it('12/8 sub=1: accents at indices 0, 3, 6, 9; beats at others', () => {
+    expect(beatPattern(12, 1, 8)).toEqual([
+      'accent', 'beat', 'beat',
+      'accent', 'beat', 'beat',
+      'accent', 'beat', 'beat',
+      'accent', 'beat', 'beat',
+    ]);
+  });
+
+  it('3/8 sub=1: NOT compound (top=3 is not > 3), accent only at 0', () => {
+    // 3/8: top=3, not > 3, so falls through to simple meter rules
+    expect(beatPattern(3, 1, 8)).toEqual(['accent', 'beat', 'beat']);
+  });
+
+  it('6/8 length = 6 * subdivision', () => {
+    expect(beatPattern(6, 1, 8)).toHaveLength(6);
+    expect(beatPattern(6, 2, 8)).toHaveLength(12);
+    expect(beatPattern(6, 3, 8)).toHaveLength(18);
   });
 });
 

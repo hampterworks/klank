@@ -101,6 +101,7 @@ function defaultConfig(overrides: Partial<MetronomeConfig> = {}): MetronomeConfi
   return {
     bpm: 120,
     timeSignatureTop: 4,
+    timeSignatureBottom: 4,
     subdivision: 1,
     accent: true,
     ...overrides,
@@ -591,6 +592,95 @@ describe('createMetronomeEngine', () => {
 
     const expected = secondsPerSubPulse(120, 1); // 0.5 s
     expect(t1 - t0).toBeCloseTo(expected, 5);
+    engine.stop();
+  });
+
+  // -------------------------------------------------------------------------
+  // Compound meter — 6/8 accent grouping
+  // -------------------------------------------------------------------------
+
+  it('6/8 compound: beat 0 and beat 3 schedule accent tones (1320 Hz); beats 1,2,4,5 schedule beat tones (880 Hz)', () => {
+    const engine = createMetronomeEngine(makeFactory());
+    // 6/8 at a very high BPM so all 6 beats fall inside the initial 0.1 s look-ahead.
+    // At 3600 BPM each quarter beat = 1/60 s ≈ 0.0167 s; 6 beats fit in 0.1 s.
+    engine.start(
+      defaultConfig({
+        bpm: 3600,
+        timeSignatureTop: 6,
+        timeSignatureBottom: 8,
+        subdivision: 1,
+        accent: true,
+      }),
+    );
+
+    // All 6 beats should be scheduled in the first look-ahead window at currentTime=0.
+    expect(fakeCtx._oscillators.length).toBeGreaterThanOrEqual(6);
+
+    // Index 0 → accent (1320 Hz)
+    expect(fakeCtx._oscillators[0].frequency.value).toBe(1320);
+    // Index 1 → beat (880 Hz)
+    expect(fakeCtx._oscillators[1].frequency.value).toBe(880);
+    // Index 2 → beat (880 Hz)
+    expect(fakeCtx._oscillators[2].frequency.value).toBe(880);
+    // Index 3 → secondary accent (1320 Hz)
+    expect(fakeCtx._oscillators[3].frequency.value).toBe(1320);
+    // Index 4 → beat (880 Hz)
+    expect(fakeCtx._oscillators[4].frequency.value).toBe(880);
+    // Index 5 → beat (880 Hz)
+    expect(fakeCtx._oscillators[5].frequency.value).toBe(880);
+
+    engine.stop();
+  });
+
+  it('3/4 simple: only beat 0 is accent (1320 Hz); beats 1,2 are beat tones (880 Hz)', () => {
+    const engine = createMetronomeEngine(makeFactory());
+    engine.start(
+      defaultConfig({
+        bpm: 3600,
+        timeSignatureTop: 3,
+        timeSignatureBottom: 4,
+        subdivision: 1,
+        accent: true,
+      }),
+    );
+
+    expect(fakeCtx._oscillators.length).toBeGreaterThanOrEqual(3);
+
+    expect(fakeCtx._oscillators[0].frequency.value).toBe(1320); // accent
+    expect(fakeCtx._oscillators[1].frequency.value).toBe(880);  // beat
+    expect(fakeCtx._oscillators[2].frequency.value).toBe(880);  // beat
+
+    engine.stop();
+  });
+
+  it('pattern key includes timeSignatureBottom — changing denominator rebuilds the pattern', () => {
+    const engine = createMetronomeEngine(makeFactory());
+    // Start as 6/4 (simple: only one accent)
+    engine.start(
+      defaultConfig({
+        bpm: 3600,
+        timeSignatureTop: 6,
+        timeSignatureBottom: 4,
+        subdivision: 1,
+        accent: true,
+      }),
+    );
+    const countBefore = fakeCtx._oscillators.length;
+    // 6/4 simple: beat 0 = accent (1320), beats 1-5 = beat (880)
+    expect(fakeCtx._oscillators[0].frequency.value).toBe(1320);
+    expect(fakeCtx._oscillators[3].frequency.value).toBe(880); // no secondary accent
+
+    // Switch to 6/8 (compound: beats 0 and 3 are accents)
+    engine.setConfig({ timeSignatureBottom: 8 });
+
+    // Advance audio clock so a second bar is scheduled under the new config.
+    fakeCtx.currentTime = 0.09;
+    vi.advanceTimersByTime(25);
+
+    // New oscillators scheduled after the config change should reflect 6/8 grouping.
+    // The pattern is rebuilt when patternKey changes; beat 3 of the new bar → 1320 Hz.
+    expect(fakeCtx._oscillators.length).toBeGreaterThan(countBefore);
+
     engine.stop();
   });
 

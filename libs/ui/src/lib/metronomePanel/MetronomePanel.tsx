@@ -122,15 +122,16 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
   const buildConfig = useCallback((): MetronomeConfig => ({
     bpm,
     timeSignatureTop: timeSignatureNum,
+    timeSignatureBottom: timeSignatureDen,
     subdivision: SUBDIVISION_MAP[subdivision],
     accent: accentDownbeat,
-  }), [bpm, timeSignatureNum, subdivision, accentDownbeat])
+  }), [bpm, timeSignatureNum, timeSignatureDen, subdivision, accentDownbeat])
 
   useEffect(() => {
     if (isRunning && engineRef.current) {
       engineRef.current.setConfig(buildConfig())
     }
-  }, [bpm, timeSignatureNum, accentDownbeat, subdivision, isRunning, buildConfig])
+  }, [bpm, timeSignatureNum, timeSignatureDen, accentDownbeat, subdivision, isRunning, buildConfig])
 
   // Stop engine when panel unmounts
   useEffect(() => {
@@ -184,10 +185,20 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
   const handleTimeSignatureNumChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = parseInt(e.target.value, 10)
     setTimeSignatureNum(val)
-    // Fix 3: reset beat index so no stale dot lights until the next engine tick
+    // Reset beat index so no stale dot lights until the next engine tick
     setCurrentBeatIndex(-1)
     if (isRunning && engineRef.current) {
       engineRef.current.setConfig({ timeSignatureTop: val })
+    }
+  }
+
+  const handleTimeSignatureDenChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = parseInt(e.target.value, 10)
+    setTimeSignatureDen(val)
+    // Reset beat index — compound/simple grouping changes the accent pattern
+    setCurrentBeatIndex(-1)
+    if (isRunning && engineRef.current) {
+      engineRef.current.setConfig({ timeSignatureBottom: val })
     }
   }
 
@@ -212,7 +223,13 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
   const beatPulseMs = isRunning ? Math.round(60000 / bpm) : undefined
   const showPulse = isRunning && bpm <= PULSE_DISABLE_BPM
 
-  // Fix 3: compute main beat index and defensively guard against out-of-range
+  // Compound meter: denominator 8, numerator divisible by 3, numerator > 3
+  const isCompoundMeter =
+    timeSignatureDen === 8 &&
+    timeSignatureNum > 3 &&
+    timeSignatureNum % 3 === 0
+
+  // Compute main beat index and defensively guard against out-of-range
   const rawMainBeatIndex = currentBeatIndex < 0
     ? -1
     : Math.floor(currentBeatIndex / SUBDIVISION_MAP[subdivision])
@@ -290,15 +307,17 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
         <div className={styles.beatDots} aria-hidden="true">
           {Array.from({ length: beatDotCount }, (_, i) => {
             const isActive = mainBeatIndex === i
-            const isDownbeat = i === 0
+            // Downbeat (beat 0) and compound group starts (beats 3, 6, 9, …)
+            // all receive downbeat/accent styling
+            const isGroupAccent = i === 0 || (isCompoundMeter && i % 3 === 0)
             return (
               <span
                 key={i}
                 className={[
                   styles.beatDot,
-                  isDownbeat ? styles.beatDotDownbeat : '',
+                  isGroupAccent ? styles.beatDotDownbeat : '',
                   isActive ? styles.beatDotActive : '',
-                  isActive && isDownbeat ? styles.beatDotDownbeatActive : '',
+                  isActive && isGroupAccent ? styles.beatDotDownbeatActive : '',
                   isActive && showPulse ? styles.beatDotPulse : '',
                 ]
                   .filter(Boolean)
@@ -307,7 +326,7 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
                   isActive && showPulse && beatPulseMs
                     ? ({
                         animationDuration: `${beatPulseMs}ms`,
-                        '--pulse-scale': isDownbeat ? '1.5' : '1.3',
+                        '--pulse-scale': isGroupAccent ? '1.5' : '1.3',
                       } as React.CSSProperties)
                     : undefined
                 }
@@ -340,7 +359,7 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
             <select
               className={styles.select}
               value={timeSignatureDen}
-              onChange={(e) => setTimeSignatureDen(parseInt(e.target.value, 10))}
+              onChange={handleTimeSignatureDenChange}
               aria-label="Note value"
             >
               {[2, 4, 8, 16].map((n) => (

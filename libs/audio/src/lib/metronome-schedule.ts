@@ -21,28 +21,55 @@ export const MAX_BPM = 300;
 /**
  * Generates the beat-kind pattern for a single bar.
  *
- * Rules:
+ * Rules (simple meters — default):
  *   - Index 0 is always 'accent' (downbeat).
  *   - The first sub-pulse of every *other* main beat (i.e. beats 1, 2, … in
  *     0-based beat index that are not the downbeat) is 'beat'.
  *   - All other sub-pulses are 'sub'.
  *
+ * Compound meters (timeSignatureBottom === 8 AND timeSignatureTop divisible by
+ * 3 AND timeSignatureTop > 3, e.g. 6/8, 9/8, 12/8):
+ *   - The bar groups into sets of 3 main beats.
+ *   - Beat 0 gets 'accent' (strong downbeat).
+ *   - The first beat of each subsequent group of 3 (beats 3, 6, 9, …) also
+ *     gets 'accent' (secondary group accent).
+ *   - All other main-beat first sub-pulses are 'beat'.
+ *   - Non-first sub-pulses within a beat are 'sub'.
+ *
  * Length is always `timeSignatureTop * subdivision`.
+ *
+ * @param timeSignatureTop    Numerator — number of main beats per bar.
+ * @param subdivision         Sub-pulses per main beat (1 | 2 | 3).
+ * @param timeSignatureBottom Denominator — note value that gets the beat
+ *                            (default 4). Used only for compound-meter
+ *                            detection; does not affect pulse spacing.
  */
 export function beatPattern(
   timeSignatureTop: number,
   subdivision: Subdivision,
+  timeSignatureBottom = 4,
 ): BeatKind[] {
+  // Compound meter: denominator 8, numerator divisible by 3, numerator > 3
+  const isCompound =
+    timeSignatureBottom === 8 &&
+    timeSignatureTop > 3 &&
+    timeSignatureTop % 3 === 0;
+
   const pattern: BeatKind[] = [];
   for (let beat = 0; beat < timeSignatureTop; beat++) {
     for (let sub = 0; sub < subdivision; sub++) {
-      if (beat === 0 && sub === 0) {
-        pattern.push('accent');
-      } else if (sub === 0) {
-        // First sub-pulse of a non-downbeat main beat
-        pattern.push('beat');
-      } else {
+      if (sub !== 0) {
+        // Non-first sub-pulse of any beat is always 'sub'
         pattern.push('sub');
+      } else if (beat === 0) {
+        // Downbeat is always 'accent'
+        pattern.push('accent');
+      } else if (isCompound && beat % 3 === 0) {
+        // Start of a compound group (beats 3, 6, 9, …) → secondary accent
+        pattern.push('accent');
+      } else {
+        // First sub-pulse of any other main beat
+        pattern.push('beat');
       }
     }
   }

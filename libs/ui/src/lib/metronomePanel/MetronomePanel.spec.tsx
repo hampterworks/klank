@@ -277,6 +277,84 @@ describe('MetronomePanel', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it('start() includes timeSignatureBottom in the config passed to engine.start', async () => {
+    const engine = makeFakeEngine()
+    renderPanel(engine)
+
+    // Change the denominator to 8 before starting
+    const noteValueSelect = screen.getByRole('combobox', { name: /note value/i })
+    await act(async () => {
+      fireEvent.change(noteValueSelect, { target: { value: '8' } })
+    })
+
+    const startBtn = screen.getByRole('button', { name: /start metronome/i })
+    await act(async () => { fireEvent.click(startBtn) })
+
+    expect(engine.lastConfig).toMatchObject({ timeSignatureBottom: 8 })
+  })
+
+  it('changing denominator select calls setConfig with timeSignatureBottom while running', async () => {
+    const engine = makeFakeEngine()
+    const setConfigSpy = vi.spyOn(engine, 'setConfig')
+    renderPanel(engine)
+
+    // Start first
+    const startBtn = screen.getByRole('button', { name: /start metronome/i })
+    await act(async () => { fireEvent.click(startBtn) })
+
+    // Now change the denominator
+    const noteValueSelect = screen.getByRole('combobox', { name: /note value/i })
+    await act(async () => {
+      fireEvent.change(noteValueSelect, { target: { value: '8' } })
+    })
+
+    expect(setConfigSpy).toHaveBeenCalledWith(expect.objectContaining({ timeSignatureBottom: 8 }))
+  })
+
+  it('changing denominator select to 8 with 6 beats configures compound meter (6/8)', async () => {
+    const engine = makeFakeEngine()
+    renderPanel(engine)
+
+    // Set numerator to 6
+    const beatsSelect = screen.getByRole('combobox', { name: /beats per bar/i })
+    await act(async () => {
+      fireEvent.change(beatsSelect, { target: { value: '6' } })
+    })
+
+    // Set denominator to 8
+    const noteValueSelect = screen.getByRole('combobox', { name: /note value/i })
+    await act(async () => {
+      fireEvent.change(noteValueSelect, { target: { value: '8' } })
+    })
+
+    // Start the metronome
+    const startBtn = screen.getByRole('button', { name: /start metronome/i })
+    await act(async () => { fireEvent.click(startBtn) })
+
+    expect(engine.lastConfig).toMatchObject({
+      timeSignatureTop: 6,
+      timeSignatureBottom: 8,
+    })
+  })
+
+  it('changing denominator resets currentBeatIndex (no stale dot highlight)', async () => {
+    // This is a structural wiring test: we just verify setConfig is called,
+    // as the beat-index reset happens via internal React state.
+    const engine = makeFakeEngine()
+    const setConfigSpy = vi.spyOn(engine, 'setConfig')
+    renderPanel(engine)
+
+    const startBtn = screen.getByRole('button', { name: /start metronome/i })
+    await act(async () => { fireEvent.click(startBtn) })
+
+    const noteValueSelect = screen.getByRole('combobox', { name: /note value/i })
+    await act(async () => {
+      fireEvent.change(noteValueSelect, { target: { value: '16' } })
+    })
+
+    expect(setConfigSpy).toHaveBeenCalledWith(expect.objectContaining({ timeSignatureBottom: 16 }))
+  })
+
   it('returns null when position is null', () => {
     const engine = makeFakeEngine()
     const triggerRef = React.createRef<HTMLButtonElement>()
