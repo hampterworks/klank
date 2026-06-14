@@ -28,12 +28,13 @@ export default defineConfig(() => ({
       '@klank/ui': resolve(__dirname, '../../libs/ui/src/index.ts'),
       '@klank/store': resolve(__dirname, '../../libs/store/src/index.ts'),
       '@klank/platform-api': resolve(__dirname, '../../libs/platform-api/src/index.ts'),
+      '@klank/audio': resolve(__dirname, '../../libs/audio/src/index.ts'),
     },
   },
   plugins: [!process.env.VITEST && reactRouter()],
   optimizeDeps: {
     // Exclude monorepo packages from pre-bundling for faster HMR
-    exclude: ['@klank/ui', '@klank/store', '@klank/platform-api'],
+    exclude: ['@klank/ui', '@klank/store', '@klank/platform-api', '@klank/audio'],
     // Include common dependencies that should be pre-bundled
     include: ['react', 'react-dom']
   },
