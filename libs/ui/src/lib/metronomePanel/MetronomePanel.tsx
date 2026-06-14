@@ -9,7 +9,7 @@ import {
 } from '@klank/audio'
 import { CloseIcon } from '../icons/CloseIcon.js'
 import { type PopoverPosition } from '../hooks/usePopoverPosition.js'
-import { useFocusTrap } from '../hooks/useFocusTrap.js'
+import { usePopoverChrome, popoverStyle } from '../hooks/usePopoverChrome.js'
 import styles from './metronomePanel.module.css'
 
 // ---------------------------------------------------------------------------
@@ -58,7 +58,8 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
   const [timeSignatureDen, setTimeSignatureDen] = useState(4)
   const [accentDownbeat, setAccentDownbeat] = useState(true)
   const [subdivision, setSubdivision] = useState<SubdivisionLabel>('quarter')
-  const [_tapTimes, setTapTimes] = useState<number[]>([])
+  // Fix 7: tap history is internal-only state, never rendered — use a ref
+  const tapTimesRef = useRef<number[]>([])
   const [currentBeatIndex, setCurrentBeatIndex] = useState(-1)
   const [audioAvailable, setAudioAvailable] = useState<boolean | null>(null)
 
@@ -85,33 +86,17 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
     return () => clearTimeout(t)
   }, [])
 
-  // Focus trap
-  useFocusTrap(panelRef, true, triggerRef)
+  // Fix 5: shared popover chrome (focus trap + click-outside + Escape)
+  // Note: Escape is handled in usePopoverChrome; the panel-local keydown below
+  // only handles ArrowUp/Down for BPM (non-Escape keys).
+  usePopoverChrome(panelRef, triggerRef, onClose)
 
-  // Click outside dismiss
-  useEffect(() => {
-    const handleMouseDown = (e: MouseEvent) => {
-      if (panelRef.current?.contains(e.target as Node)) return
-      if (triggerRef.current?.contains(e.target as Node)) return
-      onClose()
-    }
-    document.addEventListener('mousedown', handleMouseDown)
-    return () => document.removeEventListener('mousedown', handleMouseDown)
-  }, [onClose, triggerRef])
-
-  // Panel-scoped keyboard handler (ArrowUp/Down for BPM, Escape to close)
+  // Panel-scoped keyboard handler (ArrowUp/Down for BPM only — Escape is in usePopoverChrome)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null
       // Let native select handle its own arrow keys
       if (target?.tagName === 'SELECT') return
-
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        e.stopPropagation()
-        onClose()
-        return
-      }
 
       if (e.key === 'ArrowUp') {
         e.preventDefault()
@@ -131,7 +116,7 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
     }
     document.addEventListener('keydown', handleKeyDown, true)
     return () => document.removeEventListener('keydown', handleKeyDown, true)
-  }, [onClose])
+  }, [])
 
   // Sync engine config whenever state changes while running
   const buildConfig = useCallback((): MetronomeConfig => ({
@@ -178,26 +163,29 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
     }
   }
 
+  // Fix 7: handleTap reads/writes tapTimesRef.current — no re-render on every tap.
+  // The bpm sync useEffect already calls setConfig when running, so no redundant
+  // manual setConfig({ bpm }) call needed here.
   const handleTap = () => {
     const now = performance.now()
-    setTapTimes((prev) => {
-      // Reset sequence if more than 3s have passed since last tap
-      const filtered = prev.length > 0 && now - prev[prev.length - 1] > TAP_RESET_MS ? [] : prev
-      const next = [...filtered, now]
-      const computed = computeTapTempo(next)
-      if (computed !== null) {
-        setBpm(computed)
-        if (isRunning && engineRef.current) {
-          engineRef.current.setConfig({ bpm: computed })
-        }
-      }
-      return next
-    })
+    const prev = tapTimesRef.current
+    // Reset sequence if more than 3s have passed since last tap
+    const filtered = prev.length > 0 && now - prev[prev.length - 1] > TAP_RESET_MS ? [] : prev
+    const next = [...filtered, now]
+    tapTimesRef.current = next
+    const computed = computeTapTempo(next)
+    if (computed !== null) {
+      setBpm(computed)
+      // The bpm sync useEffect handles engine.setConfig when isRunning is true,
+      // so no manual setConfig call is needed here.
+    }
   }
 
   const handleTimeSignatureNumChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = parseInt(e.target.value, 10)
     setTimeSignatureNum(val)
+    // Fix 3: reset beat index so no stale dot lights until the next engine tick
+    setCurrentBeatIndex(-1)
     if (isRunning && engineRef.current) {
       engineRef.current.setConfig({ timeSignatureTop: val })
     }
@@ -212,6 +200,8 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
 
   const handleSubdivisionChange = (sub: SubdivisionLabel) => {
     setSubdivision(sub)
+    // Fix 3: reset beat index so no stale dot lights under the new subdivision
+    setCurrentBeatIndex(-1)
     if (isRunning && engineRef.current) {
       engineRef.current.setConfig({ subdivision: SUBDIVISION_MAP[sub] })
     }
@@ -222,21 +212,20 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
   const beatPulseMs = isRunning ? Math.round(60000 / bpm) : undefined
   const showPulse = isRunning && bpm <= PULSE_DISABLE_BPM
 
-  // Beat index in terms of main beats (pulses / subdivision)
-  const mainBeatIndex = currentBeatIndex < 0
+  // Fix 3: compute main beat index and defensively guard against out-of-range
+  const rawMainBeatIndex = currentBeatIndex < 0
     ? -1
     : Math.floor(currentBeatIndex / SUBDIVISION_MAP[subdivision])
+  // Guard: if the index exceeds the dot count (e.g. time sig was just reduced),
+  // treat it as inactive until the next engine tick arrives in range.
+  const mainBeatIndex = rawMainBeatIndex >= 0 && rawMainBeatIndex < beatDotCount
+    ? rawMainBeatIndex
+    : -1
 
   if (!position) return null
 
-  const posStyle: React.CSSProperties = {
-    position: 'fixed',
-    zIndex: 1100,
-    ...(position.top !== undefined ? { top: position.top } : {}),
-    ...(position.bottom !== undefined ? { bottom: position.bottom } : {}),
-    ...(position.right !== undefined ? { right: position.right } : {}),
-    ...(position.left !== undefined ? { left: position.left } : {}),
-  }
+  // Fix 5: use shared popoverStyle helper
+  const posStyle = popoverStyle(position)
 
   return ReactDOM.createPortal(
     <div

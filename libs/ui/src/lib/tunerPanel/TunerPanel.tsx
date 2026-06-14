@@ -10,7 +10,7 @@ import {
 } from '@klank/audio'
 import { CloseIcon } from '../icons/CloseIcon.js'
 import { type PopoverPosition } from '../hooks/usePopoverPosition.js'
-import { useFocusTrap } from '../hooks/useFocusTrap.js'
+import { usePopoverChrome, popoverStyle } from '../hooks/usePopoverChrome.js'
 import styles from './tunerPanel.module.css'
 
 // ---------------------------------------------------------------------------
@@ -77,34 +77,17 @@ export const TunerPanel: React.FC<TunerPanelProps> = ({
     return () => clearTimeout(t)
   }, [])
 
-  // Focus trap
-  useFocusTrap(panelRef, true, triggerRef)
+  // Fix 5: shared popover chrome (focus trap + click-outside + Escape).
+  // Pass handleClose so that closing via Escape or click-outside also stops the engine.
+  usePopoverChrome(panelRef, triggerRef, handleClose)
 
-  // Click outside dismiss
-  useEffect(() => {
-    const handleMouseDown = (e: MouseEvent) => {
-      if (panelRef.current?.contains(e.target as Node)) return
-      if (triggerRef.current?.contains(e.target as Node)) return
-      handleClose()
-    }
-    document.addEventListener('mousedown', handleMouseDown)
-    return () => document.removeEventListener('mousedown', handleMouseDown)
-  }, [handleClose, triggerRef])
-
-  // Panel-scoped keyboard handler
+  // Panel-scoped keyboard handler (digit keys only — Escape is in usePopoverChrome)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null
 
       // Skip when target is a form control that needs keys
       if (target?.tagName === 'SELECT') return
-
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        e.stopPropagation()
-        handleClose()
-        return
-      }
 
       // Digit keys 1..N: play/stop the Nth string
       const digit = parseInt(e.key, 10)
@@ -126,7 +109,7 @@ export const TunerPanel: React.FC<TunerPanelProps> = ({
     document.addEventListener('keydown', handleKeyDown, true)
     return () => document.removeEventListener('keydown', handleKeyDown, true)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleClose, tuning, soundingIndex])
+  }, [tuning, soundingIndex])
 
   const handleStringClick = useCallback((idx: number, frequency: number) => {
     const engine = engineRef.current
@@ -170,14 +153,8 @@ export const TunerPanel: React.FC<TunerPanelProps> = ({
 
   if (!position) return null
 
-  const posStyle: React.CSSProperties = {
-    position: 'fixed',
-    zIndex: 1100,
-    ...(position.top !== undefined ? { top: position.top } : {}),
-    ...(position.bottom !== undefined ? { bottom: position.bottom } : {}),
-    ...(position.right !== undefined ? { right: position.right } : {}),
-    ...(position.left !== undefined ? { left: position.left } : {}),
-  }
+  // Fix 5: use shared popoverStyle helper
+  const posStyle = popoverStyle(position)
 
   return ReactDOM.createPortal(
     <div
