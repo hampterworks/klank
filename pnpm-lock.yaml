@@ -218,6 +218,12 @@ importers:
         specifier: ^19.2.3
         version: 19.2.3(@types/react@19.2.16)
 
+  libs/audio:
+    dependencies:
+      '@klank/platform-api':
+        specifier: workspace:*
+        version: link:../platform-api
+
   libs/platform-api:
     dependencies:
       '@tauri-apps/api':

@@ -11,6 +11,11 @@ export default defineConfig(() => ({
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
     }),
   ],
+  resolve: {
+    // Allow the test runner to resolve workspace packages via their source
+    // (the "@klank/source" export condition defined in each package.json).
+    conditions: ['@klank/source'],
+  },
   build: {
     emptyOutDir: true,
     transformMixedEsModules: true,
