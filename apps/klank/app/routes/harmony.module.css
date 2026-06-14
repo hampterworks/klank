@@ -399,11 +399,10 @@
   display: none;
 }
 
+/* Disclosure body: padding only — let the inner grid (.chordGrid / .positionGrid)
+   own its row-wrap layout so cards sit next to each other. */
 .disclosure > :not(summary) {
   padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 
 /* ── Position windows grid ────────────────────────────────────────────────── */
