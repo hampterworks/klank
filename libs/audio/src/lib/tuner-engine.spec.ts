@@ -173,94 +173,137 @@ describe('createTunerEngine', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Oscillator properties
+  // Oscillator properties — multi-partial (harmonic synthesis)
   // -------------------------------------------------------------------------
 
-  it('creates a sine oscillator', () => {
+  it('creates 4 oscillators (one per harmonic partial) per playFrequency call', () => {
     const engine = createTunerEngine(makeFactory());
     engine.playFrequency(440);
-    expect(fakeCtx._oscillators).toHaveLength(1);
-    expect(fakeCtx._oscillators[0].type).toBe('sine');
+    // fundamental + 3 upper partials
+    expect(fakeCtx._oscillators).toHaveLength(4);
   });
 
-  it('sets the oscillator frequency to the provided value', () => {
+  it('all partial oscillators use sine type', () => {
+    const engine = createTunerEngine(makeFactory());
+    engine.playFrequency(440);
+    for (const osc of fakeCtx._oscillators) {
+      expect(osc.type).toBe('sine');
+    }
+  });
+
+  it('fundamental partial frequency equals the input frequency', () => {
     const engine = createTunerEngine(makeFactory());
     engine.playFrequency(880);
+    // First oscillator created is the fundamental (multiple = 1)
     expect(fakeCtx._oscillators[0].frequency.value).toBe(880);
   });
 
-  it('connects the oscillator to a gain node and the gain to the destination', () => {
+  it('upper partial frequencies are integer multiples of the fundamental', () => {
     const engine = createTunerEngine(makeFactory());
     engine.playFrequency(440);
-    const osc = fakeCtx._oscillators[0];
-    // osc → gain
-    expect(osc.connect).toHaveBeenCalled();
-    // gain → destination: the gain's connect was called with the destination
-    const gainNode = fakeCtx.createGain.mock.results[0].value as FakeGain;
-    expect(gainNode.connect).toHaveBeenCalledWith(fakeCtx.destination);
+    const oscs = fakeCtx._oscillators;
+    // 2nd harmonic = 2f, 3rd = 3f, 4th = 4f
+    expect(oscs[1].frequency.value).toBeCloseTo(880, 9);
+    expect(oscs[2].frequency.value).toBeCloseTo(1320, 9);
+    expect(oscs[3].frequency.value).toBeCloseTo(1760, 9);
   });
 
-  it('calls osc.start on the oscillator', () => {
+  it('partial gain nodes have decreasing peak gains (fundamental loudest)', () => {
     const engine = createTunerEngine(makeFactory());
     engine.playFrequency(440);
-    expect(fakeCtx._oscillators[0].start).toHaveBeenCalled();
+    // Each gain node's linearRampToValueAtTime was called with the peak gain.
+    const gains = fakeCtx.createGain.mock.results.map(
+      (r) => (r.value as FakeGain).gain.linearRampToValueAtTime.mock.calls[0]?.[0] as number,
+    );
+    // fundamental gain > 2nd harmonic gain > 3rd > 4th
+    expect(gains[0]).toBeGreaterThan(gains[1]);
+    expect(gains[1]).toBeGreaterThan(gains[2]);
+    expect(gains[2]).toBeGreaterThan(gains[3]);
   });
 
-  it('schedules osc.stop via AudioContext timing', () => {
+  it('connects each oscillator to a gain node and each gain to the destination', () => {
     const engine = createTunerEngine(makeFactory());
     engine.playFrequency(440);
-    // stop() is called with a future time (>= currentTime + durationSeconds)
-    expect(fakeCtx._oscillators[0].stop).toHaveBeenCalledWith(expect.any(Number));
+    for (let i = 0; i < 4; i++) {
+      const osc = fakeCtx._oscillators[i];
+      expect(osc.connect).toHaveBeenCalled();
+      const gainNode = fakeCtx.createGain.mock.results[i].value as FakeGain;
+      expect(gainNode.connect).toHaveBeenCalledWith(fakeCtx.destination);
+    }
+  });
+
+  it('calls osc.start on all partial oscillators', () => {
+    const engine = createTunerEngine(makeFactory());
+    engine.playFrequency(440);
+    for (const osc of fakeCtx._oscillators) {
+      expect(osc.start).toHaveBeenCalled();
+    }
+  });
+
+  it('schedules osc.stop on all partial oscillators via AudioContext timing', () => {
+    const engine = createTunerEngine(makeFactory());
+    engine.playFrequency(440);
+    for (const osc of fakeCtx._oscillators) {
+      expect(osc.stop).toHaveBeenCalledWith(expect.any(Number));
+    }
   });
 
   // -------------------------------------------------------------------------
-  // Envelope — gain ramps
+  // Envelope — gain ramps (checked on the fundamental's gain node)
   // -------------------------------------------------------------------------
 
-  it('applies attack ramp to the gain node', () => {
+  it('applies near-instant attack ramp (setValueAtTime 0, then linearRamp) to each partial gain', () => {
     const engine = createTunerEngine(makeFactory());
     engine.playFrequency(440);
+    // Check the fundamental (index 0) gain node
     const gainNode = fakeCtx.createGain.mock.results[0].value as FakeGain;
     // setValueAtTime to 0 at start (beginning of attack)
     expect(gainNode.gain.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
-    // linear ramp up to PEAK_GAIN (0.6)
-    expect(gainNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.6, expect.any(Number));
+    // linear ramp up to some positive gain value
+    const rampArgs = gainNode.gain.linearRampToValueAtTime.mock.calls[0];
+    expect(rampArgs[0]).toBeGreaterThan(0);
   });
 
-  it('applies exponential release ramp to near-zero', () => {
+  it('applies exponential release ramp to near-zero on each partial gain', () => {
     const engine = createTunerEngine(makeFactory());
     engine.playFrequency(440, 2);
-    const gainNode = fakeCtx.createGain.mock.results[0].value as FakeGain;
-    // exponential ramp to RELEASE_GAIN (0.001) at currentTime + duration
-    expect(gainNode.gain.exponentialRampToValueAtTime).toHaveBeenCalledWith(
-      0.001,
-      expect.any(Number),
-    );
+    // Check all 4 gain nodes for the exponential decay
+    for (let i = 0; i < 4; i++) {
+      const gainNode = fakeCtx.createGain.mock.results[i].value as FakeGain;
+      expect(gainNode.gain.exponentialRampToValueAtTime).toHaveBeenCalledWith(
+        0.001,
+        expect.any(Number),
+      );
+    }
   });
 
   // -------------------------------------------------------------------------
-  // Monophonic: second call stops first oscillator
+  // Monophonic: second call stops first set of oscillators
   // -------------------------------------------------------------------------
 
-  it('stops the first oscillator when a second playFrequency is called', () => {
+  it('stops all partial oscillators from the first note when a second playFrequency is called', () => {
     const engine = createTunerEngine(makeFactory());
     engine.playFrequency(440);
-    const firstOsc = fakeCtx._oscillators[0];
+    const firstNoteOscs = fakeCtx._oscillators.slice();
+    expect(firstNoteOscs).toHaveLength(4);
 
     engine.playFrequency(880);
 
-    // The first oscillator's stop should be scheduled via setTimeout + stop()
     // Advance timers so the fade-out setTimeout fires.
     vi.runAllTimers();
-    expect(firstOsc.stop).toHaveBeenCalled();
+    for (const osc of firstNoteOscs) {
+      expect(osc.stop).toHaveBeenCalled();
+    }
   });
 
-  it('creates a second oscillator for the second playFrequency call', () => {
+  it('creates 4 new partial oscillators for the second playFrequency call (8 total)', () => {
     const engine = createTunerEngine(makeFactory());
     engine.playFrequency(440);
     engine.playFrequency(880);
-    expect(fakeCtx._oscillators).toHaveLength(2);
-    expect(fakeCtx._oscillators[1].frequency.value).toBe(880);
+    // 4 partials × 2 calls = 8 oscillators total
+    expect(fakeCtx._oscillators).toHaveLength(8);
+    // The 5th oscillator (index 4) is the fundamental of the second note
+    expect(fakeCtx._oscillators[4].frequency.value).toBe(880);
   });
 
   // -------------------------------------------------------------------------

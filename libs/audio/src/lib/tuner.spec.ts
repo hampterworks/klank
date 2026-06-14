@@ -186,12 +186,159 @@ describe('tuner properties', () => {
     expect(tuningStrings('bass-5-string')).toHaveLength(5);
   });
 
-  it('TUNING_NAMES contains all 5 expected names', () => {
-    expect(TUNING_NAMES).toHaveLength(5);
+  it('TUNING_NAMES contains all 13 expected names', () => {
+    expect(TUNING_NAMES).toHaveLength(13);
+    // Original 5
     expect(TUNING_NAMES).toContain('guitar-standard');
     expect(TUNING_NAMES).toContain('guitar-drop-d');
     expect(TUNING_NAMES).toContain('guitar-half-step-down');
     expect(TUNING_NAMES).toContain('bass-standard');
     expect(TUNING_NAMES).toContain('bass-5-string');
+    // New guitar presets
+    expect(TUNING_NAMES).toContain('guitar-full-step-down');
+    expect(TUNING_NAMES).toContain('guitar-drop-c');
+    expect(TUNING_NAMES).toContain('guitar-open-g');
+    expect(TUNING_NAMES).toContain('guitar-open-d');
+    expect(TUNING_NAMES).toContain('guitar-open-e');
+    expect(TUNING_NAMES).toContain('guitar-dadgad');
+    // New bass presets
+    expect(TUNING_NAMES).toContain('bass-drop-d');
+    expect(TUNING_NAMES).toContain('bass-half-step-down');
+  });
+
+  it('every TUNING_NAMES entry has a matching TUNINGS def with a non-empty label and strings', () => {
+    for (const name of TUNING_NAMES) {
+      const def = TUNINGS[name];
+      expect(def, `TUNINGS["${name}"] should exist`).toBeDefined();
+      expect(def.label.trim(), `TUNINGS["${name}"].label should be non-empty`).not.toBe('');
+      expect(
+        def.strings.length,
+        `TUNINGS["${name}"].strings should be non-empty`,
+      ).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// New preset coverage
+// ---------------------------------------------------------------------------
+
+describe('new tuning presets', () => {
+  describe('guitar-open-g', () => {
+    const strings = tuningStrings('guitar-open-g');
+
+    it('has 6 strings', () => {
+      expect(strings).toHaveLength(6);
+    });
+
+    it('low D2 is ≈ 73.42 Hz', () => {
+      // D2: MIDI = 12*(2+1)+2 = 38 → 73.416 Hz
+      expect(strings[0].frequency).toBeCloseTo(73.416, 2);
+    });
+
+    it('labels are D2 G2 D3 G3 B3 D4', () => {
+      expect(strings.map((s) => s.label)).toEqual(['D2', 'G2', 'D3', 'G3', 'B3', 'D4']);
+    });
+  });
+
+  describe('guitar-open-d', () => {
+    const strings = tuningStrings('guitar-open-d');
+
+    it('has 6 strings', () => {
+      expect(strings).toHaveLength(6);
+    });
+
+    it('low D2 is ≈ 73.42 Hz', () => {
+      expect(strings[0].frequency).toBeCloseTo(73.416, 2);
+    });
+
+    it('4th string (F#3/Gb3) is ≈ 185.00 Hz', () => {
+      // Gb3 / F#3: MIDI = 12*(3+1)+6 = 54 → 185.00 Hz
+      expect(strings[3].frequency).toBeCloseTo(185.0, 1);
+    });
+  });
+
+  describe('guitar-full-step-down', () => {
+    const strings = tuningStrings('guitar-full-step-down');
+
+    it('has 6 strings', () => {
+      expect(strings).toHaveLength(6);
+    });
+
+    it('labels are D2 G2 C3 F3 A3 D4', () => {
+      expect(strings.map((s) => s.label)).toEqual(['D2', 'G2', 'C3', 'F3', 'A3', 'D4']);
+    });
+  });
+
+  describe('guitar-drop-c', () => {
+    const strings = tuningStrings('guitar-drop-c');
+
+    it('has 6 strings', () => {
+      expect(strings).toHaveLength(6);
+    });
+
+    it('low C2 is ≈ 65.41 Hz', () => {
+      // C2: MIDI = 12*(2+1)+0 = 36 → 65.406 Hz
+      expect(strings[0].frequency).toBeCloseTo(65.406, 2);
+    });
+  });
+
+  describe('guitar-open-e', () => {
+    const strings = tuningStrings('guitar-open-e');
+
+    it('has 6 strings', () => {
+      expect(strings).toHaveLength(6);
+    });
+
+    it('low E2 matches guitar-standard low E2', () => {
+      const standardE2 = tuningStrings('guitar-standard')[0].frequency;
+      expect(strings[0].frequency).toBeCloseTo(standardE2, 9);
+    });
+  });
+
+  describe('guitar-dadgad', () => {
+    const strings = tuningStrings('guitar-dadgad');
+
+    it('has 6 strings', () => {
+      expect(strings).toHaveLength(6);
+    });
+
+    it('labels are D2 A2 D3 G3 A3 D4', () => {
+      expect(strings.map((s) => s.label)).toEqual(['D2', 'A2', 'D3', 'G3', 'A3', 'D4']);
+    });
+  });
+
+  describe('bass-drop-d', () => {
+    const strings = tuningStrings('bass-drop-d');
+
+    it('has 4 strings', () => {
+      expect(strings).toHaveLength(4);
+    });
+
+    it('low D1 is ≈ 36.71 Hz', () => {
+      // D1: MIDI = 12*(1+1)+2 = 26 → 36.708 Hz
+      expect(strings[0].frequency).toBeCloseTo(36.708, 2);
+    });
+
+    it('labels are D1 A1 D2 G2', () => {
+      expect(strings.map((s) => s.label)).toEqual(['D1', 'A1', 'D2', 'G2']);
+    });
+  });
+
+  describe('bass-half-step-down', () => {
+    const strings = tuningStrings('bass-half-step-down');
+
+    it('has 4 strings', () => {
+      expect(strings).toHaveLength(4);
+    });
+
+    it('labels are Eb1 Ab1 Db2 Gb2', () => {
+      expect(strings.map((s) => s.label)).toEqual(['Eb1', 'Ab1', 'Db2', 'Gb2']);
+    });
+
+    it('low Eb1 is one semitone below bass-standard E1', () => {
+      const bassE1 = tuningStrings('bass-standard')[0].frequency;
+      expect(strings[0].frequency / bassE1).toBeCloseTo(Math.pow(2, -1 / 12), 9);
+    });
   });
 });
