@@ -11,4 +11,11 @@ commands.allow = [
   "git_clone",
   "git_set_token",
   "git_has_token",
+  "git_sync",
+  "git_list_branches",
+  "git_checkout_branch",
+  "git_is_authenticated",
+  "git_system_credentials_enabled",
+  "git_use_system_credentials",
+  "git_disable_system_credentials",
 ]
