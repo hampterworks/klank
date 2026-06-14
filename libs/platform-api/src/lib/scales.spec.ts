@@ -11,6 +11,8 @@ import {
   getScaleFretboard,
   getScalePositions,
   getDiatonicTriads,
+  getStepPattern,
+  intervalName,
 } from './scales.js'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -73,6 +75,14 @@ describe('SCALES table', () => {
 
   it('there are exactly 24 scales', () => {
     expect(SCALES.length).toBe(24)
+  })
+
+  it('every scale has a non-empty, trimmed description of at least 10 characters', () => {
+    for (const scale of SCALES) {
+      expect(typeof scale.description, scale.id).toBe('string')
+      expect(scale.description.trim(), scale.id).toBe(scale.description)
+      expect(scale.description.length, scale.id).toBeGreaterThanOrEqual(10)
+    }
   })
 })
 
@@ -252,7 +262,57 @@ describe('getScalePositions', () => {
   })
 })
 
-// ── 6. getDiatonicTriads ──────────────────────────────────────────────────────
+// ── 6. getStepPattern ────────────────────────────────────────────────────────
+
+describe('getStepPattern', () => {
+  it('returns an array of the same length as intervals (property over all scales)', () => {
+    fc.assert(
+      fc.property(scaleArb, (scale) => {
+        expect(getStepPattern(scale)).toHaveLength(scale.intervals.length)
+      }),
+    )
+  })
+
+  it('step sizes decode to values that sum to 12 (property over all scales)', () => {
+    const decode = (token: string): number => {
+      if (token === 'H') return 1
+      if (token === 'W') return 2
+      if (token === 'W½') return 3
+      return Number(token)
+    }
+    fc.assert(
+      fc.property(scaleArb, (scale) => {
+        const sum = getStepPattern(scale).reduce((acc, tok) => acc + decode(tok), 0)
+        expect(sum, scale.id).toBe(12)
+      }),
+    )
+  })
+
+  it("crafted: ionian step pattern is ['W','W','H','W','W','W','H']", () => {
+    const ionian = getScaleById('ionian')!
+    expect(getStepPattern(ionian)).toEqual(['W', 'W', 'H', 'W', 'W', 'W', 'H'])
+  })
+})
+
+// ── 7. intervalName ───────────────────────────────────────────────────────────
+
+describe('intervalName', () => {
+  it('intervalName(s) === intervalName(s + 12) for s in 0..11 (octave stability)', () => {
+    for (let s = 0; s <= 11; s++) {
+      expect(intervalName(s + 12), `s=${s}`).toBe(intervalName(s))
+    }
+  })
+
+  it('crafted spot-checks: 0 Root, 3 Minor 3rd, 6 Tritone, 7 Perfect 5th, 11 Major 7th', () => {
+    expect(intervalName(0)).toBe('Root')
+    expect(intervalName(3)).toBe('Minor 3rd')
+    expect(intervalName(6)).toBe('Tritone')
+    expect(intervalName(7)).toBe('Perfect 5th')
+    expect(intervalName(11)).toBe('Major 7th')
+  })
+})
+
+// ── 8. getDiatonicTriads ──────────────────────────────────────────────────────
 
 describe('getDiatonicTriads', () => {
   it('C ionian produces the correct triad degrees in order (C, Dm, Em, F, G, Am, Bdim)', () => {
@@ -260,9 +320,11 @@ describe('getDiatonicTriads', () => {
     const triads = getDiatonicTriads(0, ionian)
     // 7 degrees for a 7-note scale
     expect(triads).toHaveLength(7)
-    const expected = ['C', 'Dm', 'Em', 'F', 'G', 'Am', 'Bdim']
+    const expectedChords = ['C', 'Dm', 'Em', 'F', 'G', 'Am', 'Bdim']
+    const expectedRomans = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°']
     for (let i = 0; i < 7; i++) {
-      expect(triads[i].chordKey, `degree ${i + 1}`).toBe(expected[i])
+      expect(triads[i].chordKey, `degree ${i + 1} chordKey`).toBe(expectedChords[i])
+      expect(triads[i].roman, `degree ${i + 1} roman`).toBe(expectedRomans[i])
     }
   })
 
@@ -302,9 +364,22 @@ describe('getDiatonicTriads', () => {
       }),
     )
   })
+
+  it('roman is null exactly when chordKey is null (property over all roots and scales)', () => {
+    fc.assert(
+      fc.property(rootArb, scaleArb, (root, scale) => {
+        const triads = getDiatonicTriads(root, scale)
+        for (const triad of triads) {
+          expect(triad.roman === null, `chordKey=${triad.chordKey} roman=${triad.roman}`).toBe(
+            triad.chordKey === null,
+          )
+        }
+      }),
+    )
+  })
 })
 
-// ── 7. CHORD_SCALE_MAP ────────────────────────────────────────────────────────
+// ── 9. CHORD_SCALE_MAP ────────────────────────────────────────────────────────
 
 describe('CHORD_SCALE_MAP', () => {
   it('key set equals CHORD_QUALITIES', () => {
@@ -339,7 +414,7 @@ describe('CHORD_SCALE_MAP', () => {
   })
 })
 
-// ── 8. getScaleById ───────────────────────────────────────────────────────────
+// ── 10. getScaleById ──────────────────────────────────────────────────────────
 
 describe('getScaleById', () => {
   it('resolves every scale in SCALES by id', () => {

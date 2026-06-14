@@ -9,6 +9,12 @@ export type FretboardDiagramProps = {
   labelMode?: 'degree' | 'note'
   noteNames?: readonly string[]
   className?: string
+  /** Open-string note names, low-to-high (index 0 = lowest string). When
+   *  provided, a small left gutter renders each label at its string's y. */
+  stringLabels?: readonly string[]
+  /** When true, render a fret-number row beneath the neck (only on conventional
+   *  marker frets: 0, 3, 5, 7, 9, 12). Default false. */
+  showFretNumbers?: boolean
 }
 
 // ── Layout constants (mirror ChordDiagram's named-constant style) ─────────────
@@ -18,13 +24,22 @@ const TOP = 18          // top padding (above first string)
 const LEFT_PAD = 10     // left margin before nut / fret lines
 const OPEN_COL_W = 18   // extra width for the open-string column (when startFret === 0)
 const BASE_LABEL_W = 28 // right margin for base-fret label when startFret > 0
-const DOT_R = 7         // dot circle radius
+const DOT_R = 7.5       // dot circle radius (bumped from 7 for readability)
 const INLAY_R = 3       // inlay dot radius
+
+// Width of the string-labels gutter (when stringLabels is provided)
+const STRING_LABEL_GUTTER = 20
+
+// Height of the fret-number row below the neck (when showFretNumbers is true)
+const FRET_NUMBER_ROW_H = 14
 
 // Absolute frets that get inlay markers (single dot)
 const INLAY_FRETS = new Set([3, 5, 7, 9])
 // Double-inlay fret
 const DOUBLE_INLAY_FRET = 12
+
+// Frets shown in the fret-number row (marker frets + open string)
+const FRET_NUMBER_FRETS = new Set([0, 3, 5, 7, 9, 12])
 
 // y-coordinate for string s (index 0 = lowest/bass = BOTTOM of diagram)
 function stringY(s: number, numStrings: number): number {
@@ -38,12 +53,19 @@ export const FretboardDiagram: React.FC<FretboardDiagramProps> = ({
   labelMode = 'degree',
   noteNames,
   className,
+  stringLabels,
+  showFretNumbers = false,
 }) => {
   const numStrings = grid.length
   if (numStrings === 0) return null
 
   const hasOpenCol = startFret === 0
-  const leftEdge = LEFT_PAD + (hasOpenCol ? OPEN_COL_W : 0)
+  const gutterW = stringLabels ? STRING_LABEL_GUTTER : 0
+
+  // leftEdge is the x of the nut/first fret line, shifted right to accommodate
+  // the string-label gutter and the open-column space.
+  const leftEdge = gutterW + LEFT_PAD + (hasOpenCol ? OPEN_COL_W : 0)
+
   // Absolute fret shown in the first cell column. With an open column (full
   // neck) the open string is fret 0 and the first cell is fret 1; a position
   // window starts ON its anchor fret so the root is included.
@@ -52,7 +74,10 @@ export const FretboardDiagram: React.FC<FretboardDiagramProps> = ({
   // Total width: leftEdge + fretCount cells + optional right label space
   const rightLabelW = startFret > 0 ? BASE_LABEL_W : 0
   const totalW = leftEdge + fretCount * CELL_W + rightLabelW
-  const totalH = TOP + (numStrings - 1) * STRING_GAP + TOP
+
+  // Total height: strings + optional fret-number row below
+  const fretNumRowH = showFretNumbers ? FRET_NUMBER_ROW_H : 0
+  const totalH = TOP + (numStrings - 1) * STRING_GAP + TOP + fretNumRowH
 
   // x-coordinate of the leftmost fret line (nut position or top fret line)
   const nutX = leftEdge
@@ -67,7 +92,21 @@ export const FretboardDiagram: React.FC<FretboardDiagramProps> = ({
         : cell.degree
     return (
       <g key={key}>
-        <circle cx={x} cy={y} r={DOT_R} className={cell.isRoot ? styles.dotRoot : styles.dot} />
+        <circle
+          cx={x}
+          cy={y}
+          r={DOT_R}
+          className={cell.isRoot ? styles.dotRoot : styles.dot}
+        />
+        {cell.isRoot && (
+          <circle
+            cx={x}
+            cy={y}
+            r={DOT_R + 1.5}
+            className={styles.rootRing}
+            aria-hidden="true"
+          />
+        )}
         <text x={x} y={y} className={cell.isRoot ? styles.dotRootLabel : styles.dotLabel}>
           {label}
         </text>
@@ -81,6 +120,9 @@ export const FretboardDiagram: React.FC<FretboardDiagramProps> = ({
     visibleFrets.push(firstCellFret + i)
   }
 
+  // y just below the bottom string (used for fret-number row)
+  const belowNeckY = TOP + (numStrings - 1) * STRING_GAP + TOP / 2
+
   return (
     <svg
       viewBox={`0 0 ${totalW} ${totalH}`}
@@ -88,6 +130,24 @@ export const FretboardDiagram: React.FC<FretboardDiagramProps> = ({
       role="img"
       aria-label="scale diagram"
     >
+      {/* String-label gutter */}
+      {stringLabels && Array.from({ length: numStrings }, (_, s) => {
+        const label = stringLabels[s]
+        if (!label) return null
+        const y = stringY(s, numStrings)
+        return (
+          <text
+            key={`string-label-${s}`}
+            x={gutterW - 4}
+            y={y}
+            className={styles.stringLabel}
+            aria-hidden="true"
+          >
+            {label}
+          </text>
+        )
+      })}
+
       {/* Nut (thick rect) or top fret line */}
       {hasOpenCol ? (
         <rect
@@ -147,7 +207,7 @@ export const FretboardDiagram: React.FC<FretboardDiagramProps> = ({
           if (absFret === DOUBLE_INLAY_FRET) {
             const offset = STRING_GAP * 0.4
             return (
-              <g key={`inlay-${absFret}`}>
+              <g key={`inlay-${absFret}`} aria-hidden="true">
                 <circle cx={slotX} cy={midY - offset} r={INLAY_R} className={styles.inlay} />
                 <circle cx={slotX} cy={midY + offset} r={INLAY_R} className={styles.inlay} />
               </g>
@@ -155,7 +215,14 @@ export const FretboardDiagram: React.FC<FretboardDiagramProps> = ({
           }
           if (INLAY_FRETS.has(absFret)) {
             return (
-              <circle key={`inlay-${absFret}`} cx={slotX} cy={midY} r={INLAY_R} className={styles.inlay} />
+              <circle
+                key={`inlay-${absFret}`}
+                cx={slotX}
+                cy={midY}
+                r={INLAY_R}
+                className={styles.inlay}
+                aria-hidden="true"
+              />
             )
           }
           return null
@@ -195,6 +262,46 @@ export const FretboardDiagram: React.FC<FretboardDiagramProps> = ({
           {startFret}fr
         </text>
       )}
+
+      {/* Fret number row below the neck */}
+      {showFretNumbers && (() => {
+        // Open-string label (fret 0) when hasOpenCol
+        const items: React.ReactNode[] = []
+
+        if (hasOpenCol && FRET_NUMBER_FRETS.has(0)) {
+          items.push(
+            <text
+              key="fretnum-0"
+              x={nutX - OPEN_COL_W / 2}
+              y={belowNeckY}
+              className={styles.fretNumber}
+              aria-hidden="true"
+            >
+              0
+            </text>
+          )
+        }
+
+        for (let i = 0; i < fretCount; i++) {
+          const absFret = firstCellFret + i
+          if (FRET_NUMBER_FRETS.has(absFret)) {
+            const x = nutX + i * CELL_W + CELL_W / 2
+            items.push(
+              <text
+                key={`fretnum-${absFret}`}
+                x={x}
+                y={belowNeckY}
+                className={styles.fretNumber}
+                aria-hidden="true"
+              >
+                {absFret}
+              </text>
+            )
+          }
+        }
+
+        return items
+      })()}
     </svg>
   )
 }

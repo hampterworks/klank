@@ -12,6 +12,7 @@ export type ScaleCategory =
 export type ScaleDefinition = {
   id: string
   name: string
+  description: string
   category: ScaleCategory
   intervals: readonly number[]
   degrees: readonly string[]
@@ -30,6 +31,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'ionian',
     name: 'Ionian (Major)',
+    description: 'The standard major scale — bright, stable, and resolved',
     category: 'Major modes',
     intervals: [0, 2, 4, 5, 7, 9, 11],
     degrees: ['1', '2', '3', '4', '5', '6', '7'],
@@ -38,6 +40,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'dorian',
     name: 'Dorian',
+    description: 'Minor scale with a bright natural 6th — the classic jazz/funk minor',
     category: 'Major modes',
     intervals: [0, 2, 3, 5, 7, 9, 10],
     degrees: ['1', '2', 'b3', '4', '5', '6', 'b7'],
@@ -47,6 +50,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'phrygian',
     name: 'Phrygian',
+    description: 'Dark minor scale with a flat 2nd — Spanish and metal flavour',
     category: 'Major modes',
     intervals: [0, 1, 3, 5, 7, 8, 10],
     degrees: ['1', 'b2', 'b3', '4', '5', 'b6', 'b7'],
@@ -56,6 +60,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'lydian',
     name: 'Lydian',
+    description: 'Major scale with a raised 4th — dreamy and floating',
     category: 'Major modes',
     intervals: [0, 2, 4, 6, 7, 9, 11],
     degrees: ['1', '2', '3', '#4', '5', '6', '7'],
@@ -65,6 +70,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'mixolydian',
     name: 'Mixolydian',
+    description: 'Major scale with a flat 7th — dominant, bluesy, rock',
     category: 'Major modes',
     intervals: [0, 2, 4, 5, 7, 9, 10],
     degrees: ['1', '2', '3', '4', '5', '6', 'b7'],
@@ -74,6 +80,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'aeolian',
     name: 'Aeolian (Natural Minor)',
+    description: 'The natural minor scale — sad and serious',
     category: 'Major modes',
     intervals: [0, 2, 3, 5, 7, 8, 10],
     degrees: ['1', '2', 'b3', '4', '5', 'b6', 'b7'],
@@ -83,6 +90,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'locrian',
     name: 'Locrian',
+    description: 'Unstable minor with a flat 5th — rarely a home key',
     category: 'Major modes',
     intervals: [0, 1, 3, 5, 6, 8, 10],
     degrees: ['1', 'b2', 'b3', '4', 'b5', 'b6', 'b7'],
@@ -93,6 +101,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'melodic-minor',
     name: 'Melodic Minor',
+    description: 'Minor with major 6th and 7th — smooth jazz minor',
     category: 'Melodic minor modes',
     intervals: [0, 2, 3, 5, 7, 9, 11],
     degrees: ['1', '2', 'b3', '4', '5', '6', '7'],
@@ -101,6 +110,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'dorian-b2',
     name: 'Dorian b2',
+    description: 'Dorian with a flat 2nd — dark and mysterious modal colour',
     category: 'Melodic minor modes',
     intervals: [0, 1, 3, 5, 7, 9, 10],
     degrees: ['1', 'b2', 'b3', '4', '5', '6', 'b7'],
@@ -110,6 +120,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'lydian-augmented',
     name: 'Lydian Augmented',
+    description: 'Lydian with a raised 5th — lush and otherworldly',
     category: 'Melodic minor modes',
     intervals: [0, 2, 4, 6, 8, 9, 11],
     degrees: ['1', '2', '3', '#4', '#5', '6', '7'],
@@ -119,6 +130,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'lydian-dominant',
     name: 'Lydian Dominant',
+    description: 'Dominant scale with a raised 4th — Lydian meets the blues',
     category: 'Melodic minor modes',
     intervals: [0, 2, 4, 6, 7, 9, 10],
     degrees: ['1', '2', '3', '#4', '5', '6', 'b7'],
@@ -128,6 +140,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'mixolydian-b6',
     name: 'Mixolydian b6',
+    description: 'Dominant sound with a dark flat 6th — Hindu scale territory',
     category: 'Melodic minor modes',
     intervals: [0, 2, 4, 5, 7, 8, 10],
     degrees: ['1', '2', '3', '4', '5', 'b6', 'b7'],
@@ -137,6 +150,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'locrian-nat2',
     name: 'Locrian ♮2 (Half-Diminished)',
+    description: 'Locrian with a natural 2nd — smoother half-diminished sound',
     category: 'Melodic minor modes',
     intervals: [0, 2, 3, 5, 6, 8, 10],
     degrees: ['1', '2', 'b3', '4', 'b5', 'b6', 'b7'],
@@ -146,6 +160,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'altered',
     name: 'Altered (Super Locrian)',
+    description: 'Every tension over a dominant 7th — maximum outside colour',
     category: 'Melodic minor modes',
     intervals: [0, 1, 3, 4, 6, 8, 10],
     degrees: ['1', 'b9', '#9', '3', 'b5', '#5', 'b7'],
@@ -156,6 +171,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'harmonic-minor',
     name: 'Harmonic Minor',
+    description: 'Minor with a raised 7th — exotic, classical, neoclassical',
     category: 'Harmonic minor',
     intervals: [0, 2, 3, 5, 7, 8, 11],
     degrees: ['1', '2', 'b3', '4', '5', 'b6', '7'],
@@ -164,6 +180,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'phrygian-dominant',
     name: 'Phrygian Dominant',
+    description: 'Dominant scale with a flat 2nd — Middle-Eastern/flamenco',
     category: 'Harmonic minor',
     intervals: [0, 1, 4, 5, 7, 8, 10],
     degrees: ['1', 'b2', '3', '4', '5', 'b6', 'b7'],
@@ -174,6 +191,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'major-pentatonic',
     name: 'Major Pentatonic',
+    description: 'Five-note major subset — uplifting and universally singable',
     category: 'Pentatonic / Blues',
     intervals: [0, 2, 4, 7, 9],
     degrees: ['1', '2', '3', '5', '6'],
@@ -181,6 +199,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'minor-pentatonic',
     name: 'Minor Pentatonic',
+    description: 'Five-note minor subset — the backbone of blues and rock lead',
     category: 'Pentatonic / Blues',
     intervals: [0, 3, 5, 7, 10],
     degrees: ['1', 'b3', '4', '5', 'b7'],
@@ -188,6 +207,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'blues-minor',
     name: 'Minor Blues',
+    description: 'Minor pentatonic plus the blue note — raw and expressive',
     category: 'Pentatonic / Blues',
     intervals: [0, 3, 5, 6, 7, 10],
     degrees: ['1', 'b3', '4', 'b5', '5', 'b7'],
@@ -195,6 +215,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'blues-major',
     name: 'Major Blues',
+    description: 'Major pentatonic plus the blue note — soulful country flavour',
     category: 'Pentatonic / Blues',
     intervals: [0, 2, 3, 4, 7, 9],
     degrees: ['1', '2', 'b3', '3', '5', '6'],
@@ -203,6 +224,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'whole-tone',
     name: 'Whole Tone',
+    description: 'Six whole steps only — ambiguous, floating, Debussy-esque',
     category: 'Symmetric',
     intervals: [0, 2, 4, 6, 8, 10],
     degrees: ['1', '2', '3', '#4', '#5', 'b7'],
@@ -210,6 +232,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'diminished-wh',
     name: 'Diminished (Whole-Half)',
+    description: 'Eight-note symmetric scale — jazzy tension and release',
     category: 'Symmetric',
     intervals: [0, 2, 3, 5, 6, 8, 9, 11],
     degrees: ['1', '2', 'b3', '4', 'b5', 'b6', '6', '7'],
@@ -217,6 +240,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'diminished-hw',
     name: 'Diminished (Half-Whole)',
+    description: 'Eight-note symmetric scale — packed with dominant tensions',
     category: 'Symmetric',
     intervals: [0, 1, 3, 4, 6, 7, 9, 10],
     degrees: ['1', 'b9', '#9', '3', '#4', '5', '6', 'b7'],
@@ -224,6 +248,7 @@ export const SCALES: readonly ScaleDefinition[] = [
   {
     id: 'chromatic',
     name: 'Chromatic',
+    description: 'All twelve pitches — maximum chromaticism, no tonal centre',
     category: 'Symmetric',
     intervals: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
     degrees: ['1', 'b2', '2', 'b3', '3', '4', 'b5', '5', 'b6', '6', 'b7', '7'],
@@ -265,6 +290,26 @@ export const CHORD_SCALE_MAP: Record<string, readonly string[]> = {
 
 const MOD12 = (n: number) => ((n % 12) + 12) % 12
 
+/** Human interval name for a chromatic distance above the root (0..11, wraps mod 12). */
+const INTERVAL_NAMES = [
+  'Root',
+  'Minor 2nd',
+  'Major 2nd',
+  'Minor 3rd',
+  'Major 3rd',
+  'Perfect 4th',
+  'Tritone',
+  'Perfect 5th',
+  'Minor 6th',
+  'Major 6th',
+  'Minor 7th',
+  'Major 7th',
+] as const
+
+export function intervalName(semitones: number): string {
+  return INTERVAL_NAMES[MOD12(semitones)]
+}
+
 /** All pitch classes (0..11) sounded by this scale when rooted at rootPitch. */
 export function getScalePitches(rootPitch: number, scale: ScaleDefinition): number[] {
   return scale.intervals.map((interval) => MOD12(rootPitch + interval))
@@ -289,6 +334,25 @@ export function scalesForQuality(quality: string): ScaleDefinition[] {
   return (CHORD_SCALE_MAP[quality] ?? [])
     .map(getScaleById)
     .filter((scale): scale is ScaleDefinition => scale !== undefined)
+}
+
+/**
+ * Whole/half step pattern between successive scale tones, wrapping to the octave.
+ * 'H' = 1 semitone, 'W' = 2, 'W½' = 3, otherwise `${n}` semitones.
+ * Length === intervals.length. Steps sum to 12.
+ */
+export function getStepPattern(scale: ScaleDefinition): string[] {
+  const intervals = scale.intervals
+  const n = intervals.length
+  const result: string[] = []
+  for (let i = 0; i < n; i++) {
+    const step = i < n - 1 ? intervals[i + 1] - intervals[i] : 12 - intervals[n - 1]
+    if (step === 1) result.push('H')
+    else if (step === 2) result.push('W')
+    else if (step === 3) result.push('W½')
+    else result.push(String(step))
+  }
+  return result
 }
 
 /**
@@ -341,6 +405,8 @@ export function getScalePositions(
   return positions
 }
 
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'] as const
+
 /**
  * For each scale degree, attempt to build a diatonic triad (stack of 3rds)
  * and classify it as major (''), minor ('m'), diminished ('dim'), or
@@ -353,10 +419,10 @@ export function getScalePositions(
 export function getDiatonicTriads(
   rootPitch: number,
   scale: ScaleDefinition,
-): { degree: string; chordKey: string | null }[] {
+): { degree: string; chordKey: string | null; roman: string | null }[] {
   const pitches = getScalePitches(rootPitch, scale)
   const n = pitches.length
-  const result: { degree: string; chordKey: string | null }[] = []
+  const result: { degree: string; chordKey: string | null; roman: string | null }[] = []
 
   for (let i = 0; i < n; i++) {
     const root = pitches[i]
@@ -372,9 +438,19 @@ export function getDiatonicTriads(
     else if (thirdInterval === 3 && fifthInterval === 6) quality = 'dim'
     else if (thirdInterval === 4 && fifthInterval === 8) quality = 'aug'
 
+    let roman: string | null = null
+    if (quality !== null) {
+      const base = i < 7 ? ROMAN[i] : String(i + 1)
+      if (quality === '') roman = base
+      else if (quality === 'm') roman = base.toLowerCase()
+      else if (quality === 'dim') roman = base.toLowerCase() + '°'
+      else if (quality === 'aug') roman = base + '+'
+    }
+
     result.push({
       degree: scale.degrees[i],
       chordKey: quality !== null ? NOTE_NAMES[root] + quality : null,
+      roman,
     })
   }
 
