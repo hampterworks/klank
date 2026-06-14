@@ -81,18 +81,26 @@ export function App() {
     return () => { cancelled = true }
   }, [baseDirectory, serverMode, setBaseDirectory, setFileService, setTabSettings, setPlaylists])
 
+  // Keep a ref so the ResizeObserver callback always reads the latest value
+  // without needing isMenuExtended in the effect's dependency array.
+  // If isMenuExtended were in deps, the effect would re-run every time the
+  // menu opens, the fresh ResizeObserver would fire immediately on .observe(),
+  // and it would close the menu before the drawer ever paints on mobile.
+  const isMenuExtendedRef = useRef(isMenuExtended)
+  isMenuExtendedRef.current = isMenuExtended
+
   useEffect(() => {
     const container = containerRef.current
     if (!container || typeof ResizeObserver === 'undefined') return
     const ro = new ResizeObserver(([entry]) => {
       if (entry.contentRect.width === 0) return
-      if (entry.contentRect.width < 600 && isMenuExtended) {
+      if (entry.contentRect.width < 600 && isMenuExtendedRef.current) {
         toggleMenu(false)
       }
     })
     ro.observe(container)
     return () => ro.disconnect()
-  }, [isMenuExtended, toggleMenu])
+  }, [toggleMenu])
 
   useEffect(() => {
     if (needsUpdate && baseDirectory) {
@@ -112,17 +120,24 @@ export function App() {
     }
   }, [needsUpdate, baseDirectory, fileService])
 
-  const handleResizeStart = (e: React.MouseEvent) => {
+  // Pointer events unify mouse, touch, and pen so the same drag-to-resize works
+  // on desktop and on touch devices (tablets, fold phones) where the handle is
+  // still shown. touch-action:none on the handle (see CSS) stops the browser
+  // from hijacking the drag as a scroll/pan gesture.
+  const handleResizeStart = (e: React.PointerEvent) => {
     e.preventDefault()
     const container = containerRef.current
     const handle = handleRef.current
     if (!container || !handle) return
 
+    // Keep delivering pointer events to the handle even if the finger/cursor
+    // strays off it mid-drag.
+    handle.setPointerCapture(e.pointerId)
     container.classList.add(styles.resizing)
 
     let finalWidth = isMenuExtended ? menuWidth : 52
 
-    const onMove = (e: MouseEvent) => {
+    const onMove = (e: PointerEvent) => {
       const w = Math.min(MAX_WIDTH, Math.max(0, e.clientX))
       finalWidth = w
       const displayWidth = w < MIN_WIDTH ? 52 : w
@@ -138,12 +153,14 @@ export function App() {
         if (!isMenuExtended) toggleMenu(true)
         setMenuWidth(finalWidth)
       }
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
     }
 
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
   }
 
   const currentWidth = isMenuExtended ? menuWidth : 52
@@ -161,7 +178,7 @@ export function App() {
         ref={handleRef}
         className={styles.resizeHandle}
         style={{ left: currentWidth - 4 }}
-        onMouseDown={handleResizeStart}
+        onPointerDown={handleResizeStart}
       />
       <Player/>
     </main>

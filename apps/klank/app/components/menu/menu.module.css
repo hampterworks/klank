@@ -6,6 +6,11 @@
   font-size: 14px;
   color: var(--klank-color-text);
   height: 100dvh;
+  /* On desktop env() resolves to 0px — no visual change.
+     On Android (Fold, tablet) these protect against status/nav bars. */
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
 
   > li:first-of-type {
     display: flex;
@@ -300,4 +305,157 @@
 
 .textarea:focus {
   border-color: var(--klank-color-text);
+}
+
+@media (max-width: 599px) {
+  /* The first <li> (logo row) has a desktop border-bottom; on mobile the
+     container already draws border-bottom, so remove the inner one.
+     Height is also raised to 44px to match the Toolbar and Searchbar. */
+  .container > li:first-of-type {
+    border-bottom: none;
+    height: 44px;
+  }
+
+  /* KLANK text has no room in the horizontal top bar */
+  .logoText {
+    display: none;
+  }
+
+  /* ── Top bar (the <ul> / .container) ─────────────────────────── */
+  .container {
+    flex-direction: row !important;
+    /* align-items: flex-end keeps icons in the 44px zone below the status bar */
+    align-items: flex-end;
+    /* height: auto lets the container grow to accommodate safe-area-inset-top */
+    height: auto;
+    min-height: calc(44px + var(--safe-top));
+    max-height: none;
+    border-right: none;
+    border-bottom: 1px solid var(--klank-color-border);
+    overflow: visible;
+    width: 100%;
+    flex-shrink: 0;
+    padding-top: var(--safe-top);
+    padding-bottom: 0;
+    padding-left: max(0px, var(--safe-left));
+    padding-right: max(0px, var(--safe-right));
+    background: var(--klank-color-background);
+  }
+
+  /* Hide tree and playlist only from the top-bar <ul>.
+     .container .treeWrapper (not bare .treeWrapper) so the portal drawer's
+     treeWrapper is NOT hidden — unscoped .treeWrapper hides it everywhere. */
+  .container .treeWrapper,
+  .container [class*="playlistSection"] {
+    display: none !important;
+  }
+
+  /* ── Download / New Tab overlay ────────────────────────────────── */
+  .overlay {
+    /* Override inset:0 — use height:100dvh so the visual viewport (which
+       shrinks when the keyboard opens) determines how tall the overlay is.
+       The modal stays anchored just above the keyboard. */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: auto;
+    height: 100dvh;
+    align-items: flex-end;
+    padding-bottom: var(--safe-bottom);
+    overflow: hidden;
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 12px 12px 0 0;
+    max-height: 85dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── Textarea in manual-paste section ──────────────────────────── */
+  .textarea {
+    resize: none;
+    height: 100px;
+    min-height: unset;
+  }
+
+  /* ── Toast error sits above the bottom bar ─────────────────────── */
+  .toastError {
+    bottom: calc(1.5rem + var(--safe-bottom) + 44px);
+  }
+
+  /* ── Mobile drawer ─────────────────────────────────────────────── */
+  .mobileDrawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    /* Use height:100dvh instead of inset:0 / bottom:0 so the drawer tracks
+       the visual viewport, which shrinks when the virtual keyboard opens.
+       Same pattern as .overlay above — keeps the sheet above the keyboard. */
+    bottom: auto;
+    height: 100dvh;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  .mobileDrawerBackdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+  }
+
+  .mobileDrawerSheet {
+    position: relative;
+    background: var(--klank-color-background);
+    border-top: 1px solid var(--klank-color-border);
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    flex-direction: column;
+    /* Fixed height so the file tree always has room; scrolls within */
+    height: 72dvh;
+    max-height: 85dvh;
+    padding-bottom: max(8px, var(--safe-bottom));
+    overflow: hidden;
+    z-index: 201;
+  }
+
+  .mobileDrawerContent {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .mobileDrawerSearch {
+    flex-shrink: 0;
+    border-top: 1px solid var(--klank-color-border);
+    padding: 4px 8px;
+  }
+
+  .mobileDrawerActions {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--klank-color-border);
+    padding: 4px 8px;
+  }
+
+  .mobileDrawerActionsGroup {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .mobileDrawerActions button {
+    min-width: 40px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }

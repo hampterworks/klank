@@ -26,6 +26,9 @@ export const Player: React.FC<SheetProps> = ({ ...props }) => {
   const instrument = useKlankStore().instrument
   const [tabData, setTabData] = useState<string | undefined>()
   const [editedContent, setEditedContent] = useState<string>('')
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' && window.innerWidth <= 599
+  )
 
   const activePlaylist = playlists.find((p) => p.id === activePlaylistId)
   const playlistNav = activePlaylist && activePlaylistIndex !== null ? {
@@ -34,6 +37,12 @@ export const Player: React.FC<SheetProps> = ({ ...props }) => {
     onPrev: prevInPlaylist,
     onNext: nextInPlaylist,
   } : undefined
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 599)
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     if (!fileService?.readTabFile) return
@@ -92,6 +101,7 @@ export const Player: React.FC<SheetProps> = ({ ...props }) => {
           tabData={tabData ?? ''}
           transpose={transpose}
           instrument={instrument}
+          isMobile={isMobile}
           style={{ fontSize: `${fontSize}px` }}
         />
       )}

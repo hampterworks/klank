@@ -5,12 +5,17 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router'
 import { FileEntry, getSheetFromUG, ImportProgress, isMobileDevice, sortByArtist } from '@klank/platform-api'
 import {
+  Button,
   DownloadIcon,
   FileTreeView,
   LogoIcon,
   NewPlaylistIcon,
+  RefreshIcon,
   Searchbar,
+  ShuffleIcon,
+  TargetIcon,
   Toolbar,
+  ToolTip,
 } from '@klank/ui'
 import { useKlankStore } from '@klank/store'
 import { PlaylistSection } from './PlaylistSection'
@@ -71,6 +76,17 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
   const navigate = useNavigate()
   const isMenuExtended = useKlankStore().ui.isMenuExtended
   const toggleMenu = useKlankStore().toggleMenu
+
+  // Width-based mobile detection — user-agent checks miss tablets and some
+  // Android WebViews that don't include "mobile" in their UA string.
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' && window.innerWidth <= 599
+  )
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 599)
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
   const currentTabPath = useKlankStore().tab.path
   const setTabPath = useKlankStore().setTabPath
   const baseDirectory = useKlankStore().baseDirectory
@@ -263,9 +279,11 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
 
   // Cleanup toast timers on unmount
   useEffect(() => {
+    const deleteTimer = deleteErrorTimerRef
+    const downloadTimer = downloadErrorTimerRef
     return () => {
-      if (deleteErrorTimerRef.current) clearTimeout(deleteErrorTimerRef.current)
-      if (downloadErrorTimerRef.current) clearTimeout(downloadErrorTimerRef.current)
+      if (deleteTimer.current) clearTimeout(deleteTimer.current)
+      if (downloadTimer.current) clearTimeout(downloadTimer.current)
     }
   }, [])
 
@@ -438,14 +456,16 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
           setBaseDirectory={setBaseDirectory}
           setTabPath={handleSelectSong}
           tree={tree}
-          onRequestCreatePlaylist={handleRequestCreatePlaylist}
-          onRequestDownload={handleRequestDownload}
+          onRequestCreatePlaylist={isMobile ? undefined : handleRequestCreatePlaylist}
+          onRequestDownload={isMobile ? undefined : handleRequestDownload}
           isDownloading={isDownloading}
           downloadError={downloadError}
           onSettingsClick={() => navigate('/settings')}
           isCollapsed={!isMenuExtended}
+          hideGoToTab={isMobile}
+          hideRefresh={isMobile}
         />
-        {isMenuExtended && (
+        {!isMobile && isMenuExtended && (
           <>
             <PlaylistSection tree={tree} currentTabPath={currentTabPath} />
             <div className={styles.treeWrapper}>
@@ -473,6 +493,93 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
       {deleteConfirmModal}
       {deleteError !== null && createPortal(
         <div className={styles.toastError}>{deleteError}</div>,
+        document.body
+      )}
+      {isMobile && isMenuExtended && createPortal(
+        <div className={styles.mobileDrawer}>
+          <div
+            className={styles.mobileDrawerBackdrop}
+            onClick={() => toggleMenu(false)}
+          />
+          <div className={styles.mobileDrawerSheet}>
+            <div className={styles.mobileDrawerActions}>
+              {/* Utility — act on tree state, keep drawer open */}
+              <div className={styles.mobileDrawerActionsGroup}>
+                <ToolTip message="Go to Tab">
+                  <Button
+                    iconButton
+                    icon={<TargetIcon />}
+                    aria-label="Go to current tab"
+                    onClick={() => document.getElementById('active')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                  />
+                </ToolTip>
+                <ToolTip message="Refresh">
+                  <Button
+                    iconButton
+                    icon={<RefreshIcon />}
+                    aria-label="Refresh"
+                    onClick={() => setNeedsUpdate(true)}
+                  />
+                </ToolTip>
+              </div>
+              {/* Creation / navigation — may close drawer or open a modal */}
+              <div className={styles.mobileDrawerActionsGroup}>
+                <ToolTip message="Go to Random Tab">
+                  <Button
+                    iconButton
+                    icon={<ShuffleIcon />}
+                    aria-label="Go to random tab"
+                    onClick={() => {
+                      if (!tree.length) return
+                      const randomItem = tree[Math.floor(Math.random() * tree.length)]
+                      handleSelectSong(randomItem.path)
+                      toggleMenu(false)
+                    }}
+                  />
+                </ToolTip>
+                <ToolTip message="New Playlist">
+                  <Button
+                    iconButton
+                    icon={<NewPlaylistIcon />}
+                    aria-label="New playlist"
+                    onClick={handleRequestCreatePlaylist}
+                  />
+                </ToolTip>
+                <ToolTip message="Download Tab">
+                  <Button
+                    iconButton
+                    icon={<DownloadIcon />}
+                    aria-label="Download tab"
+                    onClick={handleRequestDownload}
+                  />
+                </ToolTip>
+              </div>
+            </div>
+            <div className={styles.mobileDrawerContent}>
+              <PlaylistSection tree={tree} currentTabPath={currentTabPath} />
+              <div className={styles.treeWrapper}>
+                <FileTreeView
+                  currentTabPath={currentTabPath}
+                  setTabPath={handleSelectSong}
+                  searchFilter={searchFilter}
+                  tree={tree}
+                  onAddToPlaylist={activePlaylist ? (path) => addTabToPlaylist(activePlaylist.id, path) : undefined}
+                  activePlaylistPaths={activePlaylist?.paths}
+                  onDeleteTab={(path) => setPathToConfirmDelete(path)}
+                />
+              </div>
+            </div>
+            <div className={styles.mobileDrawerSearch}>
+              <Searchbar
+                inDrawer
+                toggleMenu={toggleMenu}
+                isMenuExtended={isMenuExtended}
+                searchFilter={searchFilter}
+                setSearchFilter={setSearchFilter}
+              />
+            </div>
+          </div>
+        </div>,
         document.body
       )}
     </>

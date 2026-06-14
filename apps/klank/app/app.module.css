@@ -20,6 +20,8 @@
   cursor: col-resize;
   z-index: 10;
   transition: background 150ms;
+  /* Let pointer drags resize the menu instead of scrolling/panning on touch */
+  touch-action: none;
 }
 
 .resizeHandle:hover {
@@ -29,5 +31,14 @@
 @media (max-width: 599px) {
   .resizeHandle {
     display: none;
+  }
+}
+
+@media (max-width: 599px) {
+  .container {
+    display: flex !important;
+    flex-direction: column;
+    height: 100dvh;
+    overflow: clip;
   }
 }

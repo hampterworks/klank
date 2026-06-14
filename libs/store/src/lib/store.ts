@@ -149,7 +149,7 @@ export const useKlankStore = create<KlankState>()(
         },
         tabSettingByPath: {},
         mode: "Read",
-        theme: "Light",
+        theme: (typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'Dark' : 'Light',
         instrument: "guitar" as Instrument,
         playlists: [],
         activePlaylistId: null,
@@ -393,8 +393,9 @@ export const useKlankStore = create<KlankState>()(
         // v0 persisted playlists in localStorage; they now live in
         // .klank-settings.json, so stale localStorage copies are dropped.
         migrate: (persistedState) => {
-          const { playlists: _dropped, ...rest } = (persistedState ?? {}) as Record<string, unknown>
-          return rest as unknown as PersistedKlankState
+          const state = { ...((persistedState ?? {}) as Record<string, unknown>) }
+          delete state['playlists']
+          return state as unknown as PersistedKlankState
         },
         partialize: (state) => ({
           tab: { ...state.tab, isScrolling: false },

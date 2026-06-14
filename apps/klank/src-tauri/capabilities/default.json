@@ -14,12 +14,14 @@
     {
       "identifier": "fs:read-all",
       "allow": [
+        { "path": "$APPLOCALDATA/**" },
         { "path": "**" }
       ]
     },
     {
       "identifier": "fs:write-all",
       "allow": [
+        { "path": "$APPLOCALDATA/**" },
         { "path": "**" }
       ]
     },

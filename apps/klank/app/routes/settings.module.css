@@ -180,3 +180,10 @@
   opacity: 0.65;
   font-style: italic;
 }
+
+@media (max-width: 599px) {
+  .page {
+    padding-top: var(--safe-top);
+    padding-bottom: calc(var(--safe-bottom) + 1rem);
+  }
+}

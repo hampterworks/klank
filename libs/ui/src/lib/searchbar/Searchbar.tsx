@@ -11,6 +11,8 @@ type SearchbarProps = {
   toggleMenu: (isMenuExtended: boolean) => void
   searchFilter: string
   setSearchFilter: (filter: string) => void
+  /** When true (drawer context on mobile), shows the search Input instead of hiding it. */
+  inDrawer?: boolean
 } & React.ComponentPropsWithRef<'li'>
 
 export const Searchbar: React.FC<SearchbarProps> = ({
@@ -18,10 +20,11 @@ export const Searchbar: React.FC<SearchbarProps> = ({
   toggleMenu,
   searchFilter,
   setSearchFilter,
+  inDrawer,
   ...props
 }) => {
   return (
-    <li className={`${styles.container}${!isMenuExtended ? ' ' + styles.collapsed : ''}`} {...props}>
+    <li className={`${styles.container}${!isMenuExtended ? ' ' + styles.collapsed : ''}${inDrawer ? ' ' + styles.inDrawer : ''}`} {...props}>
       {isMenuExtended && (
         <Input
           value={searchFilter}

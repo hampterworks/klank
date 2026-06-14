@@ -2,6 +2,13 @@
   display: grid;
   grid-template-rows: auto 1fr;
   height: 100vh;
+  /* On desktop env() = 0px — no visual change.
+     On Android tablets/folds these inset the SheetToolbar top away from the
+     status bar, the right edge away from the screen edge, and the sheet
+     bottom above the gesture nav bar. */
+  padding-top: var(--safe-top);
+  padding-right: var(--safe-right);
+  padding-bottom: var(--safe-bottom);
 
   > div {
     position: relative;
@@ -22,4 +29,31 @@
   outline: none;
   padding: 8px;
   box-sizing: border-box;
+}
+
+@media (max-width: 599px) {
+  .container {
+    display: flex !important;
+    flex-direction: column;
+    grid-template-rows: unset;
+    flex: 1;
+    min-height: 0;
+    /* overflow:clip instead of hidden — prevents scroll-trapping while still
+       clipping overflow, and never creates a fixed-positioning containing block */
+    overflow: clip;
+    height: auto;
+    /* Safe areas are handled by the menu top bar (top) and SheetToolbar
+       mobile padding (bottom/sides) — reset the desktop container padding. */
+    padding-top: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+  }
+
+  /* Cancel the desktop z-index:2 on the SheetToolbar (direct div child).
+     Without this, SheetToolbar creates a stacking context that can paint
+     above the mobile drawer overlay (z-index: 200). */
+  .container > div {
+    position: static;
+    z-index: auto;
+  }
 }

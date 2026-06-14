@@ -12,6 +12,7 @@ import '../styles.css';
 import { ThemeProvider } from '@klank/ui';
 import { useKlankStore } from '@klank/store'
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { useEffect } from 'react';
 
 export const meta: MetaFunction = () => [
   {
@@ -49,12 +50,24 @@ export function HydrateFallback() {
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const activeTheme = useKlankStore().theme
+  const themeColor = activeTheme === 'Dark' ? '#020202' : '#fdfdfd'
+
+  useEffect(() => {
+    let tag = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    if (!tag) {
+      tag = document.createElement('meta')
+      tag.name = 'theme-color'
+      document.head.appendChild(tag)
+    }
+    tag.content = themeColor
+  }, [themeColor])
 
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-visual" />
+        <meta name="theme-color" content={themeColor} />
         <Meta />
         <Links />
       </head>

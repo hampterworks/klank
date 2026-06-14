@@ -90,3 +90,44 @@
     opacity: 0.7;
   }
 }
+
+@media (max-width: 599px) {
+  .container {
+    order: 2;
+    flex-shrink: 0;
+    /* Wrap so song name occupies its own line above the controls */
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    border-top: 1px solid var(--klank-color-border);
+    border-bottom: none;
+    background: var(--klank-color-background);
+    height: auto;
+    padding: 4px max(0.5rem, var(--safe-left)) max(8px, var(--safe-bottom)) max(0.5rem, var(--safe-right));
+  }
+
+  /* Song name: full-width first line */
+  .songName {
+    flex: 0 0 100%;
+    font-size: 0.8125rem;
+    padding: 2px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    order: 1;
+  }
+
+  /* Controls: full-width second line, scrollable horizontally */
+  .controls {
+    order: 2;
+    flex: 0 0 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .controls::-webkit-scrollbar {
+    display: none;
+  }
+}
