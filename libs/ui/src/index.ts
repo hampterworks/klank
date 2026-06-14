@@ -10,6 +10,8 @@ export { SheetToolbar } from './lib/sheetToolbar/SheetToolbar';
 export { Sheet } from './lib/sheet/Sheet';
 export { ChordDiagram } from './lib/chordDiagram/ChordDiagram';
 export { ChordDiagramTooltip } from './lib/chordDiagramTooltip/ChordDiagramTooltip';
+export { FretboardDiagram } from './lib/fretboardDiagram/FretboardDiagram';
+export type { FretboardDiagramProps } from './lib/fretboardDiagram/FretboardDiagram';
 
 export * from './lib/theme/theme'
 export { PlayIcon } from './lib/icons/PlayIcon';
@@ -17,6 +19,7 @@ export { LogoIcon } from './lib/icons/LogoIcon';
 export { DownloadIcon } from './lib/icons/DownloadIcon';
 export { RefreshIcon } from './lib/icons/RefreshIcon'
 export { SettingsIcon } from './lib/icons/SettingsIcon';
+export { ScalesIcon } from './lib/icons/ScalesIcon';
 export { ShuffleIcon } from './lib/icons/ShuffleIcon';
 export { TargetIcon } from './lib/icons/TargetIcon';
 export { FolderIcon } from './lib/icons/FolderIcon';

@@ -4,4 +4,5 @@ export default [
   index('./app.tsx'),
   route('about', './routes/about.tsx'),
   route('settings', './routes/settings.tsx'),
+  route('harmony', './routes/harmony.tsx'),
   ] satisfies RouteConfig;

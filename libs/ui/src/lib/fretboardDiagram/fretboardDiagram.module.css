@@ -1,0 +1,61 @@
+.diagram {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.nut {
+  fill: var(--klank-color-text);
+}
+
+.fretLine {
+  stroke: var(--klank-color-border);
+  stroke-width: 1;
+}
+
+.stringLine {
+  stroke: var(--klank-color-border);
+  stroke-width: 1;
+}
+
+.bassString {
+  stroke: var(--klank-color-border);
+  stroke-width: 2;
+}
+
+.dot {
+  fill: var(--klank-color-secondary-background);
+  stroke: var(--klank-color-text);
+  stroke-width: 1.5;
+}
+
+.dotRoot {
+  fill: var(--klank-color-text);
+}
+
+.dotLabel {
+  fill: var(--klank-color-background);
+  font-size: 7px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  user-select: none;
+}
+
+.dotRootLabel {
+  fill: var(--klank-color-background);
+  font-size: 7px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  user-select: none;
+}
+
+.inlay {
+  fill: var(--klank-color-border);
+}
+
+.baseFretLabel {
+  fill: var(--klank-color-text);
+  font-size: 8px;
+  dominant-baseline: central;
+  text-anchor: start;
+}

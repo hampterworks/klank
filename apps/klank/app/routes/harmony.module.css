@@ -1,0 +1,268 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--klank-color-background);
+  color: var(--klank-color-text);
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--klank-color-border);
+  flex-shrink: 0;
+}
+
+.header h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.backButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--klank-color-text);
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+
+  &:hover {
+    background: var(--klank-color-highlight);
+  }
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+  max-width: 900px;
+  width: 100%;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--klank-color-border);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.label {
+  font-size: 0.875rem;
+  color: var(--klank-color-text);
+  opacity: 0.7;
+  min-width: 80px;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--klank-color-secondary-background);
+  border: 1px solid var(--klank-color-border);
+  border-radius: 4px;
+  color: var(--klank-color-text);
+  cursor: pointer;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--klank-color-highlight);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.button.active {
+  background: var(--klank-color-highlight);
+  border-color: var(--klank-color-text);
+  font-weight: 600;
+}
+
+.select {
+  background: var(--klank-color-secondary-background);
+  border: 1px solid var(--klank-color-border);
+  border-radius: 4px;
+  color: var(--klank-color-text);
+  padding: 8px 10px;
+  font-size: 0.875rem;
+  cursor: pointer;
+
+  &:focus {
+    outline: 1px solid var(--klank-color-highlight);
+  }
+}
+
+/* ── Fretboard diagram full-neck ─────────────────────────────────────────── */
+
+.fretboardFullWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.fretboardFull {
+  min-width: 480px;
+}
+
+/* ── Position windows grid ─────────────────────────────────────────────────── */
+
+.positionGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.positionCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 160px;
+}
+
+.positionLabel {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+/* ── Chord diagram grid ──────────────────────────────────────────────────── */
+
+.chordGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.chordCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.chordName {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.chordCaption {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+/* ── Chord-scales list ──────────────────────────────────────────────────── */
+
+.chordScaleItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--klank-color-border);
+}
+
+.chordScaleItem:last-child {
+  border-bottom: none;
+}
+
+.chordScaleName {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.chordScaleCategory {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+/* ── Legend / degree row ─────────────────────────────────────────────────── */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.legendItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: var(--klank-color-secondary-background);
+  border: 1px solid var(--klank-color-border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  min-width: 32px;
+}
+
+.legendDegree {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.legendNote {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+/* ── Mode info line ──────────────────────────────────────────────────────── */
+
+.modeInfo {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  font-style: italic;
+}
+
+/* ── Empty / info messages ───────────────────────────────────────────────── */
+
+.emptyMessage {
+  font-size: 0.875rem;
+  opacity: 0.6;
+  font-style: italic;
+}
+
+/* ── Subheading within section ─────────────────────────────────────────── */
+
+.subheading {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0;
+  margin-top: 8px;
+}
+
+@media (max-width: 599px) {
+  .page {
+    padding-top: var(--safe-top);
+    padding-bottom: calc(var(--safe-bottom) + 1rem);
+  }
+
+  .content {
+    padding: 16px;
+  }
+}
