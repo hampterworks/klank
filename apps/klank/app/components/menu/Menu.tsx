@@ -11,6 +11,7 @@ import {
   LogoIcon,
   NewPlaylistIcon,
   RefreshIcon,
+  ScalesIcon,
   Searchbar,
   ShuffleIcon,
   TargetIcon,
@@ -461,6 +462,7 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
           isDownloading={isDownloading}
           downloadError={downloadError}
           onSettingsClick={() => navigate('/settings')}
+          onHarmonyClick={() => navigate('/harmony')}
           isCollapsed={!isMenuExtended}
           hideGoToTab={isMobile}
           hideRefresh={isMobile}
@@ -551,6 +553,14 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
                     icon={<DownloadIcon />}
                     aria-label="Download tab"
                     onClick={handleRequestDownload}
+                  />
+                </ToolTip>
+                <ToolTip message="Scales & Chords">
+                  <Button
+                    iconButton
+                    icon={<ScalesIcon />}
+                    aria-label="Scales & Chords"
+                    onClick={() => { navigate('/harmony'); toggleMenu(false) }}
                   />
                 </ToolTip>
               </div>

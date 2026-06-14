@@ -53,17 +53,27 @@ describe('klank-storage migration and shape', () => {
     const raw = localStorageData['klank-storage']
     expect(raw).toBeDefined()
     const parsed = JSON.parse(raw) as { version: number; state: Record<string, unknown> }
-    expect(parsed.version).toBe(2)
+    expect(parsed.version).toBe(3)
     expect(parsed.state).not.toHaveProperty('playlists')
     expect(parsed.state).toHaveProperty('activePlaylistId')
     expect(parsed.state).toHaveProperty('activePlaylistIndex')
     // Sync cadence is persisted so it survives reloads.
     expect(parsed.state).toHaveProperty('syncSettings')
+    // Instrument and Harmony settings are persisted so they survive reloads.
+    expect(parsed.state).toHaveProperty('instrument')
+    expect(parsed.state).toHaveProperty('harmony')
   })
 
   it('migrate fills in default sync settings for older persisted state', async () => {
     const { useKlankStore } = await import('./store.js')
     const { syncSettings } = useKlankStore.getState()
     expect(syncSettings).toEqual({ enabled: true, intervalMinutes: 30, debounceMinutes: 5 })
+  })
+
+  it('migrate fills in default instrument and harmony settings for older persisted state', async () => {
+    const { useKlankStore } = await import('./store.js')
+    const { instrument, harmony } = useKlankStore.getState()
+    expect(instrument).toBe('guitar')
+    expect(harmony).toEqual({ rootPitch: 0, scaleId: 'ionian', quality: '', tab: 'scales' })
   })
 })

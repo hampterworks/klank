@@ -5,6 +5,7 @@ export * from './lib/chords';
 export * from './lib/chord-symbol';
 export * from './lib/chord-diagrams';
 export * from './lib/chord-theory';
+export * from './lib/scales';
 export * from './lib/sheet-lines';
 export * from './lib/userAgent';
 export * from './lib/download';

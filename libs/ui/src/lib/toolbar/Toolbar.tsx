@@ -6,6 +6,7 @@ import {
   FolderIcon,
   NewPlaylistIcon,
   RefreshIcon,
+  ScalesIcon,
   SettingsIcon,
   ShuffleIcon,
   TargetIcon,
@@ -35,6 +36,7 @@ type ToolbarProps = {
   isDownloading?: boolean
   downloadError?: string | null
   onSettingsClick?: () => void
+  onHarmonyClick?: () => void
   tree: TreeEntry[]
   isCollapsed?: boolean
   /** When true the "Go to Tab" button is hidden (it lives in the mobile drawer instead). */
@@ -53,6 +55,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   isDownloading,
   downloadError,
   onSettingsClick,
+  onHarmonyClick,
   tree,
   isCollapsed,
   hideGoToTab,
@@ -95,6 +98,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       <ToolTip message="Settings">
         <Button iconButton={true} icon={<SettingsIcon />} onClick={onSettingsClick} />
       </ToolTip>
+      {onHarmonyClick && (
+        <ToolTip message="Scales & Chords">
+          <Button iconButton={true} icon={<ScalesIcon />} onClick={onHarmonyClick} />
+        </ToolTip>
+      )}
       {!hideGoToTab && (
         <ToolTip message="Go to Tab">
           <Button
