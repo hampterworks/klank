@@ -173,6 +173,68 @@ fn probe_system_credentials(dir: &str) -> Result<(), Error> {
     Ok(())
 }
 
+/// Resolves credentials through the user's configured git credential helper
+/// (GCM, osxkeychain, …) via `git credential fill`.
+///
+/// We shell out ourselves rather than use git2's `Cred::credential_helper`
+/// because git2 spawns the helper subprocess with a visible console on Windows,
+/// which flashes a terminal window on every sync. Spawning it here lets us pass
+/// `CREATE_NO_WINDOW` so it stays invisible. `GIT_TERMINAL_PROMPT=0` keeps git
+/// from blocking on an interactive prompt when no helper is configured — it just
+/// exits non-zero and we fall through, exactly like the old code path. `git` is
+/// always present on desktop (the system-credential opt-in presupposes a
+/// configured git helper); on Android the spawn fails and we fall through.
+fn helper_credentials(url: &str, username: Option<&str>) -> Result<Cred, Error> {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+
+    let mut cmd = Command::new("git");
+    cmd.args(["credential", "fill"])
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    let mut child = cmd.spawn().map_err(|e| Error::from_str(&e.to_string()))?;
+    // `git credential fill` parses a `url=` line into protocol/host/path itself.
+    let mut input = format!("url={url}\n");
+    if let Some(u) = username.filter(|u| !u.is_empty()) {
+        input.push_str(&format!("username={u}\n"));
+    }
+    input.push('\n');
+    child
+        .stdin
+        .take()
+        .ok_or_else(|| Error::from_str("could not open git credential stdin"))?
+        .write_all(input.as_bytes())
+        .map_err(|e| Error::from_str(&e.to_string()))?;
+    let out = child.wait_with_output().map_err(|e| Error::from_str(&e.to_string()))?;
+    if !out.status.success() {
+        return Err(Error::from_str("git credential helper returned no credentials"));
+    }
+
+    let text = String::from_utf8_lossy(&out.stdout);
+    let mut user = None;
+    let mut pass = None;
+    for line in text.lines() {
+        if let Some(v) = line.strip_prefix("username=") {
+            user = Some(v.to_string());
+        } else if let Some(v) = line.strip_prefix("password=") {
+            pass = Some(v.to_string());
+        }
+    }
+    match (user, pass) {
+        (Some(u), Some(p)) => Cred::userpass_plaintext(&u, &p),
+        _ => Err(Error::from_str("git credential helper did not return a username/password")),
+    }
+}
+
 /// Builds credential callbacks: PAT first (Android + as an override), then the
 /// system credential helper (desktop).
 fn callbacks(app: tauri::AppHandle) -> RemoteCallbacks<'static> {
@@ -187,10 +249,8 @@ fn callbacks(app: tauri::AppHandle) -> RemoteCallbacks<'static> {
                     return Cred::userpass_plaintext(username.unwrap_or("git"), &token);
                 }
             }
-            if let Ok(config) = git2::Config::open_default() {
-                if let Ok(cred) = Cred::credential_helper(&config, url, username) {
-                    return Ok(cred);
-                }
+            if let Ok(cred) = helper_credentials(url, username) {
+                return Ok(cred);
             }
         }
         if allowed.contains(CredentialType::DEFAULT) {
@@ -209,10 +269,8 @@ fn callbacks_system_only() -> RemoteCallbacks<'static> {
     let mut cb = RemoteCallbacks::new();
     cb.credentials(move |url, username, allowed| {
         if allowed.contains(CredentialType::USER_PASS_PLAINTEXT) {
-            if let Ok(config) = git2::Config::open_default() {
-                if let Ok(cred) = Cred::credential_helper(&config, url, username) {
-                    return Ok(cred);
-                }
+            if let Ok(cred) = helper_credentials(url, username) {
+                return Ok(cred);
             }
         }
         if allowed.contains(CredentialType::DEFAULT) {

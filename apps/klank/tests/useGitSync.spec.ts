@@ -1,9 +1,17 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { renderHook } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, renderHook } from '@testing-library/react'
 import { useKlankStore, type SyncStatus } from '@klank/store'
-import type { FileService, GitService, SyncResult } from '@klank/platform-api'
+import { createGitService, type FileService, type GitService, type SyncResult } from '@klank/platform-api'
 import { clampMinutes, runGitSync, useGitSync } from '../app/useGitSync'
 import { describeSyncStatus } from '../app/routes/settings'
+
+// `createGitService` reaches into Tauri IPC, which jsdom can't provide. Default
+// to "not in Tauri" (rejects, leaving gitRef null) so the scheduling-guard tests
+// match production browser behaviour; individual tests override it.
+vi.mock('@klank/platform-api', async (importActual) => {
+  const actual = await importActual<typeof import('@klank/platform-api')>()
+  return { ...actual, createGitService: vi.fn(async () => { throw new Error('no tauri') }) }
+})
 
 const baseDir = '/tabs'
 
@@ -147,6 +155,11 @@ describe('describeSyncStatus', () => {
 })
 
 describe('useGitSync scheduling guard', () => {
+  // Default to "not in Tauri" so gitRef stays null and no real sync fires;
+  // re-set here because the afterEach restore clears the implementation.
+  beforeEach(() => {
+    vi.mocked(createGitService).mockImplementation(async () => { throw new Error('no tauri') })
+  })
   afterEach(() => vi.restoreAllMocks())
 
   it('clamps a corrupt persisted interval so setInterval never receives NaN', () => {
@@ -181,6 +194,38 @@ describe('useGitSync scheduling guard', () => {
     const spy = vi.spyOn(globalThis, 'setInterval')
     const { unmount } = renderHook(() => useGitSync())
     expect(spy).not.toHaveBeenCalled()
+    unmount()
+  })
+
+  it('throttles focus-driven syncs to the configured interval', async () => {
+    const sync = vi.fn(async () => okResult())
+    vi.mocked(createGitService).mockResolvedValue(makeGit({ sync }))
+    useKlankStore.setState({
+      baseDirectory: '/tabs',
+      syncSettings: { enabled: true, intervalMinutes: 30, debounceMinutes: 5 },
+    })
+
+    const base = 1_700_000_000_000
+    const now = vi.spyOn(Date, 'now')
+    now.mockReturnValue(base)
+    const { unmount } = renderHook(() => useGitSync())
+    // Let the async createGitService resolve so gitRef is wired up.
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)) })
+
+    // First focus has no prior sync to throttle against → syncs.
+    await act(async () => { window.dispatchEvent(new Event('focus')) })
+    expect(sync).toHaveBeenCalledTimes(1)
+
+    // A focus event 10 min later is inside the 30-min window → ignored.
+    now.mockReturnValue(base + 10 * 60_000)
+    await act(async () => { window.dispatchEvent(new Event('focus')) })
+    expect(sync).toHaveBeenCalledTimes(1)
+
+    // A focus event past the interval → syncs again.
+    now.mockReturnValue(base + 31 * 60_000)
+    await act(async () => { window.dispatchEvent(new Event('focus')) })
+    expect(sync).toHaveBeenCalledTimes(2)
+
     unmount()
   })
 })
