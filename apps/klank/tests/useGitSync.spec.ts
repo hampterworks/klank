@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useKlankStore, type SyncStatus } from '@klank/store'
 import type { FileService, GitService, SyncResult } from '@klank/platform-api'
-import { runGitSync } from '../app/useGitSync'
+import { clampMinutes, runGitSync } from '../app/useGitSync'
 import { describeSyncStatus } from '../app/routes/settings'
 
 const baseDir = '/tabs'
@@ -94,6 +94,19 @@ describe('runGitSync', () => {
       undefined,
     )
     expect(useKlankStore.getState().syncStatus.kind).toBe('other')
+  })
+})
+
+describe('clampMinutes', () => {
+  it('keeps valid values at or above the minimum', () => {
+    expect(clampMinutes(30, 1, 30)).toBe(30)
+    expect(clampMinutes(0, 1, 30)).toBe(1)
+  })
+
+  it('falls back when the value is not finite (corrupt persisted state)', () => {
+    expect(clampMinutes(NaN, 1, 30)).toBe(30)
+    expect(clampMinutes(Infinity, 0, 5)).toBe(5)
+    expect(clampMinutes(-Infinity, 0, 5)).toBe(5)
   })
 })
 

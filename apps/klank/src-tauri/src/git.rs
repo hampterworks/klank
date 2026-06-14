@@ -9,7 +9,7 @@
 use git2::{
     build::{CheckoutBuilder, RepoBuilder},
     BranchType, Commit, Cred, CredentialType, Error, ErrorCode, FetchOptions, Index, IndexConflict,
-    Oid, PushOptions, RemoteCallbacks, Repository, Signature, StatusOptions,
+    Oid, PushOptions, RemoteCallbacks, Repository, Signature, StatusOptions, Tree,
 };
 use serde::Serialize;
 use serde_json::{Map, Value};
@@ -718,10 +718,13 @@ fn rebase_onto_upstream(
     let upstream_tree = upstream_commit.tree()?;
 
     let mut merged = repo.merge_trees(&base_tree, &local_tree, &upstream_tree, None)?;
+    let local_newer = local_commit.time().seconds() >= upstream_commit.time().seconds(); // tie → local
+    // Resolve every path changed on BOTH sides ourselves — overriding libgit2's
+    // line-level text auto-merge so tabs follow whole-file "latest wins" and the
+    // settings file always gets the semantic JSON merge (not a fragile line merge).
+    resolve_dual_changes(&mut merged, repo, &base_tree, &local_tree, &upstream_tree, local_newer, result)?;
+    // Safety net for anything the tree diff couldn't name (e.g. non-UTF-8 paths).
     if merged.has_conflicts() {
-        // merge_trees: ours (stage 2) = local, theirs (stage 3) = upstream.
-        let local_newer =
-            local_commit.time().seconds() >= upstream_commit.time().seconds(); // tie → local
         resolve_conflicts(&mut merged, repo, local_newer, result)?;
     }
 
@@ -789,6 +792,96 @@ fn resolve_conflicts(
         }
     }
     Ok(())
+}
+
+/// Deterministically resolves every path changed on both sides relative to the
+/// merge base, overriding libgit2's text auto-merge. `.klank-settings.json` gets the
+/// semantic 3-way JSON merge; every other path (tabs included) is whole-file "latest
+/// commit time wins" — a deleted winning side leaves the path removed.
+fn resolve_dual_changes(
+    index: &mut Index,
+    repo: &Repository,
+    base_tree: &Tree,
+    local_tree: &Tree,
+    upstream_tree: &Tree,
+    local_newer: bool,
+    result: &mut SyncResult,
+) -> Result<(), Error> {
+    let local_changed = changed_paths(repo, base_tree, local_tree)?;
+    let remote_changed = changed_paths(repo, base_tree, upstream_tree)?;
+    for path in local_changed.intersection(&remote_changed) {
+        let p = Path::new(path);
+        let local_entry = local_tree.get_path(p).ok();
+        let remote_entry = upstream_tree.get_path(p).ok();
+        // Both sides converged on identical content → merge_trees already has it.
+        if let (Some(l), Some(r)) = (&local_entry, &remote_entry) {
+            if l.id() == r.id() {
+                continue;
+            }
+        }
+        result.conflicts_resolved += 1;
+        index.remove_path(p)?;
+
+        if is_settings_path(path) {
+            let base = blob_bytes_at(repo, base_tree, p)?;
+            let local_b = blob_bytes_at(repo, local_tree, p)?;
+            let remote_b = blob_bytes_at(repo, upstream_tree, p)?;
+            if let Some(bytes) =
+                merge_settings_json(base.as_deref(), local_b.as_deref(), remote_b.as_deref(), local_newer)
+            {
+                let oid = repo.blob(&bytes)?;
+                index.add(&make_index_entry(path, oid, 0o100644))?;
+                continue;
+            }
+            // All sides unparseable — fall through to whole-file latest-wins.
+        }
+
+        let winner = if local_newer { local_entry.as_ref() } else { remote_entry.as_ref() };
+        if let Some(e) = winner {
+            index.add(&make_index_entry(path, e.id(), e.filemode() as u32))?;
+        }
+        // else: the winning side deleted the file → leave it removed.
+    }
+    Ok(())
+}
+
+/// Paths that differ between `base` and `other` (added, modified, or deleted).
+fn changed_paths(repo: &Repository, base: &Tree, other: &Tree) -> Result<BTreeSet<String>, Error> {
+    let diff = repo.diff_tree_to_tree(Some(base), Some(other), None)?;
+    let mut out = BTreeSet::new();
+    for d in diff.deltas() {
+        for f in [d.new_file().path(), d.old_file().path()].into_iter().flatten() {
+            if let Some(s) = f.to_str() {
+                out.insert(s.to_string());
+            }
+        }
+    }
+    Ok(out)
+}
+
+fn blob_bytes_at(repo: &Repository, tree: &Tree, path: &Path) -> Result<Option<Vec<u8>>, Error> {
+    match tree.get_path(path) {
+        Ok(entry) => Ok(Some(repo.find_blob(entry.id())?.content().to_vec())),
+        Err(_) => Ok(None),
+    }
+}
+
+/// Builds a fresh stage-0 index entry for `path` pointing at an existing blob.
+fn make_index_entry(path: &str, oid: Oid, mode: u32) -> git2::IndexEntry {
+    git2::IndexEntry {
+        ctime: git2::IndexTime::new(0, 0),
+        mtime: git2::IndexTime::new(0, 0),
+        dev: 0,
+        ino: 0,
+        mode,
+        uid: 0,
+        gid: 0,
+        file_size: 0,
+        id: oid,
+        flags: 0,
+        flags_extended: 0,
+        path: path.as_bytes().to_vec(),
+    }
 }
 
 /// Rebuilds an index entry at merge stage 0 (`IndexEntry` is not `Clone` in git2).
@@ -1170,6 +1263,35 @@ mod tests {
     }
 
     #[test]
+    fn rebase_same_tab_disjoint_lines_takes_whole_latest() {
+        // Both sides edit *different lines* of the same tab. libgit2's text merge
+        // would splice them; our whole-file "latest wins" must take the newer side
+        // verbatim instead.
+        let (dir, repo) = temp_repo();
+        write(&dir, "song.tab.txt", "L1\nL2\nL3\n");
+        let base = commit_all(&repo, "base", 1000);
+        repo.branch("local", &repo.find_commit(base).unwrap(), false).unwrap();
+
+        write(&dir, "song.tab.txt", "R1\nL2\nL3\n"); // remote edits line 1
+        let main_oid = commit_all(&repo, "remote", 2000);
+
+        switch_to_local(&repo);
+        write(&dir, "song.tab.txt", "L1\nL2\nL3-local\n"); // local edits line 3, newer
+        commit_all(&repo, "local", 5000);
+
+        let mut result = SyncResult::default();
+        rebase_onto_upstream(&repo, "local", main_oid, &mut result).unwrap();
+        assert_eq!(result.conflicts_resolved, 1);
+        assert_eq!(
+            std::fs::read_to_string(dir.join("song.tab.txt")).unwrap(),
+            "L1\nL2\nL3-local\n",
+            "newer side wins the whole file — no line splicing",
+        );
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
     fn rebase_clean_merge_keeps_both_sides() {
         let (dir, repo) = temp_repo();
         write(&dir, "a.tab.txt", "A0");
@@ -1278,6 +1400,25 @@ mod tests {
 
         let other = Error::from_str("some merge weirdness");
         assert_eq!(classify_error(&other), "other");
+    }
+
+    #[test]
+    fn json_merge_same_playlist_edited_both_sides_takes_newer() {
+        let base = br#"{"playlists":[{"id":"1","name":"A","paths":[],"createdAt":1}]}"#.as_slice();
+        let local = br#"{"playlists":[{"id":"1","name":"A","paths":["x"],"createdAt":1}]}"#.as_slice();
+        let remote = br#"{"playlists":[{"id":"1","name":"A","paths":["y"],"createdAt":1}]}"#.as_slice();
+
+        let merged = merge_settings_json(Some(base), Some(local), Some(remote), true).unwrap();
+        let v: Value = serde_json::from_slice(&merged).unwrap();
+        assert_eq!(v["playlists"][0]["paths"], serde_json::json!(["x"]), "newer side's playlist wins");
+    }
+
+    #[test]
+    fn current_branch_name_handles_unborn_head() {
+        let (dir, repo) = temp_repo(); // freshly init'd: HEAD is unborn
+        let name = current_branch_name(&repo).unwrap();
+        assert!(!name.is_empty(), "unborn HEAD still yields a default branch name");
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]

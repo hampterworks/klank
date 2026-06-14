@@ -4,6 +4,10 @@ import { createGitService, type FileService, type GitService } from '@klank/plat
 
 const MINUTE_MS = 60_000
 
+/** Coerces a possibly-corrupt persisted minute value to a safe number. */
+export const clampMinutes = (value: number, min: number, fallback: number): number =>
+  Number.isFinite(value) ? Math.max(min, value) : fallback
+
 /**
  * Runs one sync: updates `syncStatus`, delegates to the Rust `git_sync`, and
  * re-hydrates disk-backed state when the working tree changed. Shared by the
@@ -120,7 +124,7 @@ export function useGitSync(onChanged?: () => void): void {
   // Periodic timer.
   useEffect(() => {
     if (!enabled) return
-    const id = setInterval(trigger, Math.max(1, intervalMinutes) * MINUTE_MS)
+    const id = setInterval(trigger, clampMinutes(intervalMinutes, 1, 30) * MINUTE_MS)
     return () => clearInterval(id)
   }, [enabled, intervalMinutes, trigger])
 
@@ -130,7 +134,7 @@ export function useGitSync(onChanged?: () => void): void {
     let timer: ReturnType<typeof setTimeout> | undefined
     const unsubscribe = onTabsChanged(() => {
       if (timer) clearTimeout(timer)
-      timer = setTimeout(trigger, Math.max(0, debounceMinutes) * MINUTE_MS)
+      timer = setTimeout(trigger, clampMinutes(debounceMinutes, 0, 5) * MINUTE_MS)
     })
     return () => {
       unsubscribe()
