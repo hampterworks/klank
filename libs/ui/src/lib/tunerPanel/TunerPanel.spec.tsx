@@ -74,8 +74,16 @@ describe('TunerPanel — string button count', () => {
     'guitar-standard': 6,
     'guitar-drop-d': 6,
     'guitar-half-step-down': 6,
+    'guitar-full-step-down': 6,
+    'guitar-drop-c': 6,
+    'guitar-open-g': 6,
+    'guitar-open-d': 6,
+    'guitar-open-e': 6,
+    'guitar-dadgad': 6,
     'bass-standard': 4,
     'bass-5-string': 5,
+    'bass-drop-d': 4,
+    'bass-half-step-down': 4,
   }
 
   it('guitar-standard shows 6 string buttons (default)', () => {

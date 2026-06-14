@@ -4,8 +4,8 @@
    ============================================================ */
 
 .panel {
-  min-width: 220px;
-  max-width: 280px;
+  min-width: 300px;
+  max-width: 360px;
   background: var(--klank-color-background);
   border: 1px solid var(--klank-color-border);
   border-radius: 6px;
@@ -148,6 +148,7 @@
   font-weight: 400;
   padding: 2px 4px;
   cursor: pointer;
+  white-space: nowrap;
 
   &:hover:not(:disabled) {
     background: var(--klank-color-highlight);
@@ -163,14 +164,14 @@
 
 .stringButtons {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
+  overflow-x: auto;
 }
 
 .stringBtn {
-  /* ~44px wide; flex-basis so 6 fit in 280px minus padding */
-  flex: 1 1 auto;
-  min-width: 40px;
+  flex: 1 0 0;
+  min-width: 36px;
   padding: 0.5rem 0;
   border-radius: 4px;
   background: var(--klank-color-secondary-background);
@@ -210,4 +211,99 @@
 /* visibility:hidden keeps it in the a11y tree but hides it visually */
 .statusHidden {
   visibility: hidden;
+}
+
+/* ── Tuning row with delete button ───────────────────────── */
+
+.tuningRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.deleteBtn {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  padding: 0 2px;
+  color: var(--klank-color-text);
+  opacity: 0.6;
+  font-size: 0.75rem;
+  text-decoration: underline;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+/* ── Custom tuning form ──────────────────────────────────── */
+
+.customForm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--klank-color-border);
+  border-radius: 4px;
+  background: var(--klank-color-secondary-background);
+}
+
+.customFormInput {
+  width: 100%;
+  border: 1px solid var(--klank-color-border);
+  border-radius: 4px;
+  background: var(--klank-color-secondary-background);
+  color: var(--klank-color-text);
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  box-sizing: border-box;
+}
+
+.customFormPitches {
+  font-size: 0.6875rem;
+  color: var(--klank-color-text);
+  opacity: 0.7;
+}
+
+.customFormActions {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.customFormBtn {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--klank-color-secondary-background);
+  color: var(--klank-color-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant: all-small-caps;
+  cursor: pointer;
+  border: 1px solid var(--klank-color-border);
+
+  &:hover {
+    background: var(--klank-color-highlight);
+  }
+}
+
+.addCustomBtn {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--klank-color-text);
+  opacity: 0.7;
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-decoration: underline;
+
+  &:hover {
+    opacity: 1;
+  }
 }

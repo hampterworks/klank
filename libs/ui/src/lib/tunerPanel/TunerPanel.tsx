@@ -3,11 +3,16 @@ import ReactDOM from 'react-dom'
 import {
   createTunerEngine,
   tuningStrings,
+  tuningStringLabel,
+  stringFrequency,
   TUNINGS,
   TUNING_NAMES,
   type TunerEngine,
   type TuningName,
+  type TuningString,
 } from '@klank/audio'
+import { useKlankStore } from '@klank/store'
+import type { CustomTuning } from '@klank/store'
 import { CloseIcon } from '../icons/CloseIcon.js'
 import { type PopoverPosition } from '../hooks/usePopoverPosition.js'
 import { usePopoverChrome, popoverStyle } from '../hooks/usePopoverChrome.js'
@@ -32,6 +37,27 @@ type TunerPanelProps = {
 }
 
 // ---------------------------------------------------------------------------
+// Helper — get strings for built-in or custom tuning
+// ---------------------------------------------------------------------------
+
+function getStringsForTuning(
+  tuning: TuningName | string,
+  customTunings: CustomTuning[],
+): { label: string; frequency: number; pitchClass: number; octave: number }[] {
+  if (tuning in TUNINGS) {
+    return tuningStrings(tuning as TuningName)
+  }
+  const custom = customTunings.find((c) => c.id === tuning)
+  if (!custom) return []
+  return custom.strings.map((s: TuningString) => ({
+    label: tuningStringLabel(s),
+    frequency: stringFrequency(s),
+    pitchClass: s.pitchClass,
+    octave: s.octave,
+  }))
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -42,9 +68,15 @@ export const TunerPanel: React.FC<TunerPanelProps> = ({
   engineFactory,
 }) => {
   const [instrument, setInstrument] = useState<Instrument>('guitar')
-  const [tuning, setTuning] = useState<TuningName>('guitar-standard')
+  const [tuning, setTuning] = useState<TuningName | string>('guitar-standard')
   const [soundingIndex, setSoundingIndex] = useState<number | null>(null)
   const [audioAvailable, setAudioAvailable] = useState<boolean | null>(null)
+
+  // Custom tuning form state
+  const [showCustomForm, setShowCustomForm] = useState(false)
+  const [customName, setCustomName] = useState('')
+
+  const { customTunings, addCustomTuning, deleteCustomTuning } = useKlankStore()
 
   const panelRef = useRef<HTMLDivElement>(null)
   const engineRef = useRef<TunerEngine | null>(null)
@@ -81,6 +113,9 @@ export const TunerPanel: React.FC<TunerPanelProps> = ({
   // Pass handleClose so that closing via Escape or click-outside also stops the engine.
   usePopoverChrome(panelRef, triggerRef, handleClose)
 
+  // Current strings (built-in or custom)
+  const strings = getStringsForTuning(tuning, customTunings)
+
   // Panel-scoped keyboard handler (digit keys only — Escape is in usePopoverChrome)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -99,7 +134,6 @@ export const TunerPanel: React.FC<TunerPanelProps> = ({
         ) return
         e.preventDefault()
         e.stopPropagation()
-        const strings = tuningStrings(tuning)
         const idx = digit - 1
         if (idx < strings.length) {
           handleStringClick(idx, strings[idx].frequency)
@@ -109,7 +143,7 @@ export const TunerPanel: React.FC<TunerPanelProps> = ({
     document.addEventListener('keydown', handleKeyDown, true)
     return () => document.removeEventListener('keydown', handleKeyDown, true)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tuning, soundingIndex])
+  }, [tuning, soundingIndex, strings])
 
   const handleStringClick = useCallback((idx: number, frequency: number) => {
     const engine = engineRef.current
@@ -133,12 +167,36 @@ export const TunerPanel: React.FC<TunerPanelProps> = ({
     setSoundingIndex(null)
     setInstrument(inst)
     setTuning(INSTRUMENT_DEFAULTS[inst])
+    setShowCustomForm(false)
   }
 
   const handleTuningChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     engineRef.current?.stop()
     setSoundingIndex(null)
-    setTuning(e.target.value as TuningName)
+    setTuning(e.target.value)
+    setShowCustomForm(false)
+  }
+
+  const handleDeleteCustom = () => {
+    const id = tuning
+    deleteCustomTuning(id)
+    setTuning(INSTRUMENT_DEFAULTS[instrument])
+    engineRef.current?.stop()
+    setSoundingIndex(null)
+  }
+
+  const handleSaveCustom = () => {
+    if (!customName.trim()) return
+    const newTuning: CustomTuning = {
+      id: crypto.randomUUID(),
+      name: customName.trim(),
+      instrument,
+      strings: strings.map((s) => ({ pitchClass: s.pitchClass, octave: s.octave })),
+    }
+    addCustomTuning(newTuning)
+    setTuning(newTuning.id)
+    setCustomName('')
+    setShowCustomForm(false)
   }
 
   // Tunings filtered to current instrument
@@ -146,10 +204,18 @@ export const TunerPanel: React.FC<TunerPanelProps> = ({
     (name) => TUNINGS[name].instrument === instrument,
   )
 
-  // Current strings
-  const strings = tuningStrings(tuning)
+  // Custom tunings for current instrument
+  const instrumentCustomTunings = customTunings.filter(
+    (c) => c.instrument === instrument,
+  )
+
+  // Is the currently selected tuning a custom one?
+  const selectedCustomTuning = customTunings.find((c) => c.id === tuning) ?? null
 
   const soundingLabel = soundingIndex !== null ? strings[soundingIndex]?.label : null
+
+  // Pitch display for the custom form (shows current selection's string labels)
+  const pitchDisplay = strings.map((s) => s.label).join(' ')
 
   if (!position) return null
 
@@ -216,7 +282,7 @@ export const TunerPanel: React.FC<TunerPanelProps> = ({
         {/* Tuning select */}
         <div className={styles.row}>
           <span className={styles.rowLabel}>Tuning</span>
-          <div className={styles.rowControls}>
+          <div className={styles.tuningRow}>
             <select
               className={styles.select}
               aria-label="Tuning"
@@ -229,7 +295,25 @@ export const TunerPanel: React.FC<TunerPanelProps> = ({
                   {TUNINGS[name].label}
                 </option>
               ))}
+              {instrumentCustomTunings.length > 0 && (
+                <optgroup label="Custom">
+                  {instrumentCustomTunings.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
+            {selectedCustomTuning !== null && (
+              <button
+                className={styles.deleteBtn}
+                aria-label={`Delete custom tuning ${selectedCustomTuning.name}`}
+                onClick={handleDeleteCustom}
+              >
+                Delete
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -264,8 +348,52 @@ export const TunerPanel: React.FC<TunerPanelProps> = ({
             .join(' ')}
           aria-live="polite"
         >
-          {soundingLabel !== null ? `Sounding: ${soundingLabel}` : ' '}
+          {soundingLabel !== null ? `Sounding: ${soundingLabel}` : ' '}
         </p>
+      </div>
+
+      {/* Custom tuning section */}
+      <div className={styles.section}>
+        {!showCustomForm ? (
+          <button
+            className={styles.addCustomBtn}
+            onClick={() => setShowCustomForm(true)}
+            aria-label="New custom tuning"
+          >
+            + New custom tuning
+          </button>
+        ) : (
+          <div className={styles.customForm}>
+            <input
+              className={styles.customFormInput}
+              type="text"
+              aria-label="Custom tuning name"
+              placeholder="Name (e.g. My Open A)"
+              maxLength={30}
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+            />
+            <span className={styles.customFormPitches}>{pitchDisplay}</span>
+            <div className={styles.customFormActions}>
+              <button
+                className={styles.customFormBtn}
+                onClick={() => {
+                  setShowCustomForm(false)
+                  setCustomName('')
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className={styles.customFormBtn}
+                onClick={handleSaveCustom}
+                disabled={!customName.trim()}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>,
     document.body,

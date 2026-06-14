@@ -11,6 +11,8 @@ export default defineConfig(({ mode }) => ({
     conditions: ['@klank/source'],
     alias: {
       '@klank/platform-api': path.resolve(__dirname, '../../libs/platform-api/src/index.ts'),
+      '@klank/store': path.resolve(__dirname, '../../libs/store/src/index.ts'),
+      '@klank/audio': path.resolve(__dirname, '../../libs/audio/src/index.ts'),
     },
   },
   plugins: [
