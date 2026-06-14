@@ -3,7 +3,6 @@ import * as React from 'react'
 import {
   Button,
   DownloadIcon,
-  FolderIcon,
   NewPlaylistIcon,
   RefreshIcon,
   ScalesIcon,
@@ -27,9 +26,7 @@ const goToActiveTab = () => {
 type TreeEntry = { path: string }
 
 type ToolbarProps = {
-  getDirectoryPath?: () => Promise<string | null>
   setNeedsUpdate: React.Dispatch<React.SetStateAction<boolean>>
-  setBaseDirectory: (directory: string) => void
   setTabPath: (path: string) => void
   onRequestDownload?: () => void
   onRequestCreatePlaylist?: () => void
@@ -41,13 +38,9 @@ type ToolbarProps = {
   isCollapsed?: boolean
   /** When true the "Go to Tab" button is hidden (it lives in the mobile drawer instead). */
   hideGoToTab?: boolean
-  /** When true the Refresh button is hidden (it lives in the mobile drawer instead). */
-  hideRefresh?: boolean
 } & React.ComponentPropsWithRef<'li'>
 
 export const Toolbar: React.FC<ToolbarProps> = ({
-  setBaseDirectory,
-  getDirectoryPath,
   setNeedsUpdate,
   setTabPath,
   onRequestDownload,
@@ -59,16 +52,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   tree,
   isCollapsed,
   hideGoToTab,
-  hideRefresh,
   ...props
 }) => {
-  const handleBaseDirectoryChange = () => {
-    if (getDirectoryPath)
-      getDirectoryPath()
-        .then((path) => path !== null && setBaseDirectory(path))
-        .catch((error) => console.error('Folder picker failed:', error))
-  }
-
   const handleRandomPathUpdate = () => {
     if (!tree.length) return
     const randomItem = tree[Math.floor(Math.random() * tree.length)]
@@ -77,24 +62,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   return (
     <li className={`${styles.container}${isCollapsed ? ' ' + styles.collapsed : ''}`} {...props}>
-      {getDirectoryPath && (
-        <ToolTip message="Change Folder">
-          <Button
-            onClick={() => handleBaseDirectoryChange()}
-            iconButton={true}
-            icon={<FolderIcon />}
-          />
-        </ToolTip>
-      )}
-      {!hideRefresh && (
-        <ToolTip message="Refresh">
-          <Button
-            onClick={() => setNeedsUpdate(true)}
-            iconButton={true}
-            icon={<RefreshIcon />}
-          />
-        </ToolTip>
-      )}
       <ToolTip message="Settings">
         <Button iconButton={true} icon={<SettingsIcon />} onClick={onSettingsClick} />
       </ToolTip>

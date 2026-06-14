@@ -124,6 +124,10 @@
     }
   }
 
+  .menuAction {
+    /* inherits all .contextMenu button styles */
+  }
+
   .dangerAction:hover,
   .dangerAction:focus {
     background: var(--klank-color-fail);

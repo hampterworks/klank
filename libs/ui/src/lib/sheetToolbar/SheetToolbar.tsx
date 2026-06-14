@@ -240,12 +240,14 @@ export const SheetToolbar: React.FC<SheetToolbarProps> = ({
             icon={isScrolling ? <StopIcon /> : <PlayIcon />}
             onClick={() => setTabIsScrolling(!isScrolling)}
           />
-          <Button
-            label={mode === 'Edit' ? 'save' : 'edit'}
-            icon={<EditIcon />}
-            onClick={onEditToggle}
-            className={mode === 'Edit' ? styles.activeButton : undefined}
-          />
+          {mode === 'Edit' && (
+            <Button
+              label="save"
+              icon={<EditIcon />}
+              onClick={onEditToggle}
+              className={styles.activeButton}
+            />
+          )}
         </div>
       </div>
 
