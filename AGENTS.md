@@ -35,6 +35,7 @@ apps/klank/src-tauri/capabilities/  Tauri permission declarations (JSON) - one f
 libs/ui/src/                        Shared React components (@klank/ui)
 libs/store/src/lib/store.ts         Zustand store with persisted TabSetting (@klank/store)
 libs/platform-api/src/lib/          FileService, git (invoke-based), chords, download, userAgent (@klank/platform-api)
+libs/audio/src/                     Metronome + tuner logic and Web Audio engines (@klank/audio)
 docs/agents/                        Agent architecture + setup conventions
 .claude/agents/                     Subagent identities (self-contained, routed by description)
 .claude/skills/                     Procedure-skills (auto-discovered by Claude, Copilot, Cursor)

@@ -15,7 +15,7 @@ The Tauri application. Contains the React frontend under `app/` and the Rust bac
 Two-pane layout:
 
 - **Menu sidebar** (`components/menu/Menu.tsx`) — left pane, 400 px expanded, collapses to 52 px. Contains the logo, toolbar (folder picker, refresh, settings, go-to-tab, random, download), the artist-grouped file tree, and the search bar.
-- **Player** (`components/player/Player.tsx`) — right pane, `1fr`. Contains `SheetToolbar` (font size, transpose, scroll speed, play/stop, edit mode toggle) and the `Sheet` tab renderer.
+- **Player** (`components/player/Player.tsx`) — right pane, `1fr`. Contains `SheetToolbar` (font size, transpose, scroll speed, play/stop, edit mode toggle, metronome popover `m`, tuner popover `t`) and the `Sheet` tab renderer.
 
 ## FileService Initialization
 
