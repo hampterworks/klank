@@ -10,7 +10,7 @@ const DEFAULT_PROPS = {
   transpose: 0,
   tabScrollSpeed: 3,
   isScrolling: false,
-  mode: 'Read' as const,
+  mode: 'Read' as 'Read' | 'Edit',
   setTabFontSize: vi.fn(),
   setTabTranspose: vi.fn(),
   setTabScrollSpeed: vi.fn(),
@@ -37,9 +37,14 @@ describe('SheetToolbar — existing functionality', () => {
     expect(screen.getByRole('button', { name: /play/i })).toBeTruthy()
   })
 
-  it('renders edit button', () => {
+  it('does not render save button in Read mode', () => {
     renderToolbar()
-    expect(screen.getByRole('button', { name: /edit/i })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /save/i })).toBeNull()
+  })
+
+  it('renders save button in Edit mode', () => {
+    renderToolbar({ mode: 'Edit' })
+    expect(screen.getByRole('button', { name: /save/i })).toBeTruthy()
   })
 })
 

@@ -21,6 +21,7 @@ type RenderTreeOptions = {
   onAddToPlaylist?: (path: string) => void
   activePlaylistPaths?: string[]
   onDeleteTab?: (path: string) => void
+  onEditTab?: (path: string) => void
   onContextMenuRequest: (path: string, pos: { top: number; left: number }) => void
   songButtonRefs: React.MutableRefObject<Map<string, HTMLButtonElement | null>>
 }
@@ -36,6 +37,7 @@ const renderTreeStructure = (opts: RenderTreeOptions) => {
     onAddToPlaylist,
     activePlaylistPaths,
     onDeleteTab,
+    onEditTab,
     onContextMenuRequest,
     songButtonRefs,
   } = opts
@@ -81,10 +83,10 @@ const renderTreeStructure = (opts: RenderTreeOptions) => {
                       if (el === null) songButtonRefs.current.delete(item.path)
                       else songButtonRefs.current.set(item.path, el)
                     }}
-                    aria-haspopup={onDeleteTab ? 'menu' : undefined}
+                    aria-haspopup={(onDeleteTab || onEditTab) ? 'menu' : undefined}
                     onClick={() => setTabPath(item.path)}
                     onContextMenu={(e) => {
-                      if (!onDeleteTab) return
+                      if (!onDeleteTab && !onEditTab) return
                       e.preventDefault()
                       e.stopPropagation()
                       onContextMenuRequest(item.path, { top: e.clientY, left: e.clientX })
@@ -129,6 +131,7 @@ type FileTreeViewProps = {
   onAddToPlaylist?: (path: string) => void
   activePlaylistPaths?: string[]
   onDeleteTab?: (path: string) => void
+  onEditTab?: (path: string) => void
 } & React.ComponentPropsWithRef<'ul'>
 
 export const FileTreeView: React.FC<FileTreeViewProps> = ({
@@ -139,10 +142,12 @@ export const FileTreeView: React.FC<FileTreeViewProps> = ({
   onAddToPlaylist,
   activePlaylistPaths,
   onDeleteTab,
+  onEditTab,
   ...props
 }) => {
   const [collapsedArtists, setCollapsedArtists] = useState<string[]>([])
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+  const editItemRef = useRef<HTMLButtonElement | null>(null)
   const deleteItemRef = useRef<HTMLButtonElement | null>(null)
   const songButtonRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map())
 
@@ -184,17 +189,25 @@ export const FileTreeView: React.FC<FileTreeViewProps> = ({
     }
   }, [contextMenu])
 
-  // Move focus into the Delete menu item when menu opens
+  // Move focus into the first available menu item when menu opens
   useEffect(() => {
     if (contextMenu !== null) {
       requestAnimationFrame(() => {
-        deleteItemRef.current?.focus()
+        ;(editItemRef.current ?? deleteItemRef.current)?.focus()
       })
     }
   }, [contextMenu])
 
   const handleContextMenuRequest = (path: string, pos: { top: number; left: number }) => {
     setContextMenu({ path, pos })
+  }
+
+  const handleEditActivate = (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation()
+    if (!contextMenu || !onEditTab) return
+    const path = contextMenu.path
+    setContextMenu(null)
+    onEditTab(path)
   }
 
   const handleDeleteActivate = (e: React.MouseEvent | React.KeyboardEvent) => {
@@ -205,7 +218,7 @@ export const FileTreeView: React.FC<FileTreeViewProps> = ({
     onDeleteTab(path)
   }
 
-  const contextMenuPortal = contextMenu !== null && onDeleteTab
+  const contextMenuPortal = contextMenu !== null && (onDeleteTab || onEditTab)
     ? createPortal(
         <div
           className={styles.contextMenu}
@@ -213,27 +226,52 @@ export const FileTreeView: React.FC<FileTreeViewProps> = ({
           role="menu"
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            ref={deleteItemRef}
-            role="menuitem"
-            className={styles.dangerAction}
-            onClick={handleDeleteActivate}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                handleDeleteActivate(e)
-              }
-              if (e.key === 'Escape') {
-                const path = contextMenu.path
-                setContextMenu(null)
-                requestAnimationFrame(() => {
-                  songButtonRefs.current.get(path)?.focus()
-                })
-              }
-            }}
-          >
-            Delete
-          </button>
+          {onEditTab && (
+            <button
+              ref={editItemRef}
+              role="menuitem"
+              className={styles.menuAction}
+              onClick={handleEditActivate}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleEditActivate(e)
+                }
+                if (e.key === 'Escape') {
+                  const path = contextMenu.path
+                  setContextMenu(null)
+                  requestAnimationFrame(() => {
+                    songButtonRefs.current.get(path)?.focus()
+                  })
+                }
+              }}
+            >
+              Edit
+            </button>
+          )}
+          {onDeleteTab && (
+            <button
+              ref={deleteItemRef}
+              role="menuitem"
+              className={styles.dangerAction}
+              onClick={handleDeleteActivate}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleDeleteActivate(e)
+                }
+                if (e.key === 'Escape') {
+                  const path = contextMenu.path
+                  setContextMenu(null)
+                  requestAnimationFrame(() => {
+                    songButtonRefs.current.get(path)?.focus()
+                  })
+                }
+              }}
+            >
+              Delete
+            </button>
+          )}
         </div>,
         document.body
       )
@@ -252,6 +290,7 @@ export const FileTreeView: React.FC<FileTreeViewProps> = ({
           onAddToPlaylist,
           activePlaylistPaths,
           onDeleteTab,
+          onEditTab,
           onContextMenuRequest: handleContextMenuRequest,
           songButtonRefs,
         })}
