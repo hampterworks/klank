@@ -74,6 +74,10 @@ export function useGitSync(onChanged?: () => void): void {
   const gitRef = useRef<GitService | null>(null)
   const runningRef = useRef(false)
   const queuedRef = useRef(false)
+  // Epoch ms of the last sync we kicked off. Lets opportunistic triggers
+  // (window focus/visibility) throttle themselves to the configured interval
+  // instead of re-syncing on every focus or resize.
+  const lastSyncAtRef = useRef(0)
   // Always-latest sync implementation, so the stable `trigger` never goes stale.
   const runSyncRef = useRef<() => Promise<void>>(async () => undefined)
   const onChangedRef = useRef(onChanged)
@@ -101,6 +105,7 @@ export function useGitSync(onChanged?: () => void): void {
       return
     }
     runningRef.current = true
+    lastSyncAtRef.current = Date.now()
     try {
       await runGitSync(git, baseDirectory, fileService, onChangedRef.current)
     } finally {
@@ -142,12 +147,20 @@ export function useGitSync(onChanged?: () => void): void {
     }
   }, [enabled, debounceMinutes, trigger])
 
-  // Sync when the user returns to the app.
+  // Sync when the user returns to the app — but throttled to the configured
+  // interval. Focus/visibility (and window resize/move, which the webview
+  // surfaces as a focus event) fire constantly; without this gate every one of
+  // them would start a sync. The periodic timer and post-edit debounce above
+  // still sync on their own cadence.
   useEffect(() => {
     if (!enabled || typeof window === 'undefined') return
-    const onFocus = () => trigger()
+    const gapMs = clampMinutes(intervalMinutes, 1, 30) * MINUTE_MS
+    const maybeTrigger = () => {
+      if (Date.now() - lastSyncAtRef.current >= gapMs) trigger()
+    }
+    const onFocus = () => maybeTrigger()
     const onVisible = () => {
-      if (document.visibilityState === 'visible') trigger()
+      if (document.visibilityState === 'visible') maybeTrigger()
     }
     window.addEventListener('focus', onFocus)
     document.addEventListener('visibilitychange', onVisible)
@@ -155,5 +168,5 @@ export function useGitSync(onChanged?: () => void): void {
       window.removeEventListener('focus', onFocus)
       document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [enabled, trigger])
+  }, [enabled, intervalMinutes, trigger])
 }
