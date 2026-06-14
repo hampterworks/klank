@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => ({
   root: __dirname,
   cacheDir: '../../node_modules/.vite/libs/ui',
   resolve: {
+    conditions: ['@klank/source'],
     alias: {
       '@klank/platform-api': path.resolve(__dirname, '../../libs/platform-api/src/index.ts'),
     },

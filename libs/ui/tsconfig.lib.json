@@ -14,6 +14,9 @@
   "references": [
     {
       "path": "../platform-api/tsconfig.lib.json"
+    },
+    {
+      "path": "../audio/tsconfig.lib.json"
     }
   ],
   "exclude": [

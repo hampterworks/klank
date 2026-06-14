@@ -1,0 +1,213 @@
+/* ============================================================
+   Tuner Panel — CSS Module
+   All colors reference --klank-color-* tokens only.
+   ============================================================ */
+
+.panel {
+  min-width: 220px;
+  max-width: 280px;
+  background: var(--klank-color-background);
+  border: 1px solid var(--klank-color-border);
+  border-radius: 6px;
+  box-shadow:
+    0 4px 12px var(--klank-color-divider),
+    0 1px 3px var(--klank-color-divider);
+  padding: 16px;
+  color: var(--klank-color-text);
+  font-size: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.title {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  font-variant: all-small-caps;
+  color: var(--klank-color-text);
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--klank-color-text);
+  line-height: 1;
+
+  &:hover {
+    background: var(--klank-color-highlight);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* ── Audio unavailable ──────────────────────────────────── */
+
+.audioUnavailable {
+  font-size: 0.75rem;
+  color: var(--klank-color-text);
+  opacity: 0.7;
+  padding: 4px 0 8px;
+  text-align: center;
+}
+
+/* ── Sections ───────────────────────────────────────────── */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--klank-color-divider);
+
+  &:first-of-type {
+    border-top: none;
+    padding-top: 0;
+  }
+}
+
+/* ── Row (label + controls) ─────────────────────────────── */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rowLabel {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  font-variant: all-small-caps;
+  color: var(--klank-color-text);
+  opacity: 0.7;
+  flex: 0 0 auto;
+  min-width: 64px;
+}
+
+.rowControls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+/* ── Radio group ─────────────────────────────────────────── */
+
+.radioGroup {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.radioBtn {
+  flex: 1;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--klank-color-secondary-background);
+  color: var(--klank-color-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant: all-small-caps;
+  cursor: pointer;
+  text-align: center;
+
+  &:hover {
+    background: var(--klank-color-highlight);
+  }
+}
+
+.radioBtnActive {
+  background: var(--klank-color-highlight);
+  border: 1px solid var(--klank-color-text);
+}
+
+/* ── Select ──────────────────────────────────────────────── */
+
+.select {
+  width: 100%;
+  border: 1px solid var(--klank-color-border);
+  border-radius: 4px;
+  background: var(--klank-color-secondary-background);
+  color: var(--klank-color-text);
+  font-size: 0.75rem;
+  font-weight: 400;
+  padding: 2px 4px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--klank-color-highlight);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+/* ── String buttons ──────────────────────────────────────── */
+
+.stringButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.stringBtn {
+  /* ~44px wide; flex-basis so 6 fit in 280px minus padding */
+  flex: 1 1 auto;
+  min-width: 40px;
+  padding: 0.5rem 0;
+  border-radius: 4px;
+  background: var(--klank-color-secondary-background);
+  color: var(--klank-color-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant: all-small-caps;
+  cursor: pointer;
+  text-align: center;
+  position: relative;
+
+  &:hover:not(:disabled) {
+    background: var(--klank-color-highlight);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+.stringBtnActive {
+  background: var(--klank-color-highlight);
+  border: 1px solid var(--klank-color-text);
+}
+
+/* ── Status line ─────────────────────────────────────────── */
+
+.status {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--klank-color-text);
+  margin: 0;
+  min-height: 1em;
+}
+
+/* visibility:hidden keeps it in the a11y tree but hides it visually */
+.statusHidden {
+  visibility: hidden;
+}

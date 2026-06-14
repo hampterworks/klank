@@ -1,4 +1,8 @@
 export { Button } from './lib/button/Button';
+export { MetronomePanel } from './lib/metronomePanel/MetronomePanel';
+export { TunerPanel } from './lib/tunerPanel/TunerPanel';
+export { MetronomeIcon } from './lib/icons/MetronomeIcon';
+export { TuningForkIcon } from './lib/icons/TuningForkIcon';
 export { Toolbar } from './lib/toolbar/Toolbar';
 export { ThemeProvider } from './lib/theme/ThemeProvider';
 export { ToolTip } from './lib/toolTip/ToolTip';

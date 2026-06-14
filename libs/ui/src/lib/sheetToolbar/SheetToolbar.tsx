@@ -7,6 +7,12 @@ import { PlayIcon } from '../icons/PlayIcon'
 import { StopIcon } from '../icons/StopIcon'
 import { EditIcon } from '../icons/EditIcon'
 import { ChevronIcon } from '../icons/ChevronIcon'
+import { MetronomeIcon } from '../icons/MetronomeIcon'
+import { TuningForkIcon } from '../icons/TuningForkIcon'
+import { ToolTip } from '../toolTip/ToolTip'
+import { MetronomePanel } from '../metronomePanel/MetronomePanel'
+import { TunerPanel } from '../tunerPanel/TunerPanel'
+import { computePopoverPosition, type PopoverPosition } from '../hooks/usePopoverPosition'
 
 type PlaylistNav = {
   current: number
@@ -45,6 +51,51 @@ export const SheetToolbar: React.FC<SheetToolbarProps> = ({
   playlist,
   ...props
 }) => {
+  const [metronomePanelOpen, setMetronomePanelOpen] = React.useState(false)
+  const [tunerPanelOpen, setTunerPanelOpen] = React.useState(false)
+  const [metronomePosition, setMetronomePosition] = React.useState<PopoverPosition | null>(null)
+  const [tunerPosition, setTunerPosition] = React.useState<PopoverPosition | null>(null)
+
+  const metronomeRef = React.useRef<HTMLButtonElement>(null)
+  const tunerRef = React.useRef<HTMLButtonElement>(null)
+
+  const openMetronome = React.useCallback(() => {
+    if (metronomeRef.current) {
+      setMetronomePosition(computePopoverPosition(metronomeRef.current.getBoundingClientRect()))
+    }
+    setMetronomePanelOpen(true)
+    setTunerPanelOpen(false)
+  }, [])
+
+  const openTuner = React.useCallback(() => {
+    if (tunerRef.current) {
+      setTunerPosition(computePopoverPosition(tunerRef.current.getBoundingClientRect()))
+    }
+    setTunerPanelOpen(true)
+    setMetronomePanelOpen(false)
+  }, [])
+
+  const closeMetronome = React.useCallback(() => {
+    setMetronomePanelOpen(false)
+  }, [])
+
+  const closeTuner = React.useCallback(() => {
+    setTunerPanelOpen(false)
+  }, [])
+
+  // Close panels on resize (especially at the 599px breakpoint)
+  React.useEffect(() => {
+    const handleResize = () => {
+      if (metronomePanelOpen || tunerPanelOpen) {
+        setMetronomePanelOpen(false)
+        setTunerPanelOpen(false)
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [metronomePanelOpen, tunerPanelOpen])
+
+  // Global keyboard handler — existing Space/+/-/arrow + new m/t toggles
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null
@@ -52,6 +103,7 @@ export const SheetToolbar: React.FC<SheetToolbarProps> = ({
         target &&
         (target.tagName === 'INPUT' ||
           target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
           target.isContentEditable)
       ) {
         return
@@ -72,12 +124,38 @@ export const SheetToolbar: React.FC<SheetToolbarProps> = ({
       } else if (e.key === 'ArrowRight' && playlist) {
         e.preventDefault()
         playlist.onNext()
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault()
+        if (metronomePanelOpen) {
+          closeMetronome()
+        } else {
+          openMetronome()
+        }
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault()
+        if (tunerPanelOpen) {
+          closeTuner()
+        } else {
+          openTuner()
+        }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isScrolling, setTabIsScrolling, tabScrollSpeed, setTabScrollSpeed, playlist])
+  }, [
+    isScrolling,
+    setTabIsScrolling,
+    tabScrollSpeed,
+    setTabScrollSpeed,
+    playlist,
+    metronomePanelOpen,
+    tunerPanelOpen,
+    openMetronome,
+    openTuner,
+    closeMetronome,
+    closeTuner,
+  ])
 
   return (
     <div className={styles.container} {...props}>
@@ -114,6 +192,48 @@ export const SheetToolbar: React.FC<SheetToolbarProps> = ({
           min={1}
           max={10}
         />
+
+        <div className={styles.toolButtons}>
+          <ToolTip message="Metronome (M)">
+            <Button
+              ref={metronomeRef}
+              icon={<MetronomeIcon />}
+              iconButton={true}
+              aria-label="Metronome"
+              aria-haspopup="dialog"
+              aria-expanded={metronomePanelOpen}
+              aria-controls="metronome-panel"
+              className={metronomePanelOpen ? styles.activeButton : undefined}
+              onClick={() => {
+                if (metronomePanelOpen) {
+                  closeMetronome()
+                } else {
+                  openMetronome()
+                }
+              }}
+            />
+          </ToolTip>
+          <ToolTip message="Tuner (T)">
+            <Button
+              ref={tunerRef}
+              icon={<TuningForkIcon />}
+              iconButton={true}
+              aria-label="Tuner"
+              aria-haspopup="dialog"
+              aria-expanded={tunerPanelOpen}
+              aria-controls="tuner-panel"
+              className={tunerPanelOpen ? styles.activeButton : undefined}
+              onClick={() => {
+                if (tunerPanelOpen) {
+                  closeTuner()
+                } else {
+                  openTuner()
+                }
+              }}
+            />
+          </ToolTip>
+        </div>
+
         <div className={styles.actionButtons}>
           <Button
             label={isScrolling ? 'stop' : 'play'}
@@ -128,6 +248,21 @@ export const SheetToolbar: React.FC<SheetToolbarProps> = ({
           />
         </div>
       </div>
+
+      {metronomePanelOpen && (
+        <MetronomePanel
+          triggerRef={metronomeRef}
+          position={metronomePosition}
+          onClose={closeMetronome}
+        />
+      )}
+      {tunerPanelOpen && (
+        <TunerPanel
+          triggerRef={tunerRef}
+          position={tunerPosition}
+          onClose={closeTuner}
+        />
+      )}
     </div>
   )
 }
