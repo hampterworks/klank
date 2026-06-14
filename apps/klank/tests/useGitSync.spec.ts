@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { renderHook } from '@testing-library/react'
 import { useKlankStore, type SyncStatus } from '@klank/store'
 import type { FileService, GitService, SyncResult } from '@klank/platform-api'
-import { clampMinutes, runGitSync } from '../app/useGitSync'
+import { clampMinutes, runGitSync, useGitSync } from '../app/useGitSync'
 import { describeSyncStatus } from '../app/routes/settings'
 
 const baseDir = '/tabs'
@@ -142,5 +143,44 @@ describe('describeSyncStatus', () => {
     const d = describeSyncStatus(make({ state: 'offline', kind: 'auth', message: 'Not signed in' }))
     expect(d.tone).toBe('warn')
     expect(d.detail).toBeUndefined()
+  })
+})
+
+describe('useGitSync scheduling guard', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('clamps a corrupt persisted interval so setInterval never receives NaN', () => {
+    // Regression: a NaN interval made `setInterval(NaN)` fire every tick (runaway).
+    useKlankStore.setState({
+      baseDirectory: '/tabs',
+      syncSettings: { enabled: true, intervalMinutes: NaN, debounceMinutes: 5 },
+    })
+    const spy = vi.spyOn(globalThis, 'setInterval')
+    const { unmount } = renderHook(() => useGitSync())
+    expect(spy).toHaveBeenCalledWith(expect.any(Function), 30 * 60_000) // fallback, not NaN
+    expect(spy.mock.calls.every(([, ms]) => Number.isFinite(ms))).toBe(true)
+    unmount()
+  })
+
+  it('uses the configured interval when it is valid', () => {
+    useKlankStore.setState({
+      baseDirectory: '/tabs',
+      syncSettings: { enabled: true, intervalMinutes: 15, debounceMinutes: 5 },
+    })
+    const spy = vi.spyOn(globalThis, 'setInterval')
+    const { unmount } = renderHook(() => useGitSync())
+    expect(spy).toHaveBeenCalledWith(expect.any(Function), 15 * 60_000)
+    unmount()
+  })
+
+  it('does not schedule a timer while auto-sync is disabled', () => {
+    useKlankStore.setState({
+      baseDirectory: '/tabs',
+      syncSettings: { enabled: false, intervalMinutes: 30, debounceMinutes: 5 },
+    })
+    const spy = vi.spyOn(globalThis, 'setInterval')
+    const { unmount } = renderHook(() => useGitSync())
+    expect(spy).not.toHaveBeenCalled()
+    unmount()
   })
 })
