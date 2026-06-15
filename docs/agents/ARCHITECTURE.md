@@ -5,9 +5,10 @@ Invariants the optimisations in this system depend on. Violating any one causes 
 ## 0. `.agentkit/` is the single source; native files are generated
 
 All agent content is authored under `.agentkit/`. The native files every tool reads (`AGENTS.md`,
-`CLAUDE.md`, `CATALOG.md`, `.claude/`, `.github/`, `.cursor/`, `.junie/`) are produced by
-`pnpm agentkit generate` and must never be hand-edited - an edit is overwritten on the next generate, and
-CI fails the `generate --check` gate when generated files drift from `.agentkit/`.
+`CLAUDE.md`, `CATALOG.md`, `.claude/`, `.github/`, `.cursor/`, `.junie/`) are produced by the agentkit CLI
+(`agentkit generate`, run from the romni/skills library; not vendored here) and must never be hand-edited -
+an edit is overwritten on the next generate, and CI fails the `generate --check` gate when generated files
+drift from `.agentkit/`.
 
 ## 1. Three-tier progressive disclosure
 

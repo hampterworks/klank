@@ -12,18 +12,21 @@ generated file - edit the source under `.agentkit/` and regenerate.
 - `.agentkit/subagents/<name>.md` - subagent identities (one source -> Claude + Copilot + Cursor + Junie copies)
 - `.agentkit/instructions/*.md` - global/path instructions; `overview.md` is klank's project briefing (becomes `AGENTS.md`)
 - `.agentkit/commands/*.md`, `.agentkit/hooks/*.yaml`, `.agentkit/mcp/*.yaml` - commands, hooks, MCP servers
-- `.agentkit/cli/` - the vendored agentkit CLI (self-contained; not part of the generated content)
 
 ## Commands
 
-The CLI is vendored, so klank is self-contained. First-time setup installs the CLI's own dependencies:
+The agentkit CLI is **not vendored** in this repo; it lives in the agentkit library (romni/skills). Run it
+against klank - either with `agentkit` on your PATH from klank's root, or point the library's CLI at klank
+with `--root`:
 
 ```
-pnpm agentkit:setup                       # once: pnpm --ignore-workspace install in .agentkit/cli/src
-pnpm agentkit generate                    # regenerate all native files from .agentkit/
-pnpm agentkit generate --check            # verify native files are in sync (CI gate)
-pnpm agentkit validate                    # schema + structure + budget checks
-pnpm agentkit new skill <name> --group klank   # scaffold a new item (or use the agentkit-scaffold skill)
+agentkit generate                         # regenerate all native files from .agentkit/
+agentkit generate --check                 # verify native files are in sync (CI gate)
+agentkit validate                         # schema + structure + budget checks
+agentkit new skill <name> --group klank   # scaffold a new item (or use the agentkit-scaffold skill)
+
+# or, from a checkout of the romni/skills library, without installing the CLI globally:
+pnpm agentkit generate --root /path/to/klank
 ```
 
 ## Naming conventions
@@ -33,8 +36,8 @@ pnpm agentkit new skill <name> --group klank   # scaffold a new item (or use the
 
 ## Adding a role or skill
 
-Use the `agentkit-scaffold` skill (or `pnpm agentkit new <type> <name>`), edit the generated source under
-`.agentkit/`, then run `pnpm agentkit generate`. Generation writes the subagent to `.claude/agents/` **and**
+Use the `agentkit-scaffold` skill (or `agentkit new <type> <name>`), edit the generated source under
+`.agentkit/`, then run `agentkit generate`. Generation writes the subagent to `.claude/agents/` **and**
 its `.github/agents/` Copilot mirror from the single `.agentkit/subagents/` source - mirror parity is
 automatic, never hand-maintained.
 
@@ -50,7 +53,7 @@ Skills retired into agentkit equivalents: `cleanup-recent-changes` -> `develop-c
 
 ## Update matrix
 
-When this fact changes -> update these `.agentkit/` sources, then `pnpm agentkit generate`:
+When this fact changes -> update these `.agentkit/` sources, then `agentkit generate`:
 
 | Fact | Source to update |
 |------|------------------|
