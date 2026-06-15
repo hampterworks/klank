@@ -1,6 +1,6 @@
 Read `AGENTS.md` first - project briefing, build/test commands, and boundaries. For why the agent setup is shaped the way it is: `docs/agents/ARCHITECTURE.md`.
 
-Specialist work routes to the subagents in `.claude/agents/` automatically by their `description` - there is no lookup table to maintain. For multi-role tasks, invoke the Orchestrator before delegating. Extend the setup with `add-skill`, `add-role`, or `add-hook`; run `audit-agent-setup` before any commit touching `.claude/`, `.github/agents/`, or `docs/agents/`.
+Specialist work routes to the subagents in `.claude/agents/` automatically by their `description` - there is no lookup table to maintain. For multi-role tasks, invoke the Orchestrator before delegating. Extend the setup with `add-skill`, `add-role`, or `add-hook`; run `agentkit-doctor` before any commit touching `.claude/`, `.github/agents/`, or `docs/agents/`.
 
 ---
 
@@ -30,3 +30,7 @@ Auto-triggered procedure-skills live under `.claude/skills/` (Claude, Copilot, a
 - Subagents route by `description` - there is no role table. Keep each subagent's first sentence specific so routing stays accurate.
 - A subagent body is its full identity, not a redirect - never point it at a parallel doc.
 - Skills live once under `.claude/skills/` - never mirror them into `.github/agents/` (Copilot auto-discovers the directory; Junie imports it).
+
+<!-- BEGIN AGENTKIT IMPORT -->
+@AGENTS.md
+<!-- END AGENTKIT IMPORT -->

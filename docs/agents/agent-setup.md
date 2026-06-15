@@ -41,11 +41,15 @@ When this fact changes → update these files:
 | `add-role` | No | Create a subagent identity (`.claude/agents/` + `.github/agents/` mirror) |
 | `add-skill` | No | Create a new skill SKILL.md + catalogue entry |
 | `add-hook` | No | Add a new Claude Code hook to settings.json |
-| `audit-agent-setup` | Yes - before any commit under `.claude/`, `.github/agents/`, or `docs/agents/` | Consistency checks for klank's agent system |
-| `cleanup-recent-changes` | Yes - after development sessions | Senior-dev cleanup pass on recent changes |
 | `update-dependencies` | No | pnpm workspace + Cargo.toml dependency upgrades |
-| `ci-pipeline-optimize` | Yes - when `.github/workflows/` is touched | Audit and optimize the CI pipeline |
 | `update-docs` | Yes - after any structural change | Keep README and human-readable docs current |
+
+The agentkit install (see `/CATALOG.md`) adds the `develop-*`, `qa-*`, `cicd-*`, and `design-*` procedure
+skills plus the `agentkit-*` upkeep skills. Three former klank skills were retired in favour of those
+equivalents: `cleanup-recent-changes` -> `develop-clean`, `ci-pipeline-optimize` -> `cicd-harden`,
+`audit-agent-setup` -> `agentkit-doctor`. Note `agentkit-doctor` audits native agent files against the
+agentkit rules but does **not** check `.claude/` <-> `.github/agents/` mirror parity the way
+`audit-agent-setup` did; keep mirrors in sync by hand (or add a hook with `add-hook`).
 
 ## Hook Catalogue
 

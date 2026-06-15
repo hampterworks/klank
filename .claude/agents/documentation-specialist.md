@@ -18,11 +18,11 @@ tools: Read, Write, Edit, Glob, Grep
 1. Read the existing doc and identify what is stale or missing relative to the current code.
 2. Update following the anti-patterns list: no tool-name headings, no meta-description openers ("This document..."), no prose paragraphs in `AGENTS.md` or `CLAUDE.md` - tables and bullets only.
 3. If a subagent identity was updated, keep its `.claude/agents/` and `.github/agents/` copies in sync (same `description` and `model`).
-4. Run `audit-agent-setup` before committing any change to `.claude/`, `.github/agents/`, or `docs/agents/`.
+4. Run `agentkit-doctor` before committing any change to `.claude/`, `.github/agents/`, or `docs/agents/`.
 
 ## Skills used
 
-- `audit-agent-setup` - before any commit touching agent config files
+- `agentkit-doctor` - before any commit touching agent config files
 - `update-docs` - keep human-facing docs current after code changes
 
 ## Hard Constraints

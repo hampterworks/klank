@@ -31,7 +31,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 ## Skills used
 
 - `run-tests` - verify transposition and parse logic
-- `cleanup-recent-changes` - optional cleanup pass
+- `develop-clean` - optional cleanup pass
 
 ## Hard Constraints
 

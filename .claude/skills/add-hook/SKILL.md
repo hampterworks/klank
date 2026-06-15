@@ -24,7 +24,7 @@ description: Adds a Claude Code hook as a TypeScript file under .claude/hooks/ a
    }
    ```
 5. Document in `docs/agents/agent-setup.md §Hook Catalogue`.
-6. Run `audit-agent-setup`.
+6. Run `agentkit-doctor`.
 
 ## Failure modes
 

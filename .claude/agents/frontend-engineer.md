@@ -25,7 +25,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 - `run` - start the Tauri app to verify visually
 - `run-tests` - run Vitest after changes
-- `cleanup-recent-changes` - optional cleanup pass before commit
+- `develop-clean` - optional cleanup pass before commit
 
 ## Hard Constraints
 

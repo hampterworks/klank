@@ -18,7 +18,7 @@ description: Creates a new procedure-skill with SKILL.md and a catalogue entry. 
 4. If the body would exceed ~150 lines, extract detail to `.claude/skills/<name>/references/<detail>.md` and link from the skill.
 5. Add a row to `docs/agents/agent-setup.md §Skill Catalogue`.
 6. Update the `## Skills used` list in any subagent that should invoke the new skill.
-7. Run `audit-agent-setup`.
+7. Run `agentkit-doctor`.
 
 ## Failure modes
 

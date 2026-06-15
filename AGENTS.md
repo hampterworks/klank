@@ -1,6 +1,11 @@
-Specialist work routes to the subagents in `.claude/agents/` (Copilot: `.github/agents/`) automatically by their `description`. Read the matching subagent's identity before writing any code; invoke the Orchestrator first for multi-role tasks.
+# Klank
 
----
+> Cross-tool agent instructions for this repository. Generated from `.agentkit/instructions/`.
+
+
+## Project briefing
+
+Specialist work routes to the subagents in `.claude/agents/` (Copilot: `.github/agents/`) automatically by their `description`. Read the matching subagent's identity before writing any code; invoke the Orchestrator first for multi-role tasks.
 
 ## Build & Test
 
@@ -68,3 +73,65 @@ docs/agents/                        Agent architecture + setup conventions
 - Each subagent in `.claude/agents/` is a self-contained identity routed by `description` - there is no role-routing table to keep in sync.
 - The `.github/agents/` copies are the same identities for Copilot; when you edit a subagent, update both files' `description` and `model`.
 - Skills live once under `.claude/skills/` - never mirror them into `.github/agents/`; Copilot and Cursor auto-discover the directory and Junie imports it.
+
+## Development principles (least code, fewest deps)
+
+When writing or changing code here (the agentkit CLI) or in any code-producing skill, default to the
+**least code that solves the problem** - think like the laziest senior dev in the room:
+
+- **YAGNI.** Question whether the code, file, or abstraction needs to exist at all. Delete before you add;
+  the best code is the code you never wrote.
+- **Reach low first.** Standard library and native platform features before a dependency; one line before
+  fifty; compose existing helpers before writing new ones.
+- **Dependencies are a liability.** Prefer zero new ones. Add a dependency only when it is justified,
+  official or very widely trusted, pinned to a current stable version, and `pnpm audit`-clean.
+- **Smallest diff wins.** Match surrounding style; the change a reviewer can hold in their head beats the
+  clever one.
+- **Lazy, not negligent.** Minimalism never trades away correctness or safety: keep input validation at
+  trust boundaries, security (see `security-principles`), accessibility, error handling, and data
+  integrity. Deleting code is not deleting the safeguard - cut the bloat, not the guardrail.
+- **Pin the scope, then deliver it whole.** For non-trivial work, interrogate scope, acceptance, and the
+  owner's hard constraints up front (batched) instead of discovering them through rework; and when the
+  agreed scope is "all of it", finish the tail too - do not quietly defer a nit or re-scope. If something
+  should be cut, ask; never decide it silently.
+
+## Design principles (minimalism and impact)
+
+When doing design or product work, optimize for **minimalism and impact**:
+
+- **Least interaction.** The fewest steps and the smallest surface that achieve the user's goal; remove
+  before adding, and a sensible default beats a configurable option.
+- **Maximum effect.** Spend the user's attention where it pays off; cut everything that does not earn its
+  place.
+- **One adaptive design, not many.** Design mobile-first and let a single responsive layout reflow to
+  every viewport, input, and device - fluid grids, touch-friendly targets, content prioritized over
+  chrome. One design that adapts beats separate per-device mockups.
+- **Consistent and legible.** Reuse patterns, labels, and components; make visual weight match importance
+  so the one primary action is obvious. Consistency lowers cognitive load; hierarchy guides the eye.
+- **Aim for the wow.** Design for a moment of delight, but never at the cost of clarity or accessibility -
+  minimalism serves the user, it is not decoration.
+
+## Security principles (least privilege, distrust input)
+
+When building or reviewing anything that touches access, input, dependencies, or secrets, default to:
+
+- **Least privilege, default-deny.** Grant the minimum scope, permission, and access on the narrowest
+  surface for the shortest time; deny by default and add only what is needed.
+- **Distrust the outside.** Validate and encode every input at trust boundaries; never interpolate
+  untrusted data into a shell, query, or template; treat third-party code and data as hostile until proven safe.
+- **Secure the supply chain.** Pin dependencies to immutable digests, prefer official and maintained
+  sources, and keep secrets out of code, logs, and artifacts.
+- **Assume breach, shrink the blast radius.** Scope secrets and credentials (short-lived where possible),
+  fail safe, and design so one compromise cannot cascade.
+
+## Review principles (critique with a fix)
+
+When reviewing anything - code, a design, a test plan, agent content - critique to improve it, not to
+display taste:
+
+- **Critique against the goal, not taste.** Judge by the requirements and the user's cost; separate
+  must-fix from preference, and let tooling own style.
+- **Every finding gets a fix and a reason.** No complaint without a concrete proposed change tied to a real cost.
+- **Rate severity and lead with it.** Sort findings by impact and call out the top few; an unranked list
+  gets ignored.
+- **Verify before you opine.** Walk the real path or run it first; a static read misses the defects that matter.

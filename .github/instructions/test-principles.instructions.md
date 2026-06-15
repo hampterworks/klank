@@ -1,0 +1,21 @@
+---
+applyTo: '**/*.test.*,**/*.spec.*,test/**,tests/**,__tests__/**'
+---
+
+# Testing principles (trustworthy tests)
+
+When writing or changing tests, optimize for a fast, trustworthy safety net:
+
+- **Test behavior, not implementation.** Assert observable contracts and effects so a correct refactor
+  never breaks a test.
+- **Determinism is non-negotiable.** Control time, randomness, IO, and order; a flaky test is a broken
+  test - fix the nondeterminism, never retry around it.
+- **Risk-based and pyramid-shaped.** Most checks at the fast low level, fewest end-to-end; spend effort
+  where failure costs most, not on coverage percentage for its own sake.
+- **Prefer property-based tests.** Where a property or invariant is clearer than examples, assert it over
+  many generated inputs rather than a few hand-picked cases.
+- **Every bug fix ships with a failing-first regression test.** Reproduce the bug as a test, watch it
+  fail, then fix - so it cannot silently return.
+- **Automate over manual.** Prefer a committed automated check to one-off manual verification; if you
+  confirmed behavior by hand, leave a test that reproduces it so the next change re-checks it for free.
+- **A test you do not trust is worse than none.** It pins a real behavior or it is noise; delete the noise.
