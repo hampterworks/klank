@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
 import { classifySheetLine, type SheetLine } from './sheet-lines.js'
 import {
+  CHORD_LIKE_RE,
   delimiterMatcher,
   isTablatureLine,
   testChords,
@@ -121,6 +122,14 @@ describe('classifySheetLine', () => {
     fc.assert(
       fc.property(anyLineArb, transposeArb, (line, transpose) => {
         fc.pre(!dashMergePossible(line))
+        // Skip lines with chord-voicing tokens (A1, G1, F#1…) co-existing with
+        // valid chords — their flag classification intentionally diverges from
+        // the legacy matcher which didn't know about voicing tokens.
+        const hasVoicingToken = line
+          .split(delimiterMatcher)
+          .filter((t) => t !== '' && !/^\s*$/.test(t))
+          .some((t) => CHORD_LIKE_RE.test(t) && !testChords(t))
+        fc.pre(!hasVoicingToken)
         const classified = classifySheetLine(line, transpose)
         const legacy = legacyLineMatcher(line)
         expect(classified.kind).toBe(legacy.kind)
@@ -159,11 +168,11 @@ describe('classifySheetLine', () => {
     )
   })
 
-  it('always produces chord displays that are themselves valid chords', () => {
+  it('always produces chord displays that are themselves valid chords or chord-like voicing tokens', () => {
     fc.assert(
       fc.property(anyLineArb, transposeArb, (line, transpose) => {
         for (const token of chordLineTokens(classifySheetLine(line, transpose))) {
-          if (token.kind === 'chord') expect(testChords(token.display)).toBe(true)
+          if (token.kind === 'chord') expect(testChords(token.display) || CHORD_LIKE_RE.test(token.display)).toBe(true)
         }
       }),
     )
@@ -270,17 +279,20 @@ describe('classifySheetLine examples', () => {
     })
   })
 
-  it('classifies a line with valid chords and chord-voicing tokens as a chord-line', () => {
-    // G, F, F are valid chords; A1, G1, F#1, F#2, F#3 are chord-like voicing
+  it('classifies a line with valid chords and chord-voicing tokens as a chord-line, with voicing tokens as chord kind', () => {
+    // G, F are valid chords; A1, G1, F#1, F#2, F#3 are chord-like voicing
     // tokens. Previously they were counted as plain words, making chords a
     // minority (3 chords vs 5 non-chords) and causing misclassification.
+    // Now voicing tokens are rendered as chord boxes alongside real chords.
     const result = classifySheetLine('G      F     A1      G1                 F#1   F#2   F#3  F', 0)
     expect(result.kind).toBe('chord-line')
-    // Valid chord tokens should still be detected as chords
     const tokens = result.kind === 'chord-line' ? result.tokens : []
     const chordRaws = tokens.filter(t => t.kind === 'chord').map(t => t.raw)
     expect(chordRaws).toContain('G')
     expect(chordRaws).toContain('F')
+    expect(chordRaws).toContain('A1')
+    expect(chordRaws).toContain('G1')
+    expect(chordRaws).toContain('F#1')
   })
 
   it('classifies a line of only chord-voicing tokens as plain (no valid chords)', () => {

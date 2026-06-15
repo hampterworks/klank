@@ -5,7 +5,7 @@ import { loadChordDiagrams, lookupChordDiagram } from '@klank/platform-api'
 import { ChordDiagram } from '../chordDiagram/ChordDiagram.js'
 import styles from './chordDiagramTooltip.module.css'
 
-type TooltipPos = { bottom: number; left: number }
+type TooltipPos = { top?: number; bottom?: number; left: number }
 
 // Custom event used so opening one tooltip closes all others.
 const TOOLTIP_OPEN_EVENT = 'klank-tooltip-open'
@@ -129,16 +129,18 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
     const rect = wrapperRef.current?.getBoundingClientRect()
     if (!rect) return null
     const tooltipWidth = 160
+    const tooltipHeight = 220
     const margin = 8
     const rawLeft = rect.left + rect.width / 2
     const left = Math.max(
       tooltipWidth / 2 + margin,
       Math.min(rawLeft, window.innerWidth - tooltipWidth / 2 - margin),
     )
-    return {
-      bottom: window.innerHeight - rect.top + 8,
-      left,
+    // Flip below the chord when there isn't enough space above
+    if (rect.top < tooltipHeight + margin) {
+      return { top: rect.bottom + margin, left }
     }
+    return { bottom: window.innerHeight - rect.top + margin, left }
   }
 
   const openTooltipAt = (pos: TooltipPos) => {
@@ -158,7 +160,7 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
   }
 
   const handleClick = () => {
-    if (variants.length === 0 || isScrolling) return
+    if (variants.length === 0) return
     clearCloseTimer()
     setIsPinned(true)
     if (!tooltipPos) {
@@ -176,7 +178,7 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
           <div
             ref={tooltipRef}
             className={styles.tooltip}
-            style={{ bottom: tooltipPos.bottom, left: tooltipPos.left }}
+            style={{ bottom: tooltipPos.bottom, top: tooltipPos.top, left: tooltipPos.left }}
             role="tooltip"
             onClick={(e) => e.stopPropagation()}
             onMouseEnter={clearCloseTimer}

@@ -21,7 +21,7 @@ export function App() {
   const isMenuExtended = useKlankStore().ui.isMenuExtended
   const menuWidth = useKlankStore().ui.menuWidth
   const toggleMenu = useKlankStore().toggleMenu
-  const setMenuWidth = useKlankStore().setMenuWidth
+  const setMenuState = useKlankStore().setMenuState
   const serverMode = useKlankStore().serverMode
   const setServerMode = useKlankStore().setServerMode
   const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
@@ -161,10 +161,9 @@ export function App() {
       handle.style.left = `${finalDisplay - 4}px`
       container.classList.remove(styles.resizing)
       if (finalWidth < MIN_WIDTH) {
-        if (isMenuExtended) toggleMenu(false)
+        setMenuState(false)
       } else {
-        if (!isMenuExtended) toggleMenu(true)
-        setMenuWidth(finalWidth)
+        setMenuState(true, finalWidth)
       }
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)

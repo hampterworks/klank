@@ -37,9 +37,10 @@ export const testSpaces = (string: string) => /^\s*$/.test(string)
 /**
  * Matches chord-voicing tokens like A1, G1, F#1, F#2, F#3 — a note letter,
  * optional accidental(s), then only digits. These are not valid chord symbols
- * but should not count as plain words when classifying chord lines.
+ * but should not count as plain words when classifying chord lines, and they
+ * are rendered as chord boxes alongside real chords in the sheet view.
  */
-const CHORD_LIKE_RE = /^[A-G][#b♭]{0,2}\d+$/
+export const CHORD_LIKE_RE = /^[A-G][#b♭]{0,2}\d+$/
 
 /**
  * Transposes a chord symbol by `transpose` semitones.

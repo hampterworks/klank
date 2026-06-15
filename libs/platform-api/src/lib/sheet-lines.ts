@@ -1,4 +1,5 @@
 import {
+  CHORD_LIKE_RE,
   delimiterMatcher,
   isTablatureLine,
   testChords,
@@ -90,7 +91,7 @@ export const classifySheetLine = (line: string, transpose: number): SheetLine =>
     return {
       kind: 'chord-line',
       tokens: tokens.map((token, i): SheetToken => {
-        if (!testChords(token) && token !== 'e') return { kind: 'text', raw: token }
+        if (!testChords(token) && token !== 'e' && !CHORD_LIKE_RE.test(token)) return { kind: 'text', raw: token }
         if (isTablature && i === 0) return { kind: 'string-indicator', raw: token }
         return {
           kind: 'chord',

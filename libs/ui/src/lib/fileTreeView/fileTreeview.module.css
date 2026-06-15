@@ -93,9 +93,9 @@
   }
 }
 
-@media (hover: none) {
+@media (hover: none), (pointer: coarse) {
   .addToPlaylistButton {
-    opacity: 1;
+    opacity: 1 !important;
   }
 }
 
