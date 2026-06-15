@@ -1,6 +1,5 @@
 import styles from './harmony.module.css'
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
 import {
   SCALES,
   CHORD_QUALITIES,
@@ -31,8 +30,7 @@ function ordinal(n: number): string {
   return n + (s[(v - 20) % 10] ?? s[v] ?? s[0])
 }
 
-export default function Harmony() {
-  const navigate = useNavigate()
+export function HarmonyPanel() {
   const instrument = useKlankStore().instrument
   const setInstrument = useKlankStore().setInstrument
   const harmony = useKlankStore().harmony
@@ -66,14 +64,7 @@ export default function Harmony() {
   const fullGrid = getScaleFretboard(rootPitch, scale, tuning)
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <button className={styles.backButton} onClick={() => navigate(-1)}>
-          ← Back
-        </button>
-        <h1>Harmony</h1>
-      </header>
-
+    <div className={styles.panel}>
       <div className={styles.content}>
         {/* ── Shared controls ─────────────────────────────────────────────── */}
         <div className={styles.controlsBar}>

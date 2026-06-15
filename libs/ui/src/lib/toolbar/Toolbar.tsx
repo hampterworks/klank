@@ -34,6 +34,8 @@ type ToolbarProps = {
   downloadError?: string | null
   onSettingsClick?: () => void
   onHarmonyClick?: () => void
+  isSettingsActive?: boolean
+  isHarmonyActive?: boolean
   tree: TreeEntry[]
   isCollapsed?: boolean
   /** When true the "Go to Tab" button is hidden (it lives in the mobile drawer instead). */
@@ -49,6 +51,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   downloadError,
   onSettingsClick,
   onHarmonyClick,
+  isSettingsActive,
+  isHarmonyActive,
   tree,
   isCollapsed,
   hideGoToTab,
@@ -63,11 +67,23 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   return (
     <li className={`${styles.container}${isCollapsed ? ' ' + styles.collapsed : ''}`} {...props}>
       <ToolTip message="Settings">
-        <Button iconButton={true} icon={<SettingsIcon />} onClick={onSettingsClick} />
+        <Button
+          iconButton={true}
+          icon={<SettingsIcon />}
+          onClick={onSettingsClick}
+          className={isSettingsActive ? styles.activeBtn : undefined}
+          aria-pressed={isSettingsActive}
+        />
       </ToolTip>
       {onHarmonyClick && (
         <ToolTip message="Scales & Chords">
-          <Button iconButton={true} icon={<ScalesIcon />} onClick={onHarmonyClick} />
+          <Button
+            iconButton={true}
+            icon={<ScalesIcon />}
+            onClick={onHarmonyClick}
+            className={isHarmonyActive ? styles.activeBtn : undefined}
+            aria-pressed={isHarmonyActive}
+          />
         </ToolTip>
       )}
       {!hideGoToTab && (

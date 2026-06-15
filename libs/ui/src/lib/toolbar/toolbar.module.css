@@ -46,6 +46,12 @@
   display: none;
 }
 
+.activeBtn {
+  background: var(--klank-color-highlight);
+  border-radius: 4px;
+  opacity: 1;
+}
+
 @media (max-width: 599px) {
   .container,
   .container.collapsed {
