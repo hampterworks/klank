@@ -5,12 +5,6 @@ name: Build Android
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
-  release:
-    types: [published]
-  push:
-    branches:
-      - main
-      - master
   workflow_dispatch:
     inputs:
       debug_build:
@@ -76,11 +70,12 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      # Stable Rust with all four Android cross-compilation targets.
-      - name: Set up Rust with Android targets
+      # Stable Rust with the arm64 Android cross-compilation target only, to
+      # match the arm64-v8a APK produced by release.yml.
+      - name: Set up Rust with Android arm64 target
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+          targets: aarch64-linux-android
 
       # Cache Cargo registry and the Tauri crate build artifacts.
       - uses: Swatinem/rust-cache@v2
@@ -90,11 +85,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # pnpm tauri android build --debug --apk performs the frontend build
-      # (via Tauri's beforeBuildCommand) and then cross-compiles the Rust
-      # core for all four Android ABIs before assembling the debug APK.
-      - name: Build Android (debug)
-        run: pnpm tauri android build --debug --apk
+      # --target aarch64 builds only the arm64 product flavor; combined with the
+      # debug build type's default symbol stripping this keeps the debug APK small.
+      - name: Build Android (debug, arm64)
+        run: pnpm tauri android build --debug --apk --target aarch64
         working-directory: apps/klank
 
       - name: Upload debug APK artifact
@@ -149,16 +143,15 @@ jobs:
             }
 
   # -----------------------------------------------------------------------
-  # Release build — on push to main/master, published release, or
-  # workflow_dispatch with debug_build set to 'false'
+  # Release build — ad-hoc, opt-in via workflow_dispatch with debug_build set
+  # to 'false'. The canonical release path (attached to a GitHub Release) lives
+  # in release.yml; this job is for manually testing a release APK off-cycle.
   # -----------------------------------------------------------------------
   android-release:
     name: Android release APK
     runs-on: ubuntu-latest
     if: >
-      github.event_name == 'release' ||
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.debug_build == 'false')
+      github.event_name == 'workflow_dispatch' && github.event.inputs.debug_build == 'false'
 
     steps:
       - uses: actions/checkout@v4
@@ -203,11 +196,12 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      # Stable Rust with all four Android cross-compilation targets.
-      - name: Set up Rust with Android targets
+      # Stable Rust with the arm64 Android cross-compilation target only, to
+      # match the arm64-v8a release APK produced by release.yml.
+      - name: Set up Rust with Android arm64 target
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+          targets: aarch64-linux-android
 
       # Cache Cargo registry and the Tauri crate build artifacts.
       - uses: Swatinem/rust-cache@v2
@@ -217,11 +211,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # pnpm tauri android build --apk performs the frontend build
-      # (via Tauri's beforeBuildCommand) and then cross-compiles the Rust
-      # core for all four Android ABIs before assembling the release APK.
-      - name: Build Android (release)
-        run: pnpm tauri android build --apk
+      # --target aarch64 builds only the arm64 product flavor, matching the
+      # release APK distributed via release.yml.
+      - name: Build Android (release, arm64)
+        run: pnpm tauri android build --apk --target aarch64
         working-directory: apps/klank
 
       - name: Upload release APK artifact
@@ -230,10 +223,3 @@ jobs:
           name: klank-release-apk
           path: apps/klank/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
           if-no-files-found: error
-
-      # On a published release event, attach the APK(s) to the GitHub Release assets.
-      - name: Attach APK to GitHub Release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: apps/klank/src-tauri/gen/android/app/build/outputs/apk/**/*.apk

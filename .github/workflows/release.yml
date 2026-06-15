@@ -1,0 +1,199 @@
+name: Release
+
+# SHA-pinning of actions can be applied later per the cicd-harden convention.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # -----------------------------------------------------------------------
+  # Resolve a single version number shared by every build job so the Windows
+  # installers and the Android APK all carry the same release version.
+  # -----------------------------------------------------------------------
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+    steps:
+      - id: version
+        run: |
+          VER="2.0.${{ github.run_number }}"
+          echo "VERSION=$VER" >> "$GITHUB_OUTPUT"
+          echo "Building version: $VER"
+
+  # -----------------------------------------------------------------------
+  # Windows installers (NSIS + MSI).
+  # -----------------------------------------------------------------------
+  windows:
+    name: Windows installers
+    needs: version
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch tauri.conf.json
+        shell: pwsh
+        run: |
+          $ver = '${{ needs.version.outputs.version }}'
+          $path = 'apps/klank/src-tauri/tauri.conf.json'
+          $json = Get-Content $path -Raw | ConvertFrom-Json
+          $json.version = $ver
+          $json | ConvertTo-Json -Depth 10 | Set-Content $path -Encoding UTF8
+
+      - name: Patch Cargo.toml
+        shell: pwsh
+        run: |
+          $ver = '${{ needs.version.outputs.version }}'
+          $path = 'apps/klank/src-tauri/Cargo.toml'
+          $content = Get-Content $path -Raw
+          $patched = $content -replace '(?m)^version = "[\d.]+"', "version = `"$ver`""
+          Set-Content $path -Value $patched -Encoding UTF8 -NoNewline
+
+      # Reads the pnpm version from packageManager in package.json
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/klank/src-tauri -> target
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Windows installers
+        run: pnpm tauri:build:windows
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: klank-nsis-${{ needs.version.outputs.version }}
+          path: apps/klank/src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: klank-msi-${{ needs.version.outputs.version }}
+          path: apps/klank/src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: error
+
+  # -----------------------------------------------------------------------
+  # Android APK (arm64-v8a only, unsigned). Cross-compiling for Android needs
+  # the Linux NDK toolchain, so this runs on Ubuntu in parallel with Windows.
+  # -----------------------------------------------------------------------
+  android:
+    name: Android APK (arm64)
+    needs: version
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch version (tauri.conf.json + Cargo.toml)
+        run: |
+          ver='${{ needs.version.outputs.version }}'
+          node -e "const f='apps/klank/src-tauri/tauri.conf.json';const j=require('./'+f);j.version=process.argv[1];require('fs').writeFileSync(f,JSON.stringify(j,null,2)+'\n');" "$ver"
+          sed -i -E "0,/^version = \"[0-9.]+\"/s//version = \"$ver\"/" apps/klank/src-tauri/Cargo.toml
+
+      # JDK 17 is required by the Android Gradle toolchain.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # Installs the Android SDK command-line tools; NDK 27 is installed below.
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK 27
+        run: |
+          sdkmanager "ndk;27.0.12077973"
+          NDK_PATH="${ANDROID_SDK_ROOT}/ndk/27.0.12077973"
+          echo "ANDROID_NDK_HOME=${NDK_PATH}" >> "$GITHUB_ENV"
+          echo "NDK_HOME=${NDK_PATH}" >> "$GITHUB_ENV"
+
+      # Vendored OpenSSL (pulled in by git2) cross-compiles with the NDK, but its
+      # makefile invokes legacy per-target tool names (e.g.
+      # aarch64-linux-android-ranlib) that NDK r23+ replaced with llvm-ranlib /
+      # llvm-ar. Put the NDK llvm bin on PATH and alias the legacy names so the
+      # OpenSSL `install_dev` step succeeds.
+      - name: Alias NDK toolchain for vendored OpenSSL
+        run: |
+          NDK_BIN="${ANDROID_SDK_ROOT}/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          echo "$NDK_BIN" >> "$GITHUB_PATH"
+          for prefix in aarch64-linux-android armv7a-linux-androideabi arm-linux-androideabi i686-linux-android x86_64-linux-android; do
+            ln -sf "$NDK_BIN/llvm-ranlib" "$NDK_BIN/${prefix}-ranlib"
+            ln -sf "$NDK_BIN/llvm-ar" "$NDK_BIN/${prefix}-ar"
+          done
+
+      # Reads the pnpm version from packageManager in package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # Stable Rust with the arm64 Android cross-compilation target only.
+      - name: Set up Rust with Android arm64 target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      # Cache Cargo registry and the Tauri crate build artifacts.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/klank/src-tauri -> target
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # --target aarch64 builds only the arm64 product flavor, emitting a single
+      # arm64-v8a APK instead of the all-ABI universal one.
+      - name: Build Android (release, arm64)
+        run: pnpm tauri android build --apk --target aarch64
+        working-directory: apps/klank
+
+      - name: Upload release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: klank-apk-${{ needs.version.outputs.version }}
+          path: apps/klank/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+
+  # -----------------------------------------------------------------------
+  # Gather every build artifact and publish a single GitHub Release.
+  # -----------------------------------------------------------------------
+  publish:
+    name: Publish GitHub Release
+    needs: [version, windows, android]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          ver='${{ needs.version.outputs.version }}'
+          files=$(find artifacts -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.apk' \))
+          echo "Attaching:"; echo "$files"
+          gh release create "v$ver" \
+            --title "klank v$ver" \
+            --notes "Windows installers (NSIS + MSI) and Android arm64 APK for klank v$ver." \
+            $files
