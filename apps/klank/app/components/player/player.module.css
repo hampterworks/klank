@@ -31,6 +31,44 @@
   box-sizing: border-box;
 }
 
+.floatingSave {
+  position: fixed;
+  bottom: calc(2rem + var(--safe-bottom));
+  right: calc(2rem + var(--safe-right));
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--klank-color-text);
+  color: var(--klank-color-background);
+  border: none;
+  border-radius: 999px;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transition: opacity 150ms;
+
+  &:hover {
+    opacity: 0.85;
+  }
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+@media (max-width: 599px) {
+  .floatingSave {
+    /* On mobile the toolbar is at the bottom — float above it */
+    bottom: calc(4.5rem + var(--safe-bottom));
+    right: calc(1rem + var(--safe-right));
+  }
+}
+
 @media (max-width: 599px) {
   .container {
     display: flex !important;

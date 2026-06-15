@@ -153,6 +153,12 @@ export function App() {
     }
 
     const onUp = () => {
+      // Set inline style to the final value before re-enabling CSS transitions
+      // (removing .resizing). Without this, the transition animates from the
+      // drag position to the React-controlled value, squishing content.
+      const finalDisplay = finalWidth < MIN_WIDTH ? 52 : finalWidth
+      container.style.gridTemplateColumns = `${finalDisplay}px 1fr`
+      handle.style.left = `${finalDisplay - 4}px`
       container.classList.remove(styles.resizing)
       if (finalWidth < MIN_WIDTH) {
         if (isMenuExtended) toggleMenu(false)

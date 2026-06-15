@@ -9,45 +9,19 @@ export const MetronomeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =>
     xmlns="http://www.w3.org/2000/svg"
     {...props}
   >
-    {/* Trapezoidal body: wide base, narrower top */}
+    {/* Trapezoidal body */}
     <path
-      d="M5 20 L12 4 L19 20 Z"
+      d="M5 21 L12 3 L19 21 Z"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
-    {/* Flat base line (bottom of body) */}
-    <line
-      x1="5"
-      y1="20"
-      x2="19"
-      y2="20"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
-    {/* Center vertical staff from apex down */}
-    <line
-      x1="12"
-      y1="4"
-      x2="12"
-      y2="19"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-    />
-    {/* Pendulum arm angled right — implies a mid-swing position */}
-    <line
-      x1="12"
-      y1="11"
-      x2="16"
-      y2="7"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
-    {/* Pendulum weight: small filled circle at the tip of the arm */}
-    <circle cx="16" cy="7" r="1.5" fill="currentColor" />
+    {/* Center staff */}
+    <line x1="12" y1="7" x2="12" y2="19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    {/* Pendulum arm (angled right, mid-swing) */}
+    <line x1="12" y1="13" x2="17" y2="8" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+    {/* Pendulum weight */}
+    <circle cx="17" cy="8" r="1.5" fill="currentColor" />
   </svg>
 )

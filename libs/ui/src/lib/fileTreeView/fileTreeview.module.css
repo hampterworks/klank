@@ -86,6 +86,17 @@
     opacity: 1 !important;
     color: var(--klank-color-success);
   }
+
+  &:active {
+    opacity: 1 !important;
+    color: var(--klank-color-success);
+  }
+}
+
+@media (hover: none) {
+  .addToPlaylistButton {
+    opacity: 1;
+  }
 }
 
 .active {

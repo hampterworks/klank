@@ -1,6 +1,8 @@
 .wrapper {
   display: inline;
   position: relative;
+  touch-action: manipulation;
+  cursor: pointer;
 }
 
 .tooltip {

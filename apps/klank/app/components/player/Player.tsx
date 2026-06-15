@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import styles from './player.module.css'
-import { Sheet, SheetToolbar } from '@klank/ui'
+import { Sheet, SheetToolbar, EditIcon } from '@klank/ui'
 import { useKlankStore } from '@klank/store'
 
 type SheetProps = {} & React.ComponentPropsWithRef<'section'>
@@ -69,6 +69,12 @@ export const Player: React.FC<SheetProps> = ({ ...props }) => {
 
   return (
     <section className={styles.container} {...props}>
+      {mode === 'Edit' && (
+        <button className={styles.floatingSave} onClick={handleEditToggle} aria-label="Save">
+          <EditIcon />
+          <span>Save</span>
+        </button>
+      )}
       <SheetToolbar
         fontSize={fontSize}
         songName={tabPath

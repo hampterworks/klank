@@ -269,4 +269,26 @@ describe('classifySheetLine examples', () => {
       ],
     })
   })
+
+  it('classifies a line with valid chords and chord-voicing tokens as a chord-line', () => {
+    // G, F, F are valid chords; A1, G1, F#1, F#2, F#3 are chord-like voicing
+    // tokens. Previously they were counted as plain words, making chords a
+    // minority (3 chords vs 5 non-chords) and causing misclassification.
+    const result = classifySheetLine('G      F     A1      G1                 F#1   F#2   F#3  F', 0)
+    expect(result.kind).toBe('chord-line')
+    // Valid chord tokens should still be detected as chords
+    const tokens = result.kind === 'chord-line' ? result.tokens : []
+    const chordRaws = tokens.filter(t => t.kind === 'chord').map(t => t.raw)
+    expect(chordRaws).toContain('G')
+    expect(chordRaws).toContain('F')
+  })
+
+  it('classifies a line of only chord-voicing tokens as plain (no valid chords)', () => {
+    // A1, G1, F#1 are chord-like but not valid chords, so hasValidChords is
+    // false and classifySheetLine falls through to plain.
+    expect(classifySheetLine('A1 G1 F#1', 0)).toEqual({
+      kind: 'plain',
+      text: 'A1 G1 F#1',
+    })
+  })
 })

@@ -441,6 +441,13 @@
     z-index: 201;
   }
 
+  .mobileDrawerPlaylist {
+    flex-shrink: 0;
+    overflow-y: auto;
+    max-height: 40dvh;
+    border-bottom: 1px solid var(--klank-color-border);
+  }
+
   .mobileDrawerContent {
     flex: 1;
     overflow-y: auto;

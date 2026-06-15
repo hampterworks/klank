@@ -555,8 +555,10 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
                 </ToolTip>
               </div>
             </div>
-            <div className={styles.mobileDrawerContent}>
+            <div className={styles.mobileDrawerPlaylist}>
               <PlaylistSection tree={tree} currentTabPath={currentTabPath} />
+            </div>
+            <div className={styles.mobileDrawerContent}>
               <div className={styles.treeWrapper}>
                 <FileTreeView
                   currentTabPath={currentTabPath}

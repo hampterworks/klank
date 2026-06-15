@@ -81,7 +81,7 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
   // Click outside: close immediately when tooltip is visible
   useEffect(() => {
     if (!tooltipPos) return
-    const handleOutsideClick = (e: MouseEvent) => {
+    const handleOutsideClick = (e: PointerEvent) => {
       if (wrapperRef.current?.contains(e.target as Node)) return
       if (tooltipRef.current?.contains(e.target as Node)) return
       if (closeTimerRef.current !== null) {
@@ -91,8 +91,8 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
       setTooltipPos(null)
       setIsPinned(false)
     }
-    document.addEventListener('mousedown', handleOutsideClick)
-    return () => document.removeEventListener('mousedown', handleOutsideClick)
+    document.addEventListener('pointerdown', handleOutsideClick)
+    return () => document.removeEventListener('pointerdown', handleOutsideClick)
   }, [tooltipPos])
 
   // Close when another tooltip instance opens
@@ -110,6 +110,14 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
     return () => window.removeEventListener(TOOLTIP_OPEN_EVENT, handler)
   }, [])
 
+  // Dismiss tooltip when scrolling starts (important on mobile)
+  useEffect(() => {
+    if (isScrolling) {
+      setTooltipPos(null)
+      setIsPinned(false)
+    }
+  }, [isScrolling])
+
   // Cleanup any pending close timer on unmount
   useEffect(() => {
     return () => {
@@ -120,9 +128,16 @@ export const ChordDiagramTooltip: React.FC<ChordDiagramTooltipProps> = ({
   const getChordPos = (): TooltipPos | null => {
     const rect = wrapperRef.current?.getBoundingClientRect()
     if (!rect) return null
+    const tooltipWidth = 160
+    const margin = 8
+    const rawLeft = rect.left + rect.width / 2
+    const left = Math.max(
+      tooltipWidth / 2 + margin,
+      Math.min(rawLeft, window.innerWidth - tooltipWidth / 2 - margin),
+    )
     return {
       bottom: window.innerHeight - rect.top + 8,
-      left: rect.left + rect.width / 2,
+      left,
     }
   }
 

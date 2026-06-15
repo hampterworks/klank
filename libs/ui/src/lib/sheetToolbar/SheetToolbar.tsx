@@ -5,7 +5,6 @@ import { FontSizeIcon } from '../icons/FontSizeIcon'
 import { TransposeIcon } from '../icons/TransposeIcon'
 import { PlayIcon } from '../icons/PlayIcon'
 import { StopIcon } from '../icons/StopIcon'
-import { EditIcon } from '../icons/EditIcon'
 import { ChevronIcon } from '../icons/ChevronIcon'
 import { MetronomeIcon } from '../icons/MetronomeIcon'
 import { TuningForkIcon } from '../icons/TuningForkIcon'
@@ -240,14 +239,6 @@ export const SheetToolbar: React.FC<SheetToolbarProps> = ({
             icon={isScrolling ? <StopIcon /> : <PlayIcon />}
             onClick={() => setTabIsScrolling(!isScrolling)}
           />
-          {mode === 'Edit' && (
-            <Button
-              label="save"
-              icon={<EditIcon />}
-              onClick={onEditToggle}
-              className={styles.activeButton}
-            />
-          )}
         </div>
       </div>
 
