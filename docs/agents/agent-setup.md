@@ -23,7 +23,7 @@ with `--root`:
 agentkit generate                         # regenerate all native files from .agentkit/
 agentkit generate --check                 # verify native files are in sync (CI gate)
 agentkit validate                         # schema + structure + budget checks
-agentkit new skill <name> --group klank   # scaffold a new item (or use the agentkit-scaffold skill)
+agentkit new skill <name> --group klank   # scaffold a new item, then edit it
 
 # or, from a checkout of the romni/skills library, without installing the CLI globally:
 pnpm agentkit generate --root /path/to/klank
@@ -36,10 +36,10 @@ pnpm agentkit generate --root /path/to/klank
 
 ## Adding a role or skill
 
-Use the `agentkit-scaffold` skill (or `agentkit new <type> <name>`), edit the generated source under
-`.agentkit/`, then run `agentkit generate`. Generation writes the subagent to `.claude/agents/` **and**
-its `.github/agents/` Copilot mirror from the single `.agentkit/subagents/` source - mirror parity is
-automatic, never hand-maintained.
+Create the source with `agentkit new <type> <name>` (external CLI) or by hand under `.agentkit/`, fill it
+in, then run `agentkit generate`. Generation writes the subagent to `.claude/agents/` **and** its
+`.github/agents/` Copilot mirror from the single `.agentkit/subagents/` source - mirror parity is
+automatic, never hand-maintained. For a qualitative pass on the change, use the `agentkit-review` skill.
 
 ## Skill groups
 
@@ -48,8 +48,11 @@ klank-specific skills: `run`, `run-tests`, `build`, `new-lib`, `update-dependenc
 full index is generated to `/CATALOG.md`.
 
 Skills retired into agentkit equivalents: `cleanup-recent-changes` -> `develop-clean`, `ci-pipeline-optimize`
--> `cicd-harden`, `audit-agent-setup` -> `agentkit-doctor`, and `add-skill`/`add-role`/`add-hook` ->
-`agentkit-scaffold`.
+-> `cicd-harden`, `audit-agent-setup` -> `agentkit validate` / `agentkit generate --check`, and
+`add-skill`/`add-role`/`add-hook` -> `agentkit new` (external CLI). Only the agentkit skills that work
+without a local CLI are kept: `agentkit-review`, `agentkit-tighten`, `agentkit-learn`. The CLI-driven ones
+(`generate`, `validate`, `doctor`, `scaffold`, `install`, `release`, `evaluate`) are run as CLI commands
+from the romni/skills library, not as in-repo skills.
 
 ## Update matrix
 

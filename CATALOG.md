@@ -1,32 +1,18 @@
 # Klank - Catalog
 
-> Routing index for this agent-content repository. Authored under `.agentkit/`; generated into each agent's native files. 54 items.
+> Routing index for this agent-content repository. Authored under `.agentkit/`; generated into each agent's native files. 47 items.
 
 
 ## Skills
 
 ### agentkit
 
-- **agentkit-doctor** - Diagnoses and safely fixes a repo's existing native agent files (CLAUDE.md, AGENTS.md, .cursor/rules, SKILL.md, hooks) against these rules. Use when auditing or cleaning up another repo's agent setup.  
-  `.agentkit/skills/agentkit/agentkit-doctor/SKILL.md` → `.claude/skills/agentkit-doctor/`
-- **agentkit-evaluate** - Runs the local behavioral eval harness (promptfoo plus golden datasets) to check that skills trigger and behave correctly. Use when changing a skill's description or behavior; requires an API key.  
-  `.agentkit/skills/agentkit/agentkit-evaluate/SKILL.md` → `.claude/skills/agentkit-evaluate/`
-- **agentkit-generate** - Regenerates per-agent native files (AGENTS.md, CLAUDE.md, .claude, .github, .cursor, .junie) from .agentkit/ and keeps them in sync. Use after editing .agentkit/ or when generated files drift.  
-  `.agentkit/skills/agentkit/agentkit-generate/SKILL.md` → `.claude/skills/agentkit-generate/`
-- **agentkit-install** - Installs or updates a chosen subset of this library into a target repo, picking domains, detecting agents, reconciling files. Use when setting up or syncing agentkit, not for authoring content.  
-  `.agentkit/skills/agentkit/agentkit-install/SKILL.md` → `.claude/skills/agentkit-install/`
 - **agentkit-learn** - Analyzes a human-agent transcript for where the agent setup (skills, instructions, routing, context) lost efficiency, then ships fixes. Use after a session to improve future runs; not a PR review.  
   `.agentkit/skills/agentkit/agentkit-learn/SKILL.md` → `.claude/skills/agentkit-learn/`
-- **agentkit-release** - Regenerates the CATALOG index and prepares a versioned release of the agent-content repo. Use when cutting a release or after a batch of content changes.  
-  `.agentkit/skills/agentkit/agentkit-release/SKILL.md` → `.claude/skills/agentkit-release/`
 - **agentkit-review** - Reviews an agent-content diff against the authoring catalogue checklist. Use when reviewing a PR that changes skills, instructions, or AGENTS.md - not for general code review.  
   `.agentkit/skills/agentkit/agentkit-review/SKILL.md` → `.claude/skills/agentkit-review/`
-- **agentkit-scaffold** - Creates a new agent-content item (skill, instruction, subagent, command, hook, or MCP) with correct layout and frontmatter. Use when adding content to a .agentkit/-based agent repo.  
-  `.agentkit/skills/agentkit/agentkit-scaffold/SKILL.md` → `.claude/skills/agentkit-scaffold/`
 - **agentkit-tighten** - Refactors a .agentkit/ agent file to follow the context-architecture rules - disclosure, ordering, descriptions, budgets. Use when a SKILL.md or instruction here is bloated, vague, or oversized.  
   `.agentkit/skills/agentkit/agentkit-tighten/SKILL.md` → `.claude/skills/agentkit-tighten/`
-- **agentkit-validate** - Runs schema, structure, and metadata-budget checks over .agentkit/ and docs. Use for the deterministic pre-commit pass, not the qualitative PR review (agentkit-review) or app-code linting.  
-  `.agentkit/skills/agentkit/agentkit-validate/SKILL.md` → `.claude/skills/agentkit-validate/`
 
 ### cicd
 

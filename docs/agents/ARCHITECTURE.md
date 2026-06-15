@@ -31,7 +31,7 @@ Build commands live in `.agentkit/instructions/overview.md`. Persisted field nam
 
 When a constraint can be checked mechanically (file extension, export style, capability path), author a
 hook under `.agentkit/hooks/<name>.yaml`; generation registers it in `.claude/settings.json`. A doc bullet
-alone is not enforcement. Use `agentkit-scaffold` to bootstrap a hook.
+alone is not enforcement. Bootstrap a hook with `agentkit new hook <name>` (external CLI) or by hand.
 
 ## 5. One source per identity; mirrors are generated
 
