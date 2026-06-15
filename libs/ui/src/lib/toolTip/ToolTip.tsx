@@ -12,7 +12,8 @@ export const ToolTip: React.FC<ToolTipProps> = ({message, children, ...props}) =
   const wrapperRef = useRef<HTMLDivElement>(null)
 
 
-  const handleMouseMove = (event: React.MouseEvent) => {
+  const handlePointerMove = (event: React.PointerEvent) => {
+    if (event.pointerType === 'touch') return
     const boundingRect = wrapperRef.current?.getBoundingClientRect()
     if (boundingRect) {
       setPosition({
@@ -27,9 +28,9 @@ export const ToolTip: React.FC<ToolTipProps> = ({message, children, ...props}) =
       className={styles.container}
       {...props}
       ref={wrapperRef}
-      onMouseEnter={() => setIsVisible(true)}
-      onMouseLeave={() => setIsVisible(false)}
-      onMouseMove={handleMouseMove}
+      onPointerEnter={(e) => { if (e.pointerType !== 'touch') setIsVisible(true) }}
+      onPointerLeave={() => setIsVisible(false)}
+      onPointerMove={handlePointerMove}
     >
       {children}
       {

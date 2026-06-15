@@ -10,11 +10,14 @@ import {
 import { Menu } from './components/menu/Menu'
 import { Player } from './components/player/Player'
 import { useGitSync } from './useGitSync'
+import { SettingsPanel } from './routes/settings'
+import { HarmonyPanel } from './routes/harmony'
 
 const MIN_WIDTH = 160
 const MAX_WIDTH = 800
 
 export function App() {
+  const activeView = useKlankStore().activeView
   const isMenuExtended = useKlankStore().ui.isMenuExtended
   const menuWidth = useKlankStore().ui.menuWidth
   const toggleMenu = useKlankStore().toggleMenu
@@ -184,7 +187,9 @@ export function App() {
         style={{ left: currentWidth - 4 }}
         onPointerDown={handleResizeStart}
       />
-      <Player/>
+      {activeView === 'settings' ? <SettingsPanel /> :
+       activeView === 'harmony' ? <HarmonyPanel /> :
+       <Player />}
     </main>
   );
 }

@@ -2,7 +2,6 @@ import styles from './menu.module.css'
 import * as React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router'
 import { FileEntry, getSheetFromUG, ImportProgress, sortByArtist } from '@klank/platform-api'
 import {
   Button,
@@ -72,9 +71,10 @@ const getNeighborPath = (tree: FileEntry[], deletedPath: string): string => {
 }
 
 export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) => {
-  const navigate = useNavigate()
   const isMenuExtended = useKlankStore().ui.isMenuExtended
   const toggleMenu = useKlankStore().toggleMenu
+  const activeView = useKlankStore().activeView
+  const setActiveView = useKlankStore().setActiveView
 
   // Width-based mobile detection — user-agent checks miss tablets and some
   // Android WebViews that don't include "mobile" in their UA string.
@@ -122,6 +122,7 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
   const handleSelectSong = (path: string) => {
     useKlankStore.setState((s) => ({ ...s, activePlaylistIndex: null }))
     setTabPath(path)
+    setActiveView('tab')
   }
 
   const handleRequestCreatePlaylist = () => {
@@ -446,7 +447,9 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
     <>
       <ul className={styles.container} data-collapsed={!isMenuExtended} {...props}>
         <li key="logo">
-          <LogoIcon /> <span className={styles.logoText}>KLANK</span>
+          <button className={styles.logoButton} onClick={() => setActiveView('tab')} aria-label="Back to tab view">
+            <LogoIcon /> <span className={styles.logoText}>KLANK</span>
+          </button>
         </li>
         <Toolbar
           setNeedsUpdate={setNeedsUpdate}
@@ -456,8 +459,16 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
           onRequestDownload={isMobile ? undefined : handleRequestDownload}
           isDownloading={isDownloading}
           downloadError={downloadError}
-          onSettingsClick={() => navigate('/settings')}
-          onHarmonyClick={() => navigate('/harmony')}
+          onSettingsClick={() => {
+            setActiveView(activeView === 'settings' ? 'tab' : 'settings')
+            if (isMobile) toggleMenu(false)
+          }}
+          onHarmonyClick={() => {
+            setActiveView(activeView === 'harmony' ? 'tab' : 'harmony')
+            if (isMobile) toggleMenu(false)
+          }}
+          isSettingsActive={activeView === 'settings'}
+          isHarmonyActive={activeView === 'harmony'}
           isCollapsed={!isMenuExtended}
           hideGoToTab={isMobile}
         />

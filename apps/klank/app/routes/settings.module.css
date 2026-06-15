@@ -1,42 +1,10 @@
-.page {
+.panel {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
+  overflow-y: auto;
   background: var(--klank-color-background);
   color: var(--klank-color-text);
-  overflow-y: auto;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--klank-color-border);
-  flex-shrink: 0;
-}
-
-.header h1 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.backButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  color: var(--klank-color-text);
-  cursor: pointer;
-  padding: 6px 10px;
-  border-radius: 4px;
-  font-size: 0.9rem;
-
-  &:hover {
-    background: var(--klank-color-highlight);
-  }
 }
 
 .content {
@@ -215,9 +183,3 @@
   }
 }
 
-@media (max-width: 599px) {
-  .page {
-    padding-top: var(--safe-top);
-    padding-bottom: calc(var(--safe-bottom) + 1rem);
-  }
-}
