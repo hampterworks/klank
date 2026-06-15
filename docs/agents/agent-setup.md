@@ -2,73 +2,59 @@ Read `ARCHITECTURE.md` for the invariants every file here depends on.
 
 ---
 
-## Authoring model
-
-All agent content is authored under `.agentkit/` and **generated** into the native files every tool reads
-(`AGENTS.md`, `CLAUDE.md`, `CATALOG.md`, `.claude/`, `.github/`, `.cursor/`, `.junie/`). Never hand-edit a
-generated file - edit the source under `.agentkit/` and regenerate.
-
-- `.agentkit/skills/<group>/<name>/SKILL.md` - procedure skills (groups: `agentkit`, `cicd`, `design`, `develop`, `qa`, `klank`)
-- `.agentkit/subagents/<name>.md` - subagent identities (one source -> Claude + Copilot + Cursor + Junie copies)
-- `.agentkit/instructions/*.md` - global/path instructions; `overview.md` is klank's project briefing (becomes `AGENTS.md`)
-- `.agentkit/commands/*.md`, `.agentkit/hooks/*.yaml`, `.agentkit/mcp/*.yaml` - commands, hooks, MCP servers
-
-## Commands
-
-The agentkit CLI is **not vendored** in this repo; it lives in the agentkit library (romni/skills). Run it
-against klank - either with `agentkit` on your PATH from klank's root, or point the library's CLI at klank
-with `--root`:
-
-```
-agentkit generate                         # regenerate all native files from .agentkit/
-agentkit generate --check                 # verify native files are in sync (CI gate)
-agentkit validate                         # schema + structure + budget checks
-agentkit new skill <name> --group klank   # scaffold a new item, then edit it
-
-# or, from a checkout of the romni/skills library, without installing the CLI globally:
-pnpm agentkit generate --root /path/to/klank
-```
-
-## Naming conventions
+## Naming Conventions
 
 **Subagents**: kebab-case, noun phrase (`music-theory-expert`, not `musicTheory`).
 **Skills**: kebab-case, `verb-object` form (`run-tests`, `update-docs`).
+**Subagent mirrors**: `<name>.agent.md` in `.github/agents/` (Copilot) and `<name>.md` in `.junie/agents/` (Junie) - same `name` and body as the `.claude/agents/` subagent.
 
-## Adding a role or skill
+## Adding a New Role
 
-Create the source with `agentkit new <type> <name>` (external CLI) or by hand under `.agentkit/`, fill it
-in, then run `agentkit generate`. Generation writes the subagent to `.claude/agents/` **and** its
-`.github/agents/` Copilot mirror from the single `.agentkit/subagents/` source - mirror parity is
-automatic, never hand-maintained. For a qualitative pass on the change, use the `agentkit-review` skill.
+Use the `add-role` skill. It writes the self-contained subagent identity in `.claude/agents/` and its `.github/agents/` (Copilot) and `.junie/agents/` (Junie) mirrors.
 
-## Skill groups
+## Adding a New Skill
 
-`agentkit`, `cicd`, `design`, `develop`, `qa` come from the agentkit library. The `klank` group holds
-klank-specific skills: `run`, `run-tests`, `build`, `new-lib`, `update-dependencies`, `update-docs`. The
-full index is generated to `/CATALOG.md`.
+Use the `add-skill` skill. It creates the SKILL.md and registers the catalogue row. Skills are auto-discovered - never mirrored into `.github/agents/`.
 
-Skills retired into agentkit equivalents: `cleanup-recent-changes` -> `develop-clean`, `ci-pipeline-optimize`
--> `cicd-harden`, `audit-agent-setup` -> `agentkit validate` / `agentkit generate --check`, and
-`add-skill`/`add-role`/`add-hook` -> `agentkit new` (external CLI). Only the agentkit skills that work
-without a local CLI are kept: `agentkit-review`, `agentkit-tighten`, `agentkit-learn`. The CLI-driven ones
-(`generate`, `validate`, `doctor`, `scaffold`, `install`, `release`, `evaluate`) are run as CLI commands
-from the romni/skills library, not as in-repo skills.
+## Update Matrix
 
-## Update matrix
+When this fact changes → update these files:
 
-When this fact changes -> update these `.agentkit/` sources, then `agentkit generate`:
+| Fact | Files to update |
+|------|----------------|
+| Build/test commands | `AGENTS.md` |
+| New `@klank/*` lib | `AGENTS.md §Project Structure`, `tsconfig.base.json §paths`, this file §Skill Catalogue if `new-lib` was used |
+| New Tauri command | `.claude/agents/tauri-engineer.md §Process` (+ `.github/agents/` mirror), `AGENTS.md §Boundaries` if a new constraint |
+| New role | `.claude/agents/<name>.md` + `.github/agents/<name>.agent.md` + `.junie/agents/<name>.md` (self-contained identity), this file §Skill Catalogue |
+| New skill | `.claude/skills/<name>/`, this file §Skill Catalogue, consuming subagent `## Skills used` |
+| Hook added | `.claude/hooks/`, `.claude/settings.json`, this file §Hook Catalogue |
+| Persisted field name changed | `libs/store/src/lib/store.ts`, `AGENTS.md §Boundaries`, consuming subagent Hard Constraints |
 
-| Fact | Source to update |
-|------|------------------|
-| Build/test commands | `.agentkit/instructions/overview.md` |
-| New `@klank/*` lib | `.agentkit/instructions/overview.md §Project Structure`, `tsconfig.base.json §paths` |
-| New Tauri command | `.agentkit/subagents/tauri-engineer.md`, `overview.md §Boundaries` if a new constraint |
-| New role | `.agentkit/subagents/<name>.md` |
-| New skill | `.agentkit/skills/<group>/<name>/SKILL.md`, consuming subagent `## Skills used` |
-| Hook added | `.agentkit/hooks/<name>.yaml` |
-| Persisted field name changed | `libs/store/src/lib/store.ts`, `overview.md §Boundaries`, consuming subagent Hard Constraints |
+## Skill Catalogue
 
-## Token budget reference
+| Skill | Auto-trigger | Purpose |
+|-------|-------------|---------|
+| `run` | Yes | Start Vite dev server or Tauri desktop app |
+| `run-tests` | Yes | Run Vitest per-lib or across workspace |
+| `build` | Yes | Full NX build + typecheck + lint |
+| `new-lib` | No | Scaffold a new NX library with correct config and path alias |
+| `add-role` | No | Create a subagent identity (`.claude/agents/` + `.github/agents/` + `.junie/agents/` mirrors) |
+| `add-skill` | No | Create a new skill SKILL.md + catalogue entry |
+| `add-hook` | No | Add a new Claude Code hook to settings.json |
+| `audit-agent-setup` | Yes - before any commit under `.claude/`, `.github/agents/`, or `docs/agents/` | Consistency checks for klank's agent system |
+| `update-dependencies` | No | pnpm workspace + Cargo.toml dependency upgrades |
+| `update-docs` | Yes - after any structural change | Keep README and human-readable docs current |
+
+The `develop-*`, `qa-*`, `cicd-*`, and `design-*` procedure skills (originally from agentkit) also live in
+`.claude/skills/` and are auto-discovered; see `CATALOG.md` for the full index. Two former klank skills were
+retired in favour of those: `cleanup-recent-changes` -> `develop-clean`, `ci-pipeline-optimize` ->
+`cicd-harden`. These are hand-maintained native files - there is no generator or CLI.
+
+## Hook Catalogue
+
+*(Empty - no hooks registered yet. Use `add-hook` to bootstrap the first one.)*
+
+## Token Budget Reference
 
 | File | Soft | Hard |
 |------|------|------|

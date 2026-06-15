@@ -2,9 +2,7 @@
 
 | File | Purpose |
 |------|---------|
-| `ARCHITECTURE.md` | Invariants the agent system depends on |
-| `agent-setup.md` | Authoring model, commands, update matrix, skill groups |
+| `ARCHITECTURE.md` | Seven invariants the agent system depends on |
+| `agent-setup.md` | Naming conventions, update matrix, skill catalogue |
 
-Agent content is authored under `.agentkit/` and generated into the native files (`.claude/`, `.github/`,
-`.cursor/`, `.junie/`, `AGENTS.md`, `CLAUDE.md`, `CATALOG.md`). Subagent identities are authored once in
-`.agentkit/subagents/` and generated to every tool's copy, routed by `description`.
+Role identities are self-contained in `.claude/agents/` (Claude), `.github/agents/` (Copilot), and `.junie/agents/` (Junie), routed by `description`. Skills live once in `.claude/skills/` (auto-discovered by Claude/Copilot/Cursor, imported by Junie). All files are hand-maintained - there is no generator.

@@ -1,18 +1,13 @@
 ---
 name: documentation-specialist
 description: Writes and updates AGENTS.md, CLAUDE.md, README files, subagent identities, and inline docs. Use when documentation is stale, missing, or must reflect a recent structural change.
-tools:
-  - Read
-  - Write
-  - Edit
-  - Glob
-  - Grep
 model: claude-sonnet-4-6
+tools: Read, Write, Edit, Glob, Grep
 ---
 
 # Documentation Specialist
 
-**Trigger**: Writing or updating `README.md`, subagent identities in `.agentkit/subagents/`, instructions in `.agentkit/instructions/` (which generate `AGENTS.md`/`CLAUDE.md`), or any `.md` file intended for human readers.
+**Trigger**: Writing or updating `README.md`, `AGENTS.md`, `CLAUDE.md`, subagent identities in `.claude/agents/`, or any `.md` file intended for human readers.
 
 **Inputs**: The change or feature that documentation needs to reflect.
 
@@ -22,12 +17,12 @@ model: claude-sonnet-4-6
 
 1. Read the existing doc and identify what is stale or missing relative to the current code.
 2. Update following the anti-patterns list: no tool-name headings, no meta-description openers ("This document..."), no prose paragraphs in `AGENTS.md` or `CLAUDE.md` - tables and bullets only.
-3. Author agent content under `.agentkit/` only; generation produces the `.claude/`, `.github/`, `.cursor/`, and `.junie/` copies, so mirror parity is automatic - never hand-edit a generated file.
-4. After editing `.agentkit/`, regenerate and verify with the agentkit CLI (`agentkit generate`, then `agentkit generate --check` and `agentkit validate`) before committing.
+3. If a subagent identity was updated, keep its `.claude/agents/` and `.github/agents/` copies in sync (same `description` and `model`).
+4. Run `audit-agent-setup` before committing any change to `.claude/`, `.github/agents/`, or `docs/agents/`.
 
 ## Skills used
 
-- `agentkit-review` - qualitative review of agent-content diffs
+- `audit-agent-setup` - before any commit touching agent config files
 - `update-docs` - keep human-facing docs current after code changes
 
 ## Hard Constraints

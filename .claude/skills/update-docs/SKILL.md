@@ -19,7 +19,7 @@ description: Updates README and human-readable docs to reflect recent code or co
 2. For each structural change, identify the corresponding doc using `docs/agents/agent-setup.md §Update Matrix`.
 3. Update the doc: no prose paragraphs in `AGENTS.md` or `CLAUDE.md` - tables and bullets only.
 4. For root `README.md`: ensure it describes what klank actually is, how to run it, and the lib structure. The Nx boilerplate is not acceptable.
-5. If agent content under `.agentkit/` changed, regenerate and run `agentkit generate --check` (agentkit CLI from romni/skills).
+5. If agent setup files changed, run `audit-agent-setup`.
 
 ## Failure modes
 

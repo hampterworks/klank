@@ -1,6 +1,6 @@
 # Klank
 
-> Cross-tool agent instructions for this repository. Generated from `.agentkit/instructions/`.
+> Cross-tool agent instructions for this repository.
 
 
 ## Project briefing
@@ -76,7 +76,7 @@ docs/agents/                        Agent architecture + setup conventions
 
 ## Development principles (least code, fewest deps)
 
-When writing or changing code here (the agentkit CLI) or in any code-producing skill, default to the
+When writing or changing code in this codebase or in any code-producing skill, default to the
 **least code that solves the problem** - think like the laziest senior dev in the room:
 
 - **YAGNI.** Question whether the code, file, or abstraction needs to exist at all. Delete before you add;
