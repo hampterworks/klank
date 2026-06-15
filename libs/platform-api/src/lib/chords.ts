@@ -35,6 +35,14 @@ export const testChords = (string: string) => isChordSymbol(string)
 export const testSpaces = (string: string) => /^\s*$/.test(string)
 
 /**
+ * Matches chord-voicing tokens like A1, G1, F#1, F#2, F#3 — a note letter,
+ * optional accidental(s), then only digits. These are not chords (they label a
+ * string + fret), but they should not count as plain words when classifying
+ * chord lines, and they must never be boxed/diagrammed as chords in the sheet.
+ */
+export const CHORD_LIKE_RE = /^[A-G][#b♭]{0,2}\d+$/
+
+/**
  * Transposes a chord symbol by `transpose` semitones.
  *
  * - Positive `transpose` shifts up; negative shifts down; wraps at 12.
@@ -58,8 +66,9 @@ export const transposeChord = (chord: string, transpose: number): string => {
  * i.e. chords are in the minority among non-delimiter tokens.
  *
  * Returns false if all tokens are chords (chord line), all tokens are non-chords
- * (lyric-only line), or the token count is tied. Also returns false immediately
- * if `tokens[1]` is `|` (tablature line).
+ * (lyric-only line), or chords are in the majority (strictly more than other
+ * tokens). Ties → mixed → plain. Also returns false immediately if `tokens[1]`
+ * is `|` (tablature line).
  *
  * Parenthesized tokens are stripped before counting.
  */
@@ -77,16 +86,18 @@ export const testTokenContext = (tokens: string[]) => {
   // delimiter character (e.g. the merged minor chord `C-7`) must be kept.
   const normalizedTokens = tokensWithoutParentheses.filter(token => !/^(?:\s+|\||\(|\)|-|,|\*|%)$/.test(token))
 
-  if (normalizedTokens.every(token => testChords(token)) || normalizedTokens.every(token => !testChords(token))) return false
+  const isChordLike = (token: string) => testChords(token) || CHORD_LIKE_RE.test(token)
+
+  if (normalizedTokens.every(token => isChordLike(token)) || normalizedTokens.every(token => !isChordLike(token))) return false
 
   const tokenCount = normalizedTokens.reduce((previousValue, currentValue) => {
-    if (testChords(currentValue)) {
+    if (isChordLike(currentValue)) {
       return {chords: previousValue.chords + 1, other: previousValue.other}
     }
     return {chords: previousValue.chords, other: previousValue.other + 1}
   }, {chords: 0, other: 0})
 
-  if (tokenCount.chords >= tokenCount.other) return false
+  if (tokenCount.chords > tokenCount.other) return false
 
   return true
 }

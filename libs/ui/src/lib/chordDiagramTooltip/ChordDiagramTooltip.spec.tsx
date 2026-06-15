@@ -234,7 +234,7 @@ describe('ChordDiagramTooltip', () => {
     })
 
     await act(async () => {
-      fireEvent.mouseDown(document.body) // click outside
+      fireEvent.pointerDown(document.body) // click outside (handler uses pointerdown)
     })
     expect(document.body.querySelector('[role="tooltip"]')).toBeNull()
   })

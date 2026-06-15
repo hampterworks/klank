@@ -1,6 +1,5 @@
 .container {
   display: grid;
-  transition: grid-template-columns 100ms;
   overflow: hidden;
   width: 100%;
   height: 100vh;
@@ -10,6 +9,17 @@
 
 .resizing {
   transition: none;
+}
+
+/* Blur the nav only when the drag is below MIN_WIDTH (about to snap closed).
+   At that point the menu is pinned to 52 px but still shows expanded content,
+   so a light blur hides the visual mess. Normal width-adjustments above the
+   threshold remain unblurred so the user can read the menu while resizing.
+   pointer-events:none prevents the blurred tree from swallowing pointer events
+   during the drag. */
+.collapsing nav {
+  filter: blur(2px);
+  pointer-events: none;
 }
 
 .resizeHandle {

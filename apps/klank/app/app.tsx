@@ -21,7 +21,7 @@ export function App() {
   const isMenuExtended = useKlankStore().ui.isMenuExtended
   const menuWidth = useKlankStore().ui.menuWidth
   const toggleMenu = useKlankStore().toggleMenu
-  const setMenuWidth = useKlankStore().setMenuWidth
+  const setMenuState = useKlankStore().setMenuState
   const serverMode = useKlankStore().serverMode
   const setServerMode = useKlankStore().setServerMode
   const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
@@ -150,15 +150,28 @@ export function App() {
       const displayWidth = w < MIN_WIDTH ? 52 : w
       container.style.gridTemplateColumns = `${displayWidth}px 1fr`
       handle.style.left = `${displayWidth - 4}px`
+      // Only blur nav when below the collapse threshold (menu about to snap
+      // closed). Normal width adjustments above the threshold stay unblurred.
+      if (w < MIN_WIDTH) {
+        container.classList.add(styles.collapsing)
+      } else {
+        container.classList.remove(styles.collapsing)
+      }
     }
 
     const onUp = () => {
+      // Set inline style to the final value before re-enabling CSS transitions
+      // (removing .resizing). Without this, the transition animates from the
+      // drag position to the React-controlled value, squishing content.
+      const finalDisplay = finalWidth < MIN_WIDTH ? 52 : finalWidth
+      container.style.gridTemplateColumns = `${finalDisplay}px 1fr`
+      handle.style.left = `${finalDisplay - 4}px`
+      container.classList.remove(styles.collapsing)
       container.classList.remove(styles.resizing)
       if (finalWidth < MIN_WIDTH) {
-        if (isMenuExtended) toggleMenu(false)
+        setMenuState(false)
       } else {
-        if (!isMenuExtended) toggleMenu(true)
-        setMenuWidth(finalWidth)
+        setMenuState(true, finalWidth)
       }
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)

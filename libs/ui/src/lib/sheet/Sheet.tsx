@@ -79,6 +79,8 @@ const renderChordLyricPair = (
   chordLine: Extract<SheetLine, { kind: 'chord-line' }>,
   lyricText: string,
   index: number,
+  instrument?: Instrument,
+  isScrolling = false,
 ): React.ReactNode => {
   // Character position of each chord token (sum of preceding raw lengths).
   let charPos = 0
@@ -127,14 +129,19 @@ const renderChordLyricPair = (
     <div key={index} className={styles.chordLyricPair}>
       {units.map((u, i) => (
         <span key={i} className={styles.chordLyricSegment}>
-          {/* Invisible placeholder keeps the lyric baseline aligned when no chord */}
-          <span
-            className={styles.chord}
-            style={{ visibility: u.chord ? 'visible' : 'hidden' }}
-            aria-hidden={!u.chord}
-          >
-            {u.chord ?? ' '}
-          </span>
+          {instrument && u.chord ? (
+            <ChordDiagramTooltip chordName={u.chord} instrument={instrument} isScrolling={isScrolling}>
+              <span className={styles.chord}>{u.chord}</span>
+            </ChordDiagramTooltip>
+          ) : (
+            <span
+              className={styles.chord}
+              style={{ visibility: u.chord ? 'visible' : 'hidden' }}
+              aria-hidden={!u.chord}
+            >
+              {u.chord ?? ' '}
+            </span>
+          )}
           <span className={styles.lyricText}>{u.text}</span>
         </span>
       ))}
@@ -401,7 +408,7 @@ export const Sheet: React.FC<SheetProps> = ({
         if (i + 1 < lines.length) {
           const next = classifySheetLine(lines[i + 1], transpose)
           if (next.kind === 'plain') {
-            result.push(renderChordLyricPair(classified, next.text, i))
+            result.push(renderChordLyricPair(classified, next.text, i, instrument, isScrolling))
             i += 2
             continue
           }
