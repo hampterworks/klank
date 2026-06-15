@@ -37,6 +37,12 @@
   justify-content: center;
 }
 
+/* logoButton is width:100% so the <li>'s justify-content has no effect.
+   Center the icon inside the button so it aligns with the toolbar icons. */
+.container[data-collapsed="true"] .logoButton {
+  justify-content: center;
+}
+
 .logoText {}
 
 .logoButton {
