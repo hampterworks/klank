@@ -11,6 +11,17 @@
   transition: none;
 }
 
+/* While the handle is dragged the nav width changes every frame, reflowing and
+   compressing the menu content (truncating names, wrapping rows). Blur it for
+   the duration of the drag so the reflow reads as an intentional resize rather
+   than janky squish; it snaps back sharp the instant the handle is released
+   (.resizing is removed in onUp). pointer-events:none keeps the blurred tree
+   from swallowing the drag. */
+.resizing nav {
+  filter: blur(2.5px);
+  pointer-events: none;
+}
+
 .resizeHandle {
   position: absolute;
   top: 0;
