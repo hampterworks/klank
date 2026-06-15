@@ -3,15 +3,13 @@ import * as React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router'
-import { FileEntry, getSheetFromUG, ImportProgress, isMobileDevice, sortByArtist } from '@klank/platform-api'
+import { FileEntry, getSheetFromUG, ImportProgress, sortByArtist } from '@klank/platform-api'
 import {
   Button,
   DownloadIcon,
   FileTreeView,
   LogoIcon,
   NewPlaylistIcon,
-  RefreshIcon,
-  ScalesIcon,
   Searchbar,
   ShuffleIcon,
   TargetIcon,
@@ -91,7 +89,6 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
   const currentTabPath = useKlankStore().tab.path
   const setTabPath = useKlankStore().setTabPath
   const baseDirectory = useKlankStore().baseDirectory
-  const setBaseDirectory = useKlankStore().setBaseDirectory
   const fileService = useKlankStore().fileService
   const activePlaylistId = useKlankStore().activePlaylistId
   const playlists = useKlankStore().playlists
@@ -452,9 +449,7 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
           <LogoIcon /> <span className={styles.logoText}>KLANK</span>
         </li>
         <Toolbar
-          getDirectoryPath={isMobileDevice() ? undefined : fileService?.getDirectoryPath}
           setNeedsUpdate={setNeedsUpdate}
-          setBaseDirectory={setBaseDirectory}
           setTabPath={handleSelectSong}
           tree={tree}
           onRequestCreatePlaylist={isMobile ? undefined : handleRequestCreatePlaylist}
@@ -465,7 +460,6 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
           onHarmonyClick={() => navigate('/harmony')}
           isCollapsed={!isMenuExtended}
           hideGoToTab={isMobile}
-          hideRefresh={isMobile}
         />
         {!isMobile && isMenuExtended && (
           <>
@@ -479,6 +473,7 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
                 onAddToPlaylist={activePlaylist ? (path) => addTabToPlaylist(activePlaylist.id, path) : undefined}
                 activePlaylistPaths={activePlaylist?.paths}
                 onDeleteTab={(path) => setPathToConfirmDelete(path)}
+                onEditTab={(path) => { handleSelectSong(path); useKlankStore.getState().setMode('Edit') }}
               />
             </div>
           </>
@@ -515,14 +510,6 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
                     onClick={() => document.getElementById('active')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                   />
                 </ToolTip>
-                <ToolTip message="Refresh">
-                  <Button
-                    iconButton
-                    icon={<RefreshIcon />}
-                    aria-label="Refresh"
-                    onClick={() => setNeedsUpdate(true)}
-                  />
-                </ToolTip>
               </div>
               {/* Creation / navigation — may close drawer or open a modal */}
               <div className={styles.mobileDrawerActionsGroup}>
@@ -555,14 +542,6 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
                     onClick={handleRequestDownload}
                   />
                 </ToolTip>
-                <ToolTip message="Scales & Chords">
-                  <Button
-                    iconButton
-                    icon={<ScalesIcon />}
-                    aria-label="Scales & Chords"
-                    onClick={() => { navigate('/harmony'); toggleMenu(false) }}
-                  />
-                </ToolTip>
               </div>
             </div>
             <div className={styles.mobileDrawerContent}>
@@ -576,6 +555,7 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
                   onAddToPlaylist={activePlaylist ? (path) => addTabToPlaylist(activePlaylist.id, path) : undefined}
                   activePlaylistPaths={activePlaylist?.paths}
                   onDeleteTab={(path) => setPathToConfirmDelete(path)}
+                  onEditTab={(path) => { handleSelectSong(path); useKlankStore.getState().setMode('Edit'); toggleMenu(false) }}
                 />
               </div>
             </div>
