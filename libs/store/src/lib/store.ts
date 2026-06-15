@@ -105,6 +105,9 @@ export const notifyTabsChanged = (): void => {
 }
 
 type KlankState = {
+  /** Ephemeral — not persisted. Which panel is shown on the right. */
+  activeView: 'tab' | 'settings' | 'harmony'
+  setActiveView: (view: 'tab' | 'settings' | 'harmony') => void
   /** Active tab directory chosen by the user. Not persisted. */
   baseDirectory?: string
   /** True when running outside Tauri (browser/server). Not persisted. */
@@ -221,6 +224,8 @@ export const useKlankStore = create<KlankState>()(
   devtools(
     persist(
       (set) => ({
+        activeView: 'tab' as const,
+        setActiveView: (activeView) => set((state) => ({ ...state, activeView })),
         ui: {
           isMenuExtended: true,
           menuWidth: 400,

@@ -1,6 +1,5 @@
 import styles from './settings.module.css'
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
 import { createGitService, getAppVersion, isMobileDevice, type BranchInfo, type GitService } from '@klank/platform-api'
 import { useKlankStore, type SyncStatus } from '@klank/store'
 import { runGitSync } from '../useGitSync'
@@ -53,8 +52,7 @@ const toneClass: Record<SyncTone, string> = {
   neutral: '',
 }
 
-export default function Settings() {
-  const navigate = useNavigate()
+export function SettingsPanel() {
   const baseDirectory = useKlankStore().baseDirectory
   const setBaseDirectory = useKlankStore().setBaseDirectory
   const setTheme = useKlankStore().setTheme
@@ -237,14 +235,7 @@ export default function Settings() {
   )
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <button className={styles.backButton} onClick={() => navigate(-1)}>
-          ← Back
-        </button>
-        <h1>Settings</h1>
-      </header>
-
+    <div className={styles.panel}>
       <div className={styles.content}>
         <section className={styles.section}>
           <h2>General</h2>
