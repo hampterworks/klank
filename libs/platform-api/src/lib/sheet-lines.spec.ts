@@ -308,4 +308,12 @@ describe('classifySheetLine examples', () => {
       text: 'A1 G1 F#1',
     })
   })
+
+  it('classifies voicing-definition lines with trailing non-chord text as plain', () => {
+    // F#2 also parses as a sus2 chord. On the definition line it appears with
+    // a trailing ' ?' which creates a 1:1 chord/non-chord tie. The strict-
+    // majority rule (chords must outnumber non-chords) sends ties to plain,
+    // preventing F#2 from being boxed on lines like this.
+    expect(classifySheetLine('F#2 - (2X0210) (Dm7sus2/F#) ?', 0).kind).toBe('plain')
+  })
 })

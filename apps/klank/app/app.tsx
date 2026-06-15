@@ -150,6 +150,13 @@ export function App() {
       const displayWidth = w < MIN_WIDTH ? 52 : w
       container.style.gridTemplateColumns = `${displayWidth}px 1fr`
       handle.style.left = `${displayWidth - 4}px`
+      // Only blur nav when below the collapse threshold (menu about to snap
+      // closed). Normal width adjustments above the threshold stay unblurred.
+      if (w < MIN_WIDTH) {
+        container.classList.add(styles.collapsing)
+      } else {
+        container.classList.remove(styles.collapsing)
+      }
     }
 
     const onUp = () => {
@@ -159,6 +166,7 @@ export function App() {
       const finalDisplay = finalWidth < MIN_WIDTH ? 52 : finalWidth
       container.style.gridTemplateColumns = `${finalDisplay}px 1fr`
       handle.style.left = `${finalDisplay - 4}px`
+      container.classList.remove(styles.collapsing)
       container.classList.remove(styles.resizing)
       if (finalWidth < MIN_WIDTH) {
         setMenuState(false)

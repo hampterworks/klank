@@ -66,8 +66,9 @@ export const transposeChord = (chord: string, transpose: number): string => {
  * i.e. chords are in the minority among non-delimiter tokens.
  *
  * Returns false if all tokens are chords (chord line), all tokens are non-chords
- * (lyric-only line), or the token count is tied. Also returns false immediately
- * if `tokens[1]` is `|` (tablature line).
+ * (lyric-only line), or chords are in the majority (strictly more than other
+ * tokens). Ties → mixed → plain. Also returns false immediately if `tokens[1]`
+ * is `|` (tablature line).
  *
  * Parenthesized tokens are stripped before counting.
  */
@@ -96,7 +97,7 @@ export const testTokenContext = (tokens: string[]) => {
     return {chords: previousValue.chords, other: previousValue.other + 1}
   }, {chords: 0, other: 0})
 
-  if (tokenCount.chords >= tokenCount.other) return false
+  if (tokenCount.chords > tokenCount.other) return false
 
   return true
 }
