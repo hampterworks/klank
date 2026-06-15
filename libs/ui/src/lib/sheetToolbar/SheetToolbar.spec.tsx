@@ -37,14 +37,14 @@ describe('SheetToolbar — existing functionality', () => {
     expect(screen.getByRole('button', { name: /play/i })).toBeTruthy()
   })
 
-  it('does not render save button in Read mode', () => {
+  it('does not render a save button (save lives in the floating FAB in Player)', () => {
     renderToolbar()
     expect(screen.queryByRole('button', { name: /save/i })).toBeNull()
   })
 
-  it('renders save button in Edit mode', () => {
+  it('does not render a save button even in Edit mode (save is a floating FAB in Player)', () => {
     renderToolbar({ mode: 'Edit' })
-    expect(screen.getByRole('button', { name: /save/i })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /save/i })).toBeNull()
   })
 })
 

@@ -14,13 +14,12 @@ export const ToolTip: React.FC<ToolTipProps> = ({message, children, ...props}) =
 
   const handlePointerMove = (event: React.PointerEvent) => {
     if (event.pointerType === 'touch') return
-    const boundingRect = wrapperRef.current?.getBoundingClientRect()
-    if (boundingRect) {
-      setPosition({
-        left: `${event.clientX + 14}px`,
-        top: `${event.clientY + 14}px`,
-      })
-    }
+    const margin = 8
+    const estWidth = 200
+    const estHeight = 40
+    const left = Math.min(event.clientX + 14, window.innerWidth - estWidth - margin)
+    const top = Math.min(event.clientY + 14, window.innerHeight - estHeight - margin)
+    setPosition({ left: `${left}px`, top: `${top}px` })
   }
 
   return (

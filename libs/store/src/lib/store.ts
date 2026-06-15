@@ -120,6 +120,8 @@ type KlankState = {
   ui: Ui
   toggleMenu: (isMenuExtended: boolean) => void
   setMenuWidth: (width: number) => void
+  /** Atomically update menu open state and optionally its width in one render. */
+  setMenuState: (isMenuExtended: boolean, menuWidth?: number) => void
   /** Per-file saved settings keyed by full file path. Loaded from and written to tab-settings.json. */
   tabSettingByPath: Record<string, PerTabSettings>
   setBaseDirectory: (directory: string) => void
@@ -251,6 +253,10 @@ export const useKlankStore = create<KlankState>()(
         setMode: (mode) => set((state) => ({...state, mode})),
         toggleMenu: (isMenuExtended) => set((state) => ({...state, ui: {...state.ui, isMenuExtended}})),
         setMenuWidth: (menuWidth) => set((state) => ({...state, ui: {...state.ui, menuWidth}})),
+        setMenuState: (isMenuExtended, menuWidth) => set((state) => ({
+          ...state,
+          ui: { ...state.ui, isMenuExtended, ...(menuWidth !== undefined ? { menuWidth } : {}) },
+        })),
         setTheme: (theme) => set((state) => ({...state, theme})),
         setInstrument: (instrument) => set((state) => ({...state, instrument})),
         harmony: DEFAULT_HARMONY_SETTINGS,

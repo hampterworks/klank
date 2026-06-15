@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
 import { classifySheetLine, type SheetLine } from './sheet-lines.js'
 import {
+  CHORD_LIKE_RE,
   delimiterMatcher,
   isTablatureLine,
   testChords,
@@ -121,6 +122,16 @@ describe('classifySheetLine', () => {
     fc.assert(
       fc.property(anyLineArb, transposeArb, (line, transpose) => {
         fc.pre(!dashMergePossible(line))
+        // Skip lines carrying chord-voicing tokens (A1, G1, F#1…). Their presence
+        // makes classifySheetLine treat every chord-like-shaped token as a voicing
+        // label (so F#2, which also parses as a sus2 chord, is not boxed). The
+        // legacy matcher predates voicing tokens and boxes them, so flag
+        // classification intentionally diverges on these lines.
+        const hasVoicingToken = line
+          .split(delimiterMatcher)
+          .filter((t) => t !== '' && !testSpaces(t))
+          .some((t) => CHORD_LIKE_RE.test(t) && !testChords(t))
+        fc.pre(!hasVoicingToken)
         const classified = classifySheetLine(line, transpose)
         const legacy = legacyLineMatcher(line)
         expect(classified.kind).toBe(legacy.kind)
@@ -159,7 +170,7 @@ describe('classifySheetLine', () => {
     )
   })
 
-  it('always produces chord displays that are themselves valid chords', () => {
+  it('always produces chord displays that are valid chords', () => {
     fc.assert(
       fc.property(anyLineArb, transposeArb, (line, transpose) => {
         for (const token of chordLineTokens(classifySheetLine(line, transpose))) {
@@ -268,5 +279,41 @@ describe('classifySheetLine examples', () => {
         { kind: 'chord', raw: 'B°7', display: 'B°7' },
       ],
     })
+  })
+
+  it('classifies a line with valid chords and chord-voicing tokens as a chord-line, with voicing tokens as text', () => {
+    // G, F are valid chords; A1, G1, F#1, F#2, F#3 are chord-voicing tokens that
+    // count toward the chord-majority check so the line is a chord-line, but they
+    // label a string/fret and must never be boxed. F#2 also parses as a sus2
+    // chord, so it is the regression case: its box must be suppressed because the
+    // line carries unambiguous voicing tokens (A1/G1/F#1) alongside it.
+    const result = classifySheetLine('G      F     A1      G1                 F#1   F#2   F#3  F', 0)
+    expect(result.kind).toBe('chord-line')
+    const tokens = result.kind === 'chord-line' ? result.tokens : []
+    const chordRaws = tokens.filter(t => t.kind === 'chord').map(t => t.raw)
+    expect(chordRaws).toContain('G')
+    expect(chordRaws).toContain('F')
+    expect(chordRaws).not.toContain('A1')
+    expect(chordRaws).not.toContain('G1')
+    expect(chordRaws).not.toContain('F#1')
+    expect(chordRaws).not.toContain('F#2')
+    expect(chordRaws).not.toContain('F#3')
+  })
+
+  it('classifies a line of only chord-voicing tokens as plain (no valid chords)', () => {
+    // A1, G1, F#1 are chord-like but not valid chords, so hasValidChords is
+    // false and classifySheetLine falls through to plain.
+    expect(classifySheetLine('A1 G1 F#1', 0)).toEqual({
+      kind: 'plain',
+      text: 'A1 G1 F#1',
+    })
+  })
+
+  it('classifies voicing-definition lines with trailing non-chord text as plain', () => {
+    // F#2 also parses as a sus2 chord. On the definition line it appears with
+    // a trailing ' ?' which creates a 1:1 chord/non-chord tie. The strict-
+    // majority rule (chords must outnumber non-chords) sends ties to plain,
+    // preventing F#2 from being boxed on lines like this.
+    expect(classifySheetLine('F#2 - (2X0210) (Dm7sus2/F#) ?', 0).kind).toBe('plain')
   })
 })

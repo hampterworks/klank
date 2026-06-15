@@ -1,4 +1,5 @@
 import {
+  CHORD_LIKE_RE,
   delimiterMatcher,
   isTablatureLine,
   testChords,
@@ -87,10 +88,19 @@ export const classifySheetLine = (line: string, transpose: number): SheetLine =>
 
   if (hasValidChords && !isMixedContent) {
     const isTablature = isTablatureLine(line)
+    // Voicing tokens (note + fret digits like A1, F#2) label a string/fret, not
+    // a chord. The digit collides with real chord qualities — F#2 also parses as
+    // a sus2 chord — so a token is only safely a chord if it parses AND isn't on
+    // a line that also carries unambiguous voicing tokens (chord-like shapes that
+    // are not valid chords, e.g. A1/G1/F#1). When such tokens are present, every
+    // chord-like-shaped token is treated as a voicing label; real chords (G, F,
+    // Am) have no trailing digits, so they keep their boxes.
+    const hasVoicingTokens = tokens.some((token) => CHORD_LIKE_RE.test(token) && !testChords(token))
     return {
       kind: 'chord-line',
       tokens: tokens.map((token, i): SheetToken => {
-        if (!testChords(token) && token !== 'e') return { kind: 'text', raw: token }
+        const isVoicing = hasVoicingTokens && CHORD_LIKE_RE.test(token)
+        if (isVoicing || (!testChords(token) && token !== 'e')) return { kind: 'text', raw: token }
         if (isTablature && i === 0) return { kind: 'string-indicator', raw: token }
         return {
           kind: 'chord',
