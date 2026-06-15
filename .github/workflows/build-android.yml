@@ -1,6 +1,6 @@
 name: Build Android
 
-# SHA-pinning of actions can be applied later per the ci-pipeline-optimize convention.
+# SHA-pinning of actions can be applied later per the cicd-harden convention.
 
 on:
   pull_request:

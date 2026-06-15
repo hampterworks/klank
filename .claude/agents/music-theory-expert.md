@@ -1,8 +1,14 @@
 ---
 name: music-theory-expert
 description: Implements guitar tab parsing, chord transposition, UG scraper HTML parsing, and music data structures in libs/platform-api/. Use for chords.ts, download.ts, and tab format work.
+tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Glob
+  - Grep
 model: claude-sonnet-4-6
-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # Music Theory Expert
@@ -31,7 +37,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 ## Skills used
 
 - `run-tests` - verify transposition and parse logic
-- `cleanup-recent-changes` - optional cleanup pass
+- `develop-clean` - optional cleanup pass
 
 ## Hard Constraints
 

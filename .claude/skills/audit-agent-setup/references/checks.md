@@ -2,11 +2,11 @@
 
 ## Check 1: Mirror Parity
 
-For every `.claude/agents/<name>.md` there must be a `.github/agents/<name>.agent.md`, and vice versa - these are the same role identity for Claude and Copilot.
+For every `.claude/agents/<name>.md` there must be a `.github/agents/<name>.agent.md` (Copilot) and a `.junie/agents/<name>.md` (Junie), and vice versa - these are the same role identity for each tool.
 
 Skills are **not** mirrored: Copilot and Cursor auto-discover `.claude/skills/` and Junie imports it. A `.github/agents/<name>.agent.md` whose `<name>` matches a `.claude/skills/<name>/` directory is a stray skill mirror.
 
-**Fix (missing role mirror)**: create it with `add-role` (writes both files in one pass). **Fix (stray skill mirror)**: delete the `.github/agents/` stub.
+**Fix (missing role mirror)**: create it with `add-role` (writes all three copies in one pass). **Fix (stray skill mirror)**: delete the `.github/agents/` stub.
 
 ## Check 2: Frontmatter Shape
 
@@ -23,15 +23,15 @@ In each `.claude/agents/*.md`, the `## Skills used` section lists skills by name
 
 ## Check 4: Self-Contained Identities
 
-Every `.claude/agents/<name>.md` and `.github/agents/<name>.agent.md` body must be a real identity (Trigger, Inputs, Outputs, Process, Skills used, Hard Constraints) - never a redirect such as `Read \`docs/agents/roles/<name>.md\` and follow its process`. There must be no hand-maintained role-routing table in `CLAUDE.md` or `AGENTS.md`; routing is by `description`.
+Every `.claude/agents/<name>.md`, `.github/agents/<name>.agent.md`, and `.junie/agents/<name>.md` body must be a real identity (Trigger, Inputs, Outputs, Process, Skills used, Hard Constraints) - never a redirect such as `Read \`docs/agents/roles/<name>.md\` and follow its process`. There must be no hand-maintained role-routing table in `CLAUDE.md` or `AGENTS.md`; routing is by `description`.
 
 **Fix**: Inline the identity into the subagent body; delete any parallel role doc and any routing table.
 
 ## Check 5: Mirror Alignment
 
-The `description` and `model` fields in `.claude/agents/<name>.md` must exactly match `.github/agents/<name>.agent.md`. The `.claude/agents/` file is the source of truth.
+The identity body and `description` must match across `.claude/agents/<name>.md`, `.github/agents/<name>.agent.md`, and `.junie/agents/<name>.md`; `model` matches between the `.claude/` and `.github/` copies (the `.junie/` copy carries only `name` + `description`). The `.claude/agents/` file is the source of truth.
 
-**Fix**: Sync `description` and `model` across the two copies.
+**Fix**: Sync the body and `description` across the three copies; sync `model` between `.claude/` and `.github/`.
 
 ## Check 6: Skill Catalogue Parity
 

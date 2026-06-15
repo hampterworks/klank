@@ -1,7 +1,13 @@
 ---
 name: ux-designer
 description: Designs UI layouts, user flows, accessibility patterns, and music-app UX for klank. Use for tab reader layout, chord display, navigation redesign, keyboard shortcuts, and accessibility reviews.
-model: claude-sonnet-4-6
+tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Glob
+  - Grep
 ---
 
 # UX Designer
@@ -26,7 +32,7 @@ Key UX concerns for klank: tab readability at varying font sizes (`tab.fontSize`
 ## Skills used
 
 - `run` - start the app to review the existing flow
-- `cleanup-recent-changes` - after implementing small UI changes
+- `develop-clean` - after implementing small UI changes
 
 ## Hard Constraints
 

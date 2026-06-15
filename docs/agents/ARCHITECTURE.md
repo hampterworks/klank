@@ -20,7 +20,7 @@ When a constraint can be checked mechanically (file extension, export style, cap
 
 ## 5. Self-contained identities, one home per skill
 
-Each role identity lives in two self-contained native files - `.claude/agents/<name>.md` (Claude) and `.github/agents/<name>.agent.md` (Copilot) - with identical `description` and `model`. The body *is* the identity, routed by `description`; never a redirect to a parallel doc, and never a hand-maintained role-routing table in `CLAUDE.md`/`AGENTS.md`. Skills live once, in `.claude/skills/<name>/`; Claude, Copilot, and Cursor auto-discover that directory and Junie imports it - never mirror a skill into `.github/agents/`. Run `audit-agent-setup` before any commit touching these trees.
+Each role identity lives in self-contained native files - `.claude/agents/<name>.md` (Claude), `.github/agents/<name>.agent.md` (Copilot), and `.junie/agents/<name>.md` (Junie) - with identical body and `description` (and identical `model` between the `.claude/` and `.github/` copies). The body *is* the identity, routed by `description`; never a redirect to a parallel doc, and never a hand-maintained role-routing table in `CLAUDE.md`/`AGENTS.md`. Skills live once, in `.claude/skills/<name>/`; Claude, Copilot, and Cursor auto-discover that directory and Junie imports it - never mirror a skill into `.github/agents/`. There is no generator: keep the mirror copies in sync by hand and run `audit-agent-setup` before any commit touching these trees.
 
 ## 6. Token budgets
 

@@ -1,8 +1,13 @@
 ---
 name: orchestrator
 description: Plans and coordinates multi-role work - produces a labelled DAG with handoff payloads and acceptance gates. Use when a task spans ≥ 2 roles or needs cross-role sequencing. Never writes code.
+disallowedTools:
+  - Write
+  - Edit
+  - Bash
+  - WebSearch
+  - WebFetch
 model: claude-opus-4-7
-disallowedTools: Write, Edit, Bash, WebSearch, WebFetch
 ---
 
 # Orchestrator
