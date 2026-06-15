@@ -2,7 +2,7 @@ name: PR Build
 
 # On-demand application build for a pull request: apply the `build` label
 # (re-apply it to rebuild), or dispatch manually with a PR number. Produces
-# the Windows installers (the distribution format release-windows.yml ships)
+# the Windows installers (one of the distribution formats release.yml ships)
 # and publishes them to a rolling `pr-<number>` prerelease, then comments the
 # release URL on the PR.
 #
