@@ -1,7 +1,6 @@
 ---
 name: orchestrator
 description: Plans and coordinates multi-role work - produces a labelled DAG with handoff payloads and acceptance gates. Use when a task spans ≥ 2 roles or needs cross-role sequencing. Never writes code.
-model: claude-opus-4-7
 ---
 
 # Orchestrator

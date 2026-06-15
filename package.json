@@ -11,7 +11,9 @@
     "tauri:dev": "nx run klank:tauri:dev",
     "tauri:build": "nx run klank:tauri:build",
     "tauri:build:windows": "nx run klank:tauri:build:windows",
-    "tauri:android:dev": "tauri android dev"
+    "tauri:android:dev": "tauri android dev",
+    "agentkit:setup": "pnpm --ignore-workspace -C .agentkit/cli/src install",
+    "agentkit": "pnpm -C .agentkit/cli/src exec tsx bin/agentkit.ts"
   },
   "dependencies": {
     "@react-router/node": "^7.16.0",

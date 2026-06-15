@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-content/schemas/hook.schema.json",
+  "title": "Hook definition (canonical → .claude/settings.json)",
+  "type": "object",
+  "required": ["event", "type"],
+  "properties": {
+    "event": {
+      "enum": [
+        "SessionStart", "Setup", "UserPromptSubmit", "UserPromptExpansion",
+        "PreToolUse", "PermissionRequest", "PermissionDenied", "PostToolUse",
+        "PostToolUseFailure", "PostToolBatch", "Notification", "MessageDisplay",
+        "SubagentStart", "SubagentStop", "TaskCreated", "TaskCompleted",
+        "Stop", "StopFailure", "TeammateIdle", "InstructionsLoaded",
+        "ConfigChange", "CwdChanged", "FileChanged", "WorktreeCreate",
+        "WorktreeRemove", "PreCompact", "PostCompact", "Elicitation",
+        "ElicitationResult", "SessionEnd"
+      ]
+    },
+    "matcher": { "type": "string" },
+    "type": { "enum": ["command", "http", "mcp_tool", "prompt", "agent"] },
+    "command": { "type": "string" },
+    "args": { "type": "array", "items": { "type": "string" } },
+    "url": { "type": "string" },
+    "server": { "type": "string" },
+    "tool": { "type": "string" },
+    "prompt": { "type": "string" },
+    "model": { "type": "string" },
+    "input": { "type": "object" },
+    "if": { "type": "string" },
+    "timeout": { "type": "integer", "minimum": 1 },
+    "statusMessage": { "type": "string" },
+    "once": { "type": "boolean" },
+    "async": { "type": "boolean" },
+    "asyncRewake": { "type": "boolean" },
+    "shell": { "enum": ["bash", "powershell"] },
+    "headers": { "type": "object" },
+    "allowedEnvVars": { "type": "array", "items": { "type": "string" } },
+    "scope": { "enum": ["project", "local"], "default": "project" }
+  },
+  "additionalProperties": true,
+  "allOf": [
+    { "if": { "properties": { "type": { "const": "command" } } }, "then": { "required": ["command"] } },
+    { "if": { "properties": { "type": { "const": "http" } } }, "then": { "required": ["url"] } },
+    { "if": { "properties": { "type": { "const": "mcp_tool" } } }, "then": { "required": ["server", "tool"] } },
+    { "if": { "properties": { "type": { "const": "prompt" } } }, "then": { "required": ["prompt"] } }
+  ]
+}

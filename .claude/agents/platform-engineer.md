@@ -1,8 +1,14 @@
 ---
 name: platform-engineer
 description: Maintains NX config, Vite configs, pnpm workspaces, tsconfig.base.json path aliases, CI/CD, and library scaffolding. Use for project.json, nx.json, vite.config.ts, and .github/workflows/.
+tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Glob
+  - Grep
 model: claude-sonnet-4-6
-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # Platform Engineer

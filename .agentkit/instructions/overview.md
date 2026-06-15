@@ -54,7 +54,7 @@ docs/agents/                        Agent architecture + setup conventions
 - CSS modules (`.module.css`) - no global style additions
 - Zustand via `useKlankStore` from `@klank/store` for all persistent data
 - `useState` for ephemeral UI state only (toggles, hover, focus)
-- Tab file extension: `.tab.txt` (filter enforced in `libs/platform-api/src/lib/fs.ts`)
+- Tab file extension: `.tab.txt` (filter enforced in `libs/platform-api/src/lib/fs.ts`; `mapTreeStructure` also depends on this exact string)
 - Tauri IPC: always wrap in `@klank/platform-api`, never import `@tauri-apps/*` directly in app components
 - Path aliases: `@klank/ui` · `@klank/store` · `@klank/platform-api` - defined in `tsconfig.base.json §paths`
 - Never use relative imports across lib boundaries

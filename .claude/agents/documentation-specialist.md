@@ -1,8 +1,13 @@
 ---
 name: documentation-specialist
 description: Writes and updates AGENTS.md, CLAUDE.md, README files, subagent identities, and inline docs. Use when documentation is stale, missing, or must reflect a recent structural change.
+tools:
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
 model: claude-sonnet-4-6
-tools: Read, Write, Edit, Glob, Grep
 ---
 
 # Documentation Specialist

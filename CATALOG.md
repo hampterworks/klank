@@ -1,6 +1,6 @@
 # Klank - Catalog
 
-> Routing index for this agent-content repository. Authored under `.agentkit/`; generated into each agent's native files. 40 items.
+> Routing index for this agent-content repository. Authored under `.agentkit/`; generated into each agent's native files. 54 items.
 
 
 ## Skills
@@ -67,6 +67,21 @@
 - **develop-write** - Writes idiomatic, type-safe code - precise modeling, narrowing, boundary validation. Loads a stack reference (e.g. typescript). Use when writing or modifying source, not tidying (develop-clean).  
   `.agentkit/skills/develop/develop-write/SKILL.md` → `.claude/skills/develop-write/`
 
+### klank
+
+- **build** - Runs the full NX build pipeline including TypeScript type-check and lint. Use before any PR or to verify structural changes.  
+  `.agentkit/skills/klank/build/SKILL.md` → `.claude/skills/build/`
+- **new-lib** - Scaffolds a new NX library with correct Vite + Vitest config and @klank/* path alias. Use when adding a new shared library to libs/.  
+  `.agentkit/skills/klank/new-lib/SKILL.md` → `.claude/skills/new-lib/`
+- **run** - Starts the Vite dev server or full Tauri desktop app. Use when starting development or verifying UI changes in the running app.  
+  `.agentkit/skills/klank/run/SKILL.md` → `.claude/skills/run/`
+- **run-tests** - Runs Vitest tests across the workspace or for a specific lib. Use after any code change before committing.  
+  `.agentkit/skills/klank/run-tests/SKILL.md` → `.claude/skills/run-tests/`
+- **update-dependencies** - Upgrades pnpm workspace and Cargo.toml dependencies safely - detects breaking changes and runs tests. Use when dependencies need updating or a security advisory requires action.  
+  `.agentkit/skills/klank/update-dependencies/SKILL.md` → `.claude/skills/update-dependencies/`
+- **update-docs** - Updates README and human-readable docs to reflect recent code or config changes. Use after any structural change - new lib, Tauri command, path alias, or route - to keep docs current.  
+  `.agentkit/skills/klank/update-docs/SKILL.md` → `.claude/skills/update-docs/`
+
 ### qa
 
 - **qa-capture** - Captures web page or running-app screenshots with Playwright - full-page, element, viewport variants - for visual QA, verification, and bug evidence. Use when a UI state needs capturing.  
@@ -104,6 +119,22 @@
 
 - **content-reviewer** - Reviews agent-content changes (SKILL.md, instructions, AGENTS.md) against the authoring catalogue. Use when reviewing a diff touching .agentkit/ or generated agent files, not general code review.  
   `.agentkit/subagents/content-reviewer.md`
+- **documentation-specialist** - Writes and updates AGENTS.md, CLAUDE.md, README files, subagent identities, and inline docs. Use when documentation is stale, missing, or must reflect a recent structural change.  
+  `.agentkit/subagents/documentation-specialist.md`
+- **frontend-engineer** - Builds React 19 components, CSS modules, routes, and Tauri IPC calls in apps/klank/app/ and libs/ui/. Use for component work, styling, React Router navigation, and platform-api integration.  
+  `.agentkit/subagents/frontend-engineer.md`
+- **music-theory-expert** - Implements guitar tab parsing, chord transposition, UG scraper HTML parsing, and music data structures in libs/platform-api/. Use for chords.ts, download.ts, and tab format work.  
+  `.agentkit/subagents/music-theory-expert.md`
+- **orchestrator** - Plans and coordinates multi-role work - produces a labelled DAG with handoff payloads and acceptance gates. Use when a task spans ≥ 2 roles or needs cross-role sequencing. Never writes code.  
+  `.agentkit/subagents/orchestrator.md`
+- **platform-engineer** - Maintains NX config, Vite configs, pnpm workspaces, tsconfig.base.json path aliases, CI/CD, and library scaffolding. Use for project.json, nx.json, vite.config.ts, and .github/workflows/.  
+  `.agentkit/subagents/platform-engineer.md`
+- **tauri-engineer** - Implements Rust commands, Tauri plugins, capability JSON, and platform-api TypeScript wrappers for apps/klank/src-tauri/. Use for IPC design, Cargo.toml, Tauri permissions, and src-tauri/ work.  
+  `.agentkit/subagents/tauri-engineer.md`
+- **tester** - Writes and maintains Vitest tests using @testing-library/react for libs/ and apps/klank/. Use for new test files, coverage gaps, test structure review, and pre-ship audits.  
+  `.agentkit/subagents/tester.md`
+- **ux-designer** - Designs UI layouts, user flows, accessibility patterns, and music-app UX for klank. Use for tab reader layout, chord display, navigation redesign, keyboard shortcuts, and accessibility reviews.  
+  `.agentkit/subagents/ux-designer.md`
 
 ## Commands
 

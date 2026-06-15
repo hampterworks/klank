@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-content/schemas/instruction.schema.json",
+  "title": "Instruction module frontmatter",
+  "type": "object",
+  "required": ["title", "scope"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "title": { "type": "string", "minLength": 1 },
+    "scope": { "enum": ["global", "path"] },
+    "applyTo": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Glob patterns. Required when scope=path."
+    },
+    "agents": {
+      "type": "array",
+      "items": { "enum": ["claude", "copilot", "cursor", "junie", "all"] },
+      "description": "Targets to emit to. Defaults to all when omitted."
+    },
+    "priority": { "type": "integer", "description": "Lower numbers emit first (stable, cache-friendly ordering)." }
+  },
+  "additionalProperties": true,
+  "allOf": [
+    {
+      "if": { "properties": { "scope": { "const": "path" } } },
+      "then": { "required": ["applyTo"], "properties": { "applyTo": { "minItems": 1 } } }
+    }
+  ]
+}
