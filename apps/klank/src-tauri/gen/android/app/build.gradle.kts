@@ -30,11 +30,9 @@ android {
             isDebuggable = true
             isJniDebuggable = true
             isMinifyEnabled = false
-            packaging {                jniLibs.keepDebugSymbols.add("*/arm64-v8a/*.so")
-                jniLibs.keepDebugSymbols.add("*/armeabi-v7a/*.so")
-                jniLibs.keepDebugSymbols.add("*/x86/*.so")
-                jniLibs.keepDebugSymbols.add("*/x86_64/*.so")
-            }
+            // Native .so debug symbols are left to AGP's default stripping so the
+            // debug APK stays small; the Rust dev profile is untouched, so local
+            // `tauri:android:dev` incremental builds are unaffected.
         }
         getByName("release") {
             isMinifyEnabled = true
