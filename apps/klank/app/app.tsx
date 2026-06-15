@@ -147,7 +147,7 @@ export function App() {
     const onMove = (e: PointerEvent) => {
       const w = Math.min(MAX_WIDTH, Math.max(0, e.clientX))
       finalWidth = w
-      const displayWidth = w < MIN_WIDTH ? 52 : w
+      const displayWidth = Math.max(52, w)
       container.style.gridTemplateColumns = `${displayWidth}px 1fr`
       handle.style.left = `${displayWidth - 4}px`
     }
