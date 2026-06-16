@@ -1,6 +1,6 @@
 import styles from './settings.module.css'
 import { useEffect, useRef, useState } from 'react'
-import { createGitService, getAppVersion, isMobileDevice, type BranchInfo, type GitService } from '@klank/platform-api'
+import { createGitService, createJamHost, getAppVersion, isMobileDevice, type BranchInfo, type GitService, type JamHost } from '@klank/platform-api'
 import { useKlankStore, type SyncStatus } from '@klank/store'
 import { runGitSync } from '../useGitSync'
 
@@ -65,6 +65,57 @@ export function SettingsPanel() {
   const syncSettings = useKlankStore().syncSettings
   const setSyncSettings = useKlankStore().setSyncSettings
   const syncStatus = useKlankStore().syncStatus
+
+  // Jam store slice
+  const jamRole = useKlankStore((s) => s.jam.role)
+  const jamUrls = useKlankStore((s) => s.jam.urls)
+  const jamConnected = useKlankStore((s) => s.jam.connected)
+  const jamHostAddress = useKlankStore((s) => s.jam.hostAddress)
+  const setJamHosting = useKlankStore((s) => s.setJamHosting)
+  const setJamGuest = useKlankStore((s) => s.setJamGuest)
+  const setJamOff = useKlankStore((s) => s.setJamOff)
+
+  // Single JamHost instance shared across host actions in this panel.
+  const jamHostRef = useRef<JamHost | null>(null)
+  const [joinAddress, setJoinAddress] = useState('')
+  const [jamBusy, setJamBusy] = useState(false)
+
+  const getOrCreateJamHost = async (): Promise<JamHost> => {
+    if (!jamHostRef.current) {
+      jamHostRef.current = await createJamHost()
+    }
+    return jamHostRef.current
+  }
+
+  const handleStartHosting = async () => {
+    if (jamBusy) return
+    setJamBusy(true)
+    try {
+      const host = await getOrCreateJamHost()
+      const info = await host.start()
+      setJamHosting(info)
+    } finally {
+      setJamBusy(false)
+    }
+  }
+
+  const handleStopHosting = async () => {
+    if (jamBusy) return
+    setJamBusy(true)
+    try {
+      const host = await getOrCreateJamHost()
+      await host.stop()
+      setJamOff()
+    } finally {
+      setJamBusy(false)
+    }
+  }
+
+  const handleJoinJam = () => {
+    const addr = joinAddress.trim()
+    if (!addr) return
+    setJamGuest(addr)
+  }
 
   const gitRef = useRef<GitService | null>(null)
   const [isRepo, setIsRepo] = useState<boolean | null>(null)
@@ -433,6 +484,85 @@ export function SettingsPanel() {
                 </div>
               )}
             </>
+          )}
+        </section>
+        {/* ── Jam mode ──────────────────────────────────────────────────── */}
+        <section className={styles.section}>
+          <h2>Jam mode</h2>
+
+          {jamRole === 'off' && (
+            <>
+              <div className={styles.row}>
+                <span className={styles.label}>Host</span>
+                <button className={styles.button} onClick={handleStartHosting} disabled={jamBusy}>
+                  Host a jam
+                </button>
+              </div>
+              <div className={styles.row}>
+                <span className={styles.label}>Join</span>
+                <input
+                  className={styles.commitInput}
+                  type="text"
+                  placeholder="192.168.1.5:7070"
+                  value={joinAddress}
+                  onChange={(e) => setJoinAddress(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleJoinJam()}
+                  aria-label="Host address"
+                />
+                <button
+                  className={styles.button}
+                  onClick={handleJoinJam}
+                  disabled={!joinAddress.trim()}
+                >
+                  Join
+                </button>
+              </div>
+            </>
+          )}
+
+          {jamRole === 'host' && (
+            <>
+              <div className={styles.row}>
+                <span className={styles.label}>Status</span>
+                <span className={styles.jamStatus}>Hosting</span>
+                <button className={styles.button} onClick={handleStopHosting} disabled={jamBusy}>
+                  Stop hosting
+                </button>
+              </div>
+              {jamUrls.length > 0 && (
+                <div className={styles.row}>
+                  <span className={styles.label}>Share</span>
+                  <div className={styles.jamUrls}>
+                    {jamUrls.map((url) => (
+                      <div key={url} className={styles.jamUrlRow}>
+                        <span className={styles.dirPath} title={url}>{url}</span>
+                        <button
+                          className={styles.button}
+                          onClick={() => navigator.clipboard?.writeText(url)}
+                          aria-label={`Copy ${url}`}
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <span className={styles.infoMessage}>
+                Others on your network can open these URLs in a browser, or join with the app using the ip:port.
+              </span>
+            </>
+          )}
+
+          {jamRole === 'guest' && (
+            <div className={styles.row}>
+              <span className={styles.label}>
+                {jamConnected ? `Connected to ${jamHostAddress}` : `Connecting to ${jamHostAddress}…`}
+              </span>
+              <button className={styles.button} onClick={setJamOff}>
+                Leave
+              </button>
+            </div>
           )}
         </section>
       </div>

@@ -3,6 +3,7 @@
 //! the [`import`] module).
 mod git;
 mod import;
+mod jam;
 
 use import::ImportProgress;
 use tauri::ipc::Channel;
@@ -27,7 +28,8 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
-        .plugin(tauri_plugin_ug_scraper::init());
+        .plugin(tauri_plugin_ug_scraper::init())
+        .manage(jam::JamState::default());
 
     // The hidden-webview import stage (and its IPC) is desktop-only; Android
     // uses the mobile API / website stages and (next) a dedicated plugin. Git
@@ -54,7 +56,11 @@ pub fn run() {
             git::git_is_authenticated,
             git::git_system_credentials_enabled,
             git::git_use_system_credentials,
-            git::git_disable_system_credentials
+            git::git_disable_system_credentials,
+            jam::jam_start,
+            jam::jam_stop,
+            jam::jam_broadcast,
+            jam::jam_status
         ]);
     #[cfg(not(desktop))]
     let builder = builder.invoke_handler(tauri::generate_handler![
@@ -74,7 +80,11 @@ pub fn run() {
         git::git_is_authenticated,
         git::git_system_credentials_enabled,
         git::git_use_system_credentials,
-        git::git_disable_system_credentials
+        git::git_disable_system_credentials,
+        jam::jam_start,
+        jam::jam_stop,
+        jam::jam_broadcast,
+        jam::jam_status
     ]);
 
     builder

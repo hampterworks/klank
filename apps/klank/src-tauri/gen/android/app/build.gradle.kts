@@ -35,6 +35,11 @@ android {
             // `tauri:android:dev` incremental builds are unaffected.
         }
         getByName("release") {
+            // Jam mode connects a guest WebView to the host over plain ws:// on a
+            // bare LAN IP, which has no TLS cert — so cleartext must be permitted
+            // even in release. The app makes no other cleartext requests (UG
+            // scraping is HTTPS), so the exposure is limited to LAN jam traffic.
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

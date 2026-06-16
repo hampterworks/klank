@@ -1,10 +1,32 @@
 import {create} from 'zustand'
 import {devtools, persist} from 'zustand/middleware'
 import type {} from '@redux-devtools/extension'
-import { FileService, PerTabSettings, type Instrument, type Playlist, type SyncErrorKind } from '@klank/platform-api'
+import { FileService, PerTabSettings, type Instrument, type JamSnapshot, type Playlist, type SyncErrorKind } from '@klank/platform-api'
 import type { CustomTuning } from '@klank/audio'
 
-export type { Instrument, Playlist, CustomTuning }
+// JamSnapshot is defined once in @klank/platform-api; re-exported here so jam
+// consumers can import it alongside the store.
+export type { Instrument, Playlist, CustomTuning, JamSnapshot }
+
+/** Whether this client is currently hosting, following as a guest, or off. */
+export type JamRole = 'off' | 'host' | 'guest'
+
+/**
+ * Ephemeral jam state — NOT persisted (excluded from `partialize`).
+ * Resets to defaults on every app launch.
+ */
+export type JamState = {
+  role: JamRole
+  // host
+  port: number | null
+  urls: string[]
+  // guest
+  /** "ip:port" string the user typed, e.g. "192.168.1.5:7070". */
+  hostAddress: string
+  connected: boolean
+  /** Latest snapshot received from the host (guest only). */
+  snapshot: JamSnapshot | null
+}
 
 export type Mode = "Read" | "Edit"
 export type Theme = "Light" | "Dark"
@@ -182,6 +204,21 @@ type KlankState = {
   customTunings: CustomTuning[]
   addCustomTuning: (tuning: CustomTuning) => void
   deleteCustomTuning: (id: string) => void
+  /**
+   * Ephemeral jam state. Not persisted — excluded from `partialize`.
+   * Use setters below to transition between roles.
+   */
+  jam: JamState
+  /** Called when this client becomes the host after jam server starts. */
+  setJamHosting: (info: { port: number; urls: string[] }) => void
+  /** Called when the user chooses to join as a guest. Sets address, clears snapshot. */
+  setJamGuest: (hostAddress: string) => void
+  /** Resets jam to the default off state. */
+  setJamOff: () => void
+  /** Updates guest WebSocket connection status. */
+  setJamConnected: (connected: boolean) => void
+  /** Stores the latest snapshot received from the host. */
+  setJamSnapshot: (snapshot: JamSnapshot) => void
 }
 
 /** All valid scroll speed levels (0–9, displayed as 1–10). */
@@ -268,6 +305,28 @@ export const useKlankStore = create<KlankState>()(
         customTunings: [],
         addCustomTuning: (tuning) => set((state) => ({...state, customTunings: [...state.customTunings, tuning]})),
         deleteCustomTuning: (id) => set((state) => ({...state, customTunings: state.customTunings.filter((t) => t.id !== id)})),
+        // ── Jam slice (ephemeral — not in partialize) ──────────────────────────
+        jam: { role: 'off', port: null, urls: [], hostAddress: '', connected: false, snapshot: null },
+        setJamHosting: (info) => set((state) => ({
+          ...state,
+          jam: { ...state.jam, role: 'host', port: info.port, urls: info.urls },
+        })),
+        setJamGuest: (hostAddress) => set((state) => ({
+          ...state,
+          jam: { ...state.jam, role: 'guest', hostAddress, connected: false, snapshot: null },
+        })),
+        setJamOff: () => set((state) => ({
+          ...state,
+          jam: { role: 'off', port: null, urls: [], hostAddress: '', connected: false, snapshot: null },
+        })),
+        setJamConnected: (connected) => set((state) => ({
+          ...state,
+          jam: { ...state.jam, connected },
+        })),
+        setJamSnapshot: (snapshot) => set((state) => ({
+          ...state,
+          jam: { ...state.jam, snapshot },
+        })),
         setTabPath: (path) => set((state) => {
           const saved = state.tabSettingByPath[path]
           const tab: TabSetting = {
