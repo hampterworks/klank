@@ -427,3 +427,48 @@ describe('tab-setting writes preserve playlists', () => {
     expect(written['playlists']).toEqual([stored])
   })
 })
+
+describe('readDirectoryRecursively', () => {
+  const readDir = pluginFs.readDir as Mock
+  const tabFilter = (f: { isDirectory: boolean; name: string }) =>
+    f.isDirectory || f.name.endsWith('.tab.txt')
+  const file = (name: string) => ({ name, isDirectory: false, isFile: true, isSymlink: false })
+  const folder = (name: string) => ({ name, isDirectory: true, isFile: false, isSymlink: false })
+
+  beforeEach(() => vi.clearAllMocks())
+
+  // On mobile the base dir is the app sandbox root, which also holds the WebView
+  // profile + caches. Descending into those is what used to throw and empty the
+  // tree, so they must be skipped entirely.
+  it('skips app-internal directories (app_webview/cache/...) instead of scanning them', async () => {
+    readDir.mockImplementation(async (dir: string) => {
+      if (dir === '/data/app') return [file('A - Song.tab.txt'), folder('cache'), folder('app_webview'), folder('set')]
+      if (dir === '/data/app/set') return [file('B - Song.tab.txt')]
+      throw new Error(`unexpected readDir into ${dir}`)
+    })
+    const service = await getService()
+
+    const tree = JSON.stringify(await service.readDirectoryRecursively('/data/app', tabFilter))
+
+    expect(tree).toContain('A - Song.tab.txt')
+    expect(tree).toContain('B - Song.tab.txt')
+    expect(readDir).not.toHaveBeenCalledWith('/data/app/cache')
+    expect(readDir).not.toHaveBeenCalledWith('/data/app/app_webview')
+  })
+
+  // The actual bug: one unreadable subdir rejected the whole scan → empty tree.
+  it('skips an unreadable subdirectory instead of failing the whole scan', async () => {
+    readDir.mockImplementation(async (dir: string) => {
+      if (dir === '/data/app') return [file('A - Song.tab.txt'), folder('broken'), folder('set')]
+      if (dir === '/data/app/broken') throw new Error('EACCES')
+      if (dir === '/data/app/set') return [file('B - Song.tab.txt')]
+      return []
+    })
+    const service = await getService()
+
+    const tree = JSON.stringify(await service.readDirectoryRecursively('/data/app', tabFilter))
+
+    expect(tree).toContain('A - Song.tab.txt')
+    expect(tree).toContain('B - Song.tab.txt')
+  })
+})

@@ -171,7 +171,7 @@ type LegacyKlankEntry = {
 }
 
 const createTauriFileService = async (): Promise<FileService> => {
-  const { BaseDirectory, readDir, readTextFile, writeTextFile, create, exists, remove } = await import(
+  const { readDir, readTextFile, writeTextFile, create, exists, remove } = await import(
     '@tauri-apps/plugin-fs'
   )
   const { appLocalDataDir, join } = await import('@tauri-apps/api/path')
@@ -204,32 +204,44 @@ const createTauriFileService = async (): Promise<FileService> => {
     settingsFileLock = run.catch(() => undefined)
     return run
   }
+  // On mobile the tab directory is the app's private data root, which also holds
+  // the WebView profile, HTTP/code caches, prefs, logs, etc. Tabs live alongside
+  // these, so the scan must NOT descend into them: the Chromium cache tree is
+  // huge and, on some devices, a `readDir` inside it throws — which used to
+  // reject the whole scan and leave the file tree empty after the cache grew
+  // (a relaunch-only, device-specific failure). A user-chosen tab folder on
+  // desktop never contains these names, so skipping them is a no-op there.
+  const INTERNAL_DIRS = new Set([
+    'app_webview', 'cache', 'code_cache', 'shared_prefs',
+    'no_backup', 'logs', 'app_textures', 'files',
+  ])
+
   const processEntriesRecursively = async (
     parent: string,
     entries: FileTree,
     filter: (name: File) => boolean
   ): Promise<FileTree> => {
+    const kept = entries.filter(
+      (file) =>
+        filter(file) &&
+        !(file.isDirectory && (INTERNAL_DIRS.has(file.name) || file.name.startsWith('.')))
+    )
     return Promise.all(
-      entries
-        .filter((file) => filter(file))
-        .flatMap(async (entry) => {
-          const dir = await join(parent, entry.name)
-          if (entry.isDirectory) {
-            return {
-              ...entry,
-              path: dir,
-              children: await processEntriesRecursively(
-                dir,
-                await readDir(dir, { baseDir: BaseDirectory.AppLocalData }),
-                filter
-              ),
-            }
+      kept.map(async (entry) => {
+        const dir = await join(parent, entry.name)
+        if (entry.isDirectory) {
+          // A subdirectory we can't read must never fail the whole scan — skip
+          // it (no children) so every other tab still loads.
+          let children: FileTree = []
+          try {
+            children = await processEntriesRecursively(dir, await readDir(dir), filter)
+          } catch {
+            children = []
           }
-          return {
-            ...entry,
-            path: dir,
-          }
-        })
+          return { ...entry, path: dir, children }
+        }
+        return { ...entry, path: dir }
+      })
     )
   }
 
