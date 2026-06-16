@@ -6,4 +6,5 @@ commands.allow = [
   "jam_stop",
   "jam_broadcast",
   "jam_status",
+  "jam_discover",
 ]

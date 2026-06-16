@@ -70,7 +70,7 @@ describe('klank-storage migration and shape', () => {
     const { useKlankStore } = await import('./store.js')
 
     // Enter host mode (and force a persisted write so the entry is fresh).
-    useKlankStore.getState().setJamHosting({ port: 7070, urls: ['http://192.168.50.50:7070'] })
+    useKlankStore.getState().setJamHosting({ port: 7070, urls: ['http://192.168.50.50:7070'], name: 'klank-jam-1234' })
     useKlankStore.getState().setTheme('Dark')
 
     const parsed = JSON.parse(localStorageData['klank-storage']) as { state: Record<string, unknown> }

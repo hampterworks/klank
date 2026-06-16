@@ -1,6 +1,6 @@
 import styles from './settings.module.css'
 import { useEffect, useRef, useState } from 'react'
-import { createGitService, createJamHost, getAppVersion, isMobileDevice, type BranchInfo, type GitService, type JamHost } from '@klank/platform-api'
+import { createGitService, createJamHost, discoverJams, getAppVersion, isMobileDevice, type BranchInfo, type DiscoveredJam, type GitService, type JamHost } from '@klank/platform-api'
 import { useKlankStore, type SyncStatus } from '@klank/store'
 import { runGitSync } from '../useGitSync'
 
@@ -71,14 +71,55 @@ export function SettingsPanel() {
   const jamUrls = useKlankStore((s) => s.jam.urls)
   const jamConnected = useKlankStore((s) => s.jam.connected)
   const jamHostAddress = useKlankStore((s) => s.jam.hostAddress)
+  const hostedJamName = useKlankStore((s) => s.jam.name)
+  const jamClients = useKlankStore((s) => s.jam.clients)
   const setJamHosting = useKlankStore((s) => s.setJamHosting)
   const setJamGuest = useKlankStore((s) => s.setJamGuest)
   const setJamOff = useKlankStore((s) => s.setJamOff)
+  const setJamClients = useKlankStore((s) => s.setJamClients)
 
   // Single JamHost instance shared across host actions in this panel.
   const jamHostRef = useRef<JamHost | null>(null)
   const [joinAddress, setJoinAddress] = useState('')
   const [jamBusy, setJamBusy] = useState(false)
+  // Editable jam name; default is a random klank-jam-NNNN (never the device name).
+  const [jamName, setJamName] = useState(() => `klank-jam-${Math.floor(1000 + Math.random() * 9000)}`)
+  const [discovered, setDiscovered] = useState<DiscoveredJam[]>([])
+  const [scanning, setScanning] = useState(false)
+  const [showManualJoin, setShowManualJoin] = useState(false)
+
+  const scanForJams = async () => {
+    setScanning(true)
+    try {
+      setDiscovered(await discoverJams())
+    } finally {
+      setScanning(false)
+    }
+  }
+
+  // Auto-scan for nearby jams when not in a jam, and poll the connected count
+  // while hosting so the host sees joins/leaves live.
+  useEffect(() => {
+    if (jamRole === 'off') {
+      scanForJams()
+      return
+    }
+    if (jamRole === 'host') {
+      let cancelled = false
+      const poll = async () => {
+        if (!jamHostRef.current) jamHostRef.current = await createJamHost()
+        const status = await jamHostRef.current.status()
+        if (!cancelled) setJamClients(status.clients)
+      }
+      poll()
+      const id = setInterval(poll, 2000)
+      return () => {
+        cancelled = true
+        clearInterval(id)
+      }
+    }
+    return
+  }, [jamRole, setJamClients])
 
   const getOrCreateJamHost = async (): Promise<JamHost> => {
     if (!jamHostRef.current) {
@@ -92,7 +133,8 @@ export function SettingsPanel() {
     setJamBusy(true)
     try {
       const host = await getOrCreateJamHost()
-      const info = await host.start()
+      const name = jamName.trim() || `klank-jam-${Math.floor(1000 + Math.random() * 9000)}`
+      const info = await host.start(name)
       setJamHosting(info)
     } finally {
       setJamBusy(false)
@@ -492,31 +534,72 @@ export function SettingsPanel() {
 
           {jamRole === 'off' && (
             <>
+              <span className={styles.infoMessage}>
+                Play together on your local network — one device hosts, the others follow along live.
+              </span>
+
               <div className={styles.row}>
-                <span className={styles.label}>Host</span>
-                <button className={styles.button} onClick={handleStartHosting} disabled={jamBusy}>
-                  Host a jam
-                </button>
-              </div>
-              <div className={styles.row}>
-                <span className={styles.label}>Join</span>
+                <span className={styles.label}>Jam name</span>
                 <input
                   className={styles.commitInput}
                   type="text"
-                  placeholder="192.168.1.5:7070"
-                  value={joinAddress}
-                  onChange={(e) => setJoinAddress(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleJoinJam()}
-                  aria-label="Host address"
+                  value={jamName}
+                  onChange={(e) => setJamName(e.target.value)}
+                  aria-label="Jam name"
                 />
-                <button
-                  className={styles.button}
-                  onClick={handleJoinJam}
-                  disabled={!joinAddress.trim()}
-                >
-                  Join
+                <button className={styles.button} onClick={handleStartHosting} disabled={jamBusy}>
+                  Host
                 </button>
               </div>
+
+              <div className={styles.jamSubhead}>
+                <span>Nearby jams</span>
+                <button className={styles.linkButton} onClick={scanForJams} disabled={scanning}>
+                  {scanning ? 'Scanning…' : 'Refresh'}
+                </button>
+              </div>
+
+              {discovered.length === 0 ? (
+                <span className={styles.infoMessage}>
+                  {scanning ? 'Looking for jams on your network…' : 'No open jams found nearby.'}
+                </span>
+              ) : (
+                <div className={styles.jamList}>
+                  {discovered.map((jam) => (
+                    <div key={jam.address} className={styles.jamListRow}>
+                      <span className={styles.jamListName} title={jam.name}>{jam.name}</span>
+                      <span className={styles.jamListAddress}>{jam.address}</span>
+                      <button className={styles.button} onClick={() => setJamGuest(jam.address)}>
+                        Join
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <button className={styles.linkButton} onClick={() => setShowManualJoin((v) => !v)}>
+                {showManualJoin ? 'Hide manual join' : 'Join by address'}
+              </button>
+              {showManualJoin && (
+                <div className={styles.row}>
+                  <input
+                    className={styles.commitInput}
+                    type="text"
+                    placeholder="192.168.1.5:7070"
+                    value={joinAddress}
+                    onChange={(e) => setJoinAddress(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleJoinJam()}
+                    aria-label="Host address"
+                  />
+                  <button
+                    className={styles.button}
+                    onClick={handleJoinJam}
+                    disabled={!joinAddress.trim()}
+                  >
+                    Join
+                  </button>
+                </div>
+              )}
             </>
           )}
 
@@ -524,10 +607,18 @@ export function SettingsPanel() {
             <>
               <div className={styles.row}>
                 <span className={styles.label}>Status</span>
-                <span className={styles.jamStatus}>Hosting</span>
+                <span className={styles.jamStatus}>
+                  Hosting{hostedJamName ? ` “${hostedJamName}”` : ''}
+                </span>
                 <button className={styles.button} onClick={handleStopHosting} disabled={jamBusy}>
                   Stop hosting
                 </button>
+              </div>
+              <div className={styles.row}>
+                <span className={styles.label}>Connected</span>
+                <span className={styles.jamStatus}>
+                  {jamClients} {jamClients === 1 ? 'person' : 'people'}
+                </span>
               </div>
               {jamUrls.length > 0 && (
                 <div className={styles.row}>
@@ -549,20 +640,31 @@ export function SettingsPanel() {
                 </div>
               )}
               <span className={styles.infoMessage}>
-                Others on your network can open these URLs in a browser, or join with the app using the ip:port.
+                Others on your network can find this jam in their app, open these URLs in a browser, or join with the ip:port.
               </span>
             </>
           )}
 
           {jamRole === 'guest' && (
-            <div className={styles.row}>
-              <span className={styles.label}>
-                {jamConnected ? `Connected to ${jamHostAddress}` : `Connecting to ${jamHostAddress}…`}
-              </span>
-              <button className={styles.button} onClick={setJamOff}>
-                Leave
-              </button>
-            </div>
+            <>
+              <div className={styles.row}>
+                <span className={styles.label}>Status</span>
+                <span className={styles.jamStatus}>
+                  {jamConnected ? `Connected to ${jamHostAddress}` : `Connecting to ${jamHostAddress}…`}
+                </span>
+                <button className={styles.button} onClick={setJamOff}>
+                  Leave
+                </button>
+              </div>
+              {jamConnected && jamClients > 0 && (
+                <div className={styles.row}>
+                  <span className={styles.label}>Connected</span>
+                  <span className={styles.jamStatus}>
+                    {jamClients} {jamClients === 1 ? 'person' : 'people'}
+                  </span>
+                </div>
+              )}
+            </>
           )}
         </section>
       </div>

@@ -205,3 +205,43 @@
   gap: 8px;
 }
 
+/* Row heading with an inline action (e.g. "Nearby jams" + Refresh). */
+.jamSubhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Discovered-jam list. */
+.jamList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jamListRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jamListName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jamListAddress {
+  font-size: 0.8rem;
+  font-family: monospace;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+

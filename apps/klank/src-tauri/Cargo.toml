@@ -24,6 +24,9 @@ log = "0.4"
 tauri = { version = "2.11.2", features = [] }
 tokio = { version = "1", features = ["sync", "time", "net", "rt-multi-thread", "io-util"] }
 axum = { version = "0.7", default-features = false, features = ["ws", "http1", "tokio"] }
+# LAN jam discovery — advertise/browse a _klank-jam._tcp service. Pure-Rust,
+# cross-compiles to Android (multicast lock still required there at runtime).
+mdns-sd = "0.20"
 tauri-plugin-log = "2.0.0"
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2.0"

@@ -9,26 +9,50 @@ export type JamSnapshot = {
   scrollSpeed: number
   scrolling: boolean
   fraction: number // 0..1 normalized scroll position
+  /** Connected-guest count, injected by the host server (guest-facing only). */
+  clients?: number
 }
 
-export type JamInfo = { port: number; urls: string[] }
+export type JamInfo = { port: number; urls: string[]; name: string }
 
-export type JamStatus = { hosting: boolean; port: number | null; urls: string[] }
+export type JamStatus = {
+  hosting: boolean
+  port: number | null
+  urls: string[]
+  name: string | null
+  /** Guests currently connected (host perspective). */
+  clients: number
+}
+
+/** A jam discovered on the local network via mDNS. */
+export type DiscoveredJam = { name: string; address: string }
 
 export type JamHost = {
-  start: () => Promise<JamInfo>
+  start: (name: string) => Promise<JamInfo>
   stop: () => Promise<void>
   broadcast: (snapshot: JamSnapshot) => Promise<void>
   status: () => Promise<JamStatus>
 }
 
 export const createJamHost = async (): Promise<JamHost> => ({
-  start: () => invoke<JamInfo>('jam_start'),
+  start: (name: string) => invoke<JamInfo>('jam_start', { name }),
   stop: () => invoke<void>('jam_stop'),
   broadcast: (snapshot: JamSnapshot) =>
     invoke<void>('jam_broadcast', { snapshot: JSON.stringify(snapshot) }),
   status: () => invoke<JamStatus>('jam_status'),
 })
+
+/**
+ * Browse the local network for open jams (mDNS). Resolves after a short scan
+ * window. Returns an empty list outside Tauri or when discovery is unavailable.
+ */
+export const discoverJams = async (): Promise<DiscoveredJam[]> => {
+  try {
+    return await invoke<DiscoveredJam[]>('jam_discover')
+  } catch {
+    return []
+  }
+}
 
 // ── Guest / client side ───────────────────────────────────────────────────────
 

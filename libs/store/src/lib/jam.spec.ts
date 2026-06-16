@@ -25,7 +25,7 @@ const snapshot = (overrides: Partial<JamSnapshot> = {}): JamSnapshot => ({
   ...overrides,
 })
 
-const OFF = { role: 'off', port: null, urls: [], hostAddress: '', connected: false, snapshot: null }
+const OFF = { role: 'off', port: null, urls: [], name: '', hostAddress: '', connected: false, snapshot: null, clients: 0 }
 
 describe('jam store slice', () => {
   beforeEach(() => useKlankStore.getState().setJamOff())
@@ -34,12 +34,29 @@ describe('jam store slice', () => {
     expect(useKlankStore.getState().jam).toEqual(OFF)
   })
 
-  it('setJamHosting → host role carrying port + urls', () => {
-    useKlankStore.getState().setJamHosting({ port: 7070, urls: ['http://192.168.1.5:7070'] })
+  it('setJamHosting → host role carrying port + urls + name', () => {
+    useKlankStore.getState().setJamHosting({ port: 7070, urls: ['http://192.168.1.5:7070'], name: 'klank-jam-1234' })
     const { jam } = useKlankStore.getState()
     expect(jam.role).toBe('host')
     expect(jam.port).toBe(7070)
     expect(jam.urls).toEqual(['http://192.168.1.5:7070'])
+    expect(jam.name).toBe('klank-jam-1234')
+  })
+
+  it('setJamClients updates the connected count', () => {
+    useKlankStore.getState().setJamClients(3)
+    expect(useKlankStore.getState().jam.clients).toBe(3)
+  })
+
+  it('setJamSnapshot mirrors the snapshot clients count into state', () => {
+    useKlankStore.getState().setJamSnapshot(snapshot({ clients: 5 }))
+    expect(useKlankStore.getState().jam.clients).toBe(5)
+  })
+
+  it('setJamSnapshot keeps the prior count when the snapshot omits clients', () => {
+    useKlankStore.getState().setJamClients(2)
+    useKlankStore.getState().setJamSnapshot(snapshot())
+    expect(useKlankStore.getState().jam.clients).toBe(2)
   })
 
   it('setJamGuest → guest role and clears any prior connection/snapshot', () => {
@@ -67,7 +84,7 @@ describe('jam store slice', () => {
   })
 
   it('setJamOff fully resets from host', () => {
-    useKlankStore.getState().setJamHosting({ port: 7070, urls: ['http://x:7070'] })
+    useKlankStore.getState().setJamHosting({ port: 7070, urls: ['http://x:7070'], name: 'klank-jam-1234' })
     useKlankStore.getState().setJamOff()
     expect(useKlankStore.getState().jam).toEqual(OFF)
   })

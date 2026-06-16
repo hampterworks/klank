@@ -5,7 +5,7 @@ import type { Mock } from 'vitest'
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 
 import { invoke } from '@tauri-apps/api/core'
-import { connectJam, createJamHost, type JamSnapshot } from './jam.js'
+import { connectJam, createJamHost, discoverJams, type JamSnapshot } from './jam.js'
 
 const invokeMock = invoke as Mock
 
@@ -24,11 +24,11 @@ const snapshot = (overrides: Partial<JamSnapshot> = {}): JamSnapshot => ({
 describe('createJamHost', () => {
   beforeEach(() => invokeMock.mockReset())
 
-  it('start invokes jam_start and returns the host info', async () => {
-    invokeMock.mockResolvedValue({ port: 7070, urls: ['http://x:7070'] })
+  it('start invokes jam_start with the jam name and returns the host info', async () => {
+    invokeMock.mockResolvedValue({ port: 7070, urls: ['http://x:7070'], name: 'klank-jam-1234' })
     const host = await createJamHost()
-    expect(await host.start()).toEqual({ port: 7070, urls: ['http://x:7070'] })
-    expect(invokeMock).toHaveBeenCalledWith('jam_start')
+    expect(await host.start('klank-jam-1234')).toEqual({ port: 7070, urls: ['http://x:7070'], name: 'klank-jam-1234' })
+    expect(invokeMock).toHaveBeenCalledWith('jam_start', { name: 'klank-jam-1234' })
   })
 
   it('stop invokes jam_stop', async () => {
@@ -48,6 +48,22 @@ describe('createJamHost', () => {
     invokeMock.mockResolvedValue({ hosting: true, port: 7070, urls: [] })
     expect(await (await createJamHost()).status()).toEqual({ hosting: true, port: 7070, urls: [] })
     expect(invokeMock).toHaveBeenCalledWith('jam_status')
+  })
+})
+
+describe('discoverJams', () => {
+  beforeEach(() => invokeMock.mockReset())
+
+  it('invokes jam_discover and returns the discovered jams', async () => {
+    const jams = [{ name: 'klank-jam-1', address: '192.168.1.5:7070' }]
+    invokeMock.mockResolvedValue(jams)
+    expect(await discoverJams()).toEqual(jams)
+    expect(invokeMock).toHaveBeenCalledWith('jam_discover')
+  })
+
+  it('resolves to an empty list when discovery is unavailable', async () => {
+    invokeMock.mockRejectedValueOnce(new Error('not in tauri'))
+    await expect(discoverJams()).resolves.toEqual([])
   })
 })
 

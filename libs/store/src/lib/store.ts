@@ -20,12 +20,16 @@ export type JamState = {
   // host
   port: number | null
   urls: string[]
+  /** Host-chosen jam name advertised on the LAN (host only). */
+  name: string
   // guest
   /** "ip:port" string the user typed, e.g. "192.168.1.5:7070". */
   hostAddress: string
   connected: boolean
   /** Latest snapshot received from the host (guest only). */
   snapshot: JamSnapshot | null
+  /** Live connected-guest count — host polls status, guest reads it from snapshots. */
+  clients: number
 }
 
 export type Mode = "Read" | "Edit"
@@ -210,7 +214,7 @@ type KlankState = {
    */
   jam: JamState
   /** Called when this client becomes the host after jam server starts. */
-  setJamHosting: (info: { port: number; urls: string[] }) => void
+  setJamHosting: (info: { port: number; urls: string[]; name: string }) => void
   /** Called when the user chooses to join as a guest. Sets address, clears snapshot. */
   setJamGuest: (hostAddress: string) => void
   /** Resets jam to the default off state. */
@@ -219,6 +223,8 @@ type KlankState = {
   setJamConnected: (connected: boolean) => void
   /** Stores the latest snapshot received from the host. */
   setJamSnapshot: (snapshot: JamSnapshot) => void
+  /** Updates the live connected-guest count. */
+  setJamClients: (clients: number) => void
 }
 
 /** All valid scroll speed levels (0–9, displayed as 1–10). */
@@ -306,18 +312,18 @@ export const useKlankStore = create<KlankState>()(
         addCustomTuning: (tuning) => set((state) => ({...state, customTunings: [...state.customTunings, tuning]})),
         deleteCustomTuning: (id) => set((state) => ({...state, customTunings: state.customTunings.filter((t) => t.id !== id)})),
         // ── Jam slice (ephemeral — not in partialize) ──────────────────────────
-        jam: { role: 'off', port: null, urls: [], hostAddress: '', connected: false, snapshot: null },
+        jam: { role: 'off', port: null, urls: [], name: '', hostAddress: '', connected: false, snapshot: null, clients: 0 },
         setJamHosting: (info) => set((state) => ({
           ...state,
-          jam: { ...state.jam, role: 'host', port: info.port, urls: info.urls },
+          jam: { ...state.jam, role: 'host', port: info.port, urls: info.urls, name: info.name, clients: 0 },
         })),
         setJamGuest: (hostAddress) => set((state) => ({
           ...state,
-          jam: { ...state.jam, role: 'guest', hostAddress, connected: false, snapshot: null },
+          jam: { ...state.jam, role: 'guest', hostAddress, connected: false, snapshot: null, clients: 0 },
         })),
         setJamOff: () => set((state) => ({
           ...state,
-          jam: { role: 'off', port: null, urls: [], hostAddress: '', connected: false, snapshot: null },
+          jam: { role: 'off', port: null, urls: [], name: '', hostAddress: '', connected: false, snapshot: null, clients: 0 },
         })),
         setJamConnected: (connected) => set((state) => ({
           ...state,
@@ -325,7 +331,17 @@ export const useKlankStore = create<KlankState>()(
         })),
         setJamSnapshot: (snapshot) => set((state) => ({
           ...state,
-          jam: { ...state.jam, snapshot },
+          // The host injects `clients` into each frame; mirror it into state so
+          // guests can show the count without a separate message.
+          jam: {
+            ...state.jam,
+            snapshot,
+            clients: typeof snapshot.clients === 'number' ? snapshot.clients : state.jam.clients,
+          },
+        })),
+        setJamClients: (clients) => set((state) => ({
+          ...state,
+          jam: { ...state.jam, clients },
         })),
         setTabPath: (path) => set((state) => {
           const saved = state.tabSettingByPath[path]
