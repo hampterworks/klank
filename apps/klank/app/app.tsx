@@ -5,12 +5,14 @@ import { useEffect, useRef, useState } from 'react'
 import {
   createFileService,
   FileEntry,
+  isMobileDevice,
   mapTreeStructure,
 } from '@klank/platform-api'
 import { Menu } from './components/menu/Menu'
 import { Player } from './components/player/Player'
 import { useGitSync } from './useGitSync'
 import { useJam } from './useJam'
+import { needsBaseDirResolution, resolveBaseDir } from './baseDirectory'
 import { SettingsPanel } from './routes/settings'
 import { HarmonyPanel } from './routes/harmony'
 
@@ -58,14 +60,23 @@ export function App() {
         if (cancelled) return
         setFileService(fileService)
 
-        // Get base directory if not set yet
+        // Resolve the tab directory. On mobile this is re-derived every launch
+        // (the app-local data dir is platform-owned; a persisted absolute path
+        // from a previous launch reads as an empty tree on Android). On desktop
+        // a user-chosen folder is authoritative and only resolved when unset.
         let dir = baseDirectory
-        if (!dir) {
-          dir = await fileService.getBaseDirectoryPath()
+        const mobile = isMobileDevice()
+        if (needsBaseDirResolution(dir, mobile)) {
+          const resolved = await fileService.getBaseDirectoryPath()
           if (cancelled) return
-          setBaseDirectory(dir)
-          return // re-triggers effect once baseDirectory is in state
+          const next = resolveBaseDir(baseDirectory, resolved, mobile)
+          if (next.changed) {
+            setBaseDirectory(next.dir)
+            return // re-triggers effect once baseDirectory is in state
+          }
+          dir = next.dir
         }
+        if (!dir) return // no directory to read (also narrows `dir` to string)
 
         // Load per-tab settings and playlists from the tab directory, then load the tree
         const savedSettings = await fileService.readTabSettings(dir)
