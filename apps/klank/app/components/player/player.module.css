@@ -1,3 +1,29 @@
+/* ── Jam guest header ─────────────────────────────────────────────────────── */
+.guestHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--klank-color-border);
+  background: var(--klank-color-secondary-background);
+  flex-shrink: 0;
+}
+
+.guestLabel {
+  font-weight: 600;
+  font-size: 0.875rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guestStatus {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+/* ── Normal container ──────────────────────────────────────────────────────── */
 .container {
   display: grid;
   grid-template-rows: auto 1fr;

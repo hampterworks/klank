@@ -1,0 +1,9 @@
+[[permission]]
+identifier = "allow-jam"
+description = "Allows the main window to use the Jam mode LAN-sync commands."
+commands.allow = [
+  "jam_start",
+  "jam_stop",
+  "jam_broadcast",
+  "jam_status",
+]

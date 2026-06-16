@@ -11,8 +11,10 @@
 .noItems {
   display: flex;
   justify-content: center;
-  align-items: center;
-  height: 100%;
+  padding: 2rem 1rem;
+  color: var(--klank-color-text);
+  opacity: 0.45;
+  font-style: italic;
 }
 
 .artistName {
