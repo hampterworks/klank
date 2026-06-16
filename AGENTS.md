@@ -31,15 +31,19 @@ pnpm nx run klank:tauri:build
 
 ```
 apps/klank/app/                     React Router 7 app - routes, components, root layout
+apps/klank/app/routes/settings.tsx  Settings panel - rendered inline by app.tsx via activeView, not a router route
+apps/klank/app/routes/harmony.tsx   Harmony panel - scales/modes/chord-scale browser, rendered inline via activeView
+apps/klank/app/routes/about.tsx     Unused NX boilerplate stub, registered at /about in routes.tsx
 apps/klank/app/components/menu/     Left sidebar: directory tree, search bar
 apps/klank/app/components/player/   Center pane: tab display, toolbar, playback controls
-apps/klank/src-tauri/src/lib.rs     Rust entry - registers scrape_ug + git_* commands
+apps/klank/src-tauri/src/lib.rs     Rust entry - registers scrape_ug + git_* + jam_* commands
 apps/klank/src-tauri/src/import/    Tab-import pipeline (stages, orchestrator, progress)
 apps/klank/src-tauri/src/git.rs     In-app git engine (libgit2) - git_pull/commit/push/clone/…
+apps/klank/src-tauri/src/jam.rs     LAN jam-session host - jam_start/stop/broadcast/status, serves jam-lite.html
 apps/klank/src-tauri/capabilities/  Tauri permission declarations (JSON) - one file per window
 libs/ui/src/                        Shared React components (@klank/ui)
 libs/store/src/lib/store.ts         Zustand store with persisted TabSetting (@klank/store)
-libs/platform-api/src/lib/          FileService, git (invoke-based), chords, download, userAgent (@klank/platform-api)
+libs/platform-api/src/lib/          FileService, git, jam, chords/scales/chord-theory, download, userAgent (@klank/platform-api)
 libs/audio/src/                     Metronome + tuner logic and Web Audio engines (@klank/audio)
 docs/agents/                        Agent architecture + setup conventions
 .claude/agents/                     Subagent identities (self-contained, routed by description)

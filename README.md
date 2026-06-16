@@ -8,14 +8,18 @@ Klank is a Tauri desktop application for viewing, downloading, and editing guita
 - Full-text search with highlighted matches in the file tree
 - Chord highlighting within tab content with hover fingering diagrams (guitar/bass selectable)
 - Semitone transposition with chromatic chord rewriting
+- Harmony panel — scale and mode browser with fretboard diagrams, diatonic chord-scale lookup, and chord-diagram rendering for guitar/bass
 - Auto-scroll with adjustable speed
 - Playlists — create named playlists, add tabs, reorder with drag-and-drop, and navigate sequentially; persisted to `.klank-settings.json` in the tab directory
+- Jam mode — host a LAN session that broadcasts the active tab, transpose, and live scroll position to other devices on the network
 - Download tabs directly from Ultimate Guitar via built-in scraper
+- In-app git sync — pull/commit/push the tab directory from the Settings panel, with token or system-credential authentication
 - Right-click context menu on file tree entries for tab deletion (with confirmation modal)
 - Light and Dark theme including icons and native chrome
 - App version displayed on the Settings page
 - Metronome — look-ahead Web Audio scheduler with BPM control, tap-tempo, time signature, accent, and subdivisions; beat indicator updates live. Press `m` to open, arrow keys to nudge BPM, `Esc` to close.
 - Tuner — plays reference tones for each open string (guitar standard / drop-D / half-step-down, bass standard / 5-string); listen-only, no microphone required. Press `t` to open.
+- Android build, alongside desktop, via Tauri's mobile target
 - Keyboard shortcuts for navigation and playback
 
 ## Tech Stack
@@ -46,6 +50,7 @@ pnpm tauri:dev
 |---------|-------------|
 | `pnpm dev` | Vite dev server only (React, no Tauri shell), port 4200 |
 | `pnpm tauri:dev` | Full Tauri desktop app with hot reload |
+| `pnpm tauri:android:dev` | Run on Android (emulator/device) |
 | `pnpm build` | Production Vite build |
 | `pnpm test` | Vitest across all libs |
 | `pnpm lint` | ESLint across workspace |
