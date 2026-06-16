@@ -20,10 +20,19 @@ jobs:
       version: ${{ steps.version.outputs.VERSION }}
     steps:
       - id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VER="2.0.${{ github.run_number }}"
+          # Find the latest published (non-prerelease) release and bump the patch.
+          # Falls back to v2.0.0 if no releases exist yet.
+          LATEST=$(gh release view --repo "$GITHUB_REPOSITORY" --latest --json tagName --jq '.tagName' 2>/dev/null || echo "v2.0.0")
+          LATEST="${LATEST#v}"
+          MAJOR=$(echo "$LATEST" | cut -d. -f1)
+          MINOR=$(echo "$LATEST" | cut -d. -f2)
+          PATCH=$(echo "$LATEST" | cut -d. -f3)
+          VER="${MAJOR}.${MINOR}.$((PATCH + 1))"
           echo "VERSION=$VER" >> "$GITHUB_OUTPUT"
-          echo "Building version: $VER"
+          echo "Building version: $VER (bumped from v$LATEST)"
 
   # -----------------------------------------------------------------------
   # Windows installers (NSIS + MSI).
