@@ -140,7 +140,7 @@ export const Player: React.FC<PlayerProps> = ({ ...props }) => {
         </div>
         <Sheet
           tabScrollSpeed={snap?.scrollSpeed ?? 1}
-          isScrolling={false}
+          isScrolling={snap?.scrolling ?? false}
           setTabIsScrolling={() => { /* guests don't own playback */ }}
           tabData={snap?.content ?? ''}
           transpose={snap?.transpose ?? 0}

@@ -6,6 +6,13 @@ import {
   type SheetLine,
 } from '@klank/platform-api'
 import { ChordDiagramTooltip } from '../chordDiagramTooltip/ChordDiagramTooltip.js'
+import { clamp01, shouldSnap, smoothFraction } from './scrollFollow.js'
+
+// ── Guest-follower tunables ───────────────────────────────────────────────────
+const FOLLOW_TAU = 0.15          // easing time-constant (seconds)
+const FOLLOW_SNAP_THRESHOLD = 0.3 // |Δfraction| above which we snap, not ease
+const FOLLOW_EPS = 0.0005        // convergence threshold — below this, stop the RAF
+const FOLLOW_MAX_DT = 0.1        // clamp per-frame dt so a backgrounded tab can't jump
 
 const renderLine = (
   line: string,
@@ -300,14 +307,121 @@ export const Sheet: React.FC<SheetProps> = ({
     }
   }, [tabData])
 
-  // ── Guest follower: drive scrollTop from the prop ─────────────────────────
+  // ── Guest follower: smooth-easing RAF toward the host's scroll position ──────
+  //
+  // Refs so the RAF callback always reads the latest values without triggering
+  // re-renders or effect restarts.
+  const followTargetRef = useRef<number>(0)      // latest host scrollFraction
+  const followDisplayRef = useRef<number>(0)     // current rendered fraction
+  const followRafRef = useRef<number>(0)         // RAF id (0 = not running)
+  const followLastTimeRef = useRef<number | null>(null)
+  const followHostScrollingRef = useRef<boolean>(false) // is the HOST scrolling
+
+  // Keep target + host-scrolling refs in sync with the props every render, so
+  // the long-lived RAF closure always reads current values without restarting.
+  if (scrollFraction !== undefined) {
+    followTargetRef.current = scrollFraction
+    followHostScrollingRef.current = isScrolling
+  }
+
+  // Helper: start (or restart) the follower RAF.  Seeds displayFraction from
+  // the container's actual scrollTop so re-sync eases from the current position.
+  const startFollowRaf = useRef<(() => void) | null>(null)
+
   useEffect(() => {
     if (scrollFraction === undefined) return
+
+    const container = containerRef.current
+    if (!container) return
+
+    // Seed display from where the container currently sits so re-syncs ease
+    // from wherever the guest scrolled to rather than jumping.
+    const seedDisplay = () => {
+      const maxScroll = container.scrollHeight - container.clientHeight
+      followDisplayRef.current = maxScroll > 0
+        ? clamp01(container.scrollTop / maxScroll)
+        : 0
+    }
+
+    const startRaf = () => {
+      if (followRafRef.current) return // already running
+      seedDisplay()
+      followLastTimeRef.current = null
+
+      const step = (timestamp: number) => {
+        const target = followTargetRef.current
+        let display = followDisplayRef.current
+
+        // Compute per-frame dt, clamped so a backgrounded tab doesn't jump.
+        let dt = 0
+        if (followLastTimeRef.current !== null) {
+          dt = Math.min((timestamp - followLastTimeRef.current) / 1000, FOLLOW_MAX_DT)
+        }
+        followLastTimeRef.current = timestamp
+
+        // Big-jump snap: if the gap is large, teleport instead of easing.
+        if (shouldSnap(display, target, FOLLOW_SNAP_THRESHOLD)) {
+          display = target
+        } else {
+          display = clamp01(smoothFraction(display, target, dt, FOLLOW_TAU))
+        }
+        followDisplayRef.current = display
+
+        // Apply to DOM — recompute maxScroll each frame so resize/font changes
+        // are handled without restarting the effect.
+        const maxScroll = container.scrollHeight - container.clientHeight
+        container.scrollTop = maxScroll > 0 ? display * maxScroll : 0
+
+        // Stop the loop only when the host is NOT scrolling AND we've converged.
+        // While the host IS scrolling the RAF keeps running every frame so a
+        // guest who peeks away gets smoothly pulled back.
+        const converged = Math.abs(target - display) < FOLLOW_EPS
+        if (!followHostScrollingRef.current && converged) {
+          followRafRef.current = 0
+          return
+        }
+
+        followRafRef.current = requestAnimationFrame(step)
+      }
+
+      followRafRef.current = requestAnimationFrame(step)
+    }
+
+    // Expose startRaf so the target/isScrolling watchers below can trigger it.
+    startFollowRaf.current = startRaf
+
+    // Start immediately.
+    startRaf()
+
+    return () => {
+      if (followRafRef.current) {
+        cancelAnimationFrame(followRafRef.current)
+        followRafRef.current = 0
+      }
+      startFollowRaf.current = null
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scrollFraction !== undefined]) // only (re)mount when follower mode is entered/left
+
+  // Restart the RAF when the host target changes or isScrolling flips on —
+  // either event means the guest should re-converge.
+  useEffect(() => {
+    if (scrollFraction === undefined) return
+    if (startFollowRaf.current) startFollowRaf.current()
+  }, [scrollFraction, isScrolling])
+
+  // On tab change in follower mode: snap immediately (don't slide across new doc).
+  useEffect(() => {
+    if (scrollFraction === undefined) return
+    followDisplayRef.current = scrollFraction
+    followTargetRef.current = scrollFraction
     const container = containerRef.current
     if (!container) return
     const maxScroll = container.scrollHeight - container.clientHeight
     container.scrollTop = maxScroll > 0 ? scrollFraction * maxScroll : 0
-  }, [scrollFraction, tabData])
+  // tabData change is the trigger; scrollFraction is read for the initial position.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabData])
 
   // ── Host / standalone: manual-scroll reporting on native scroll event ─────
   useEffect(() => {
