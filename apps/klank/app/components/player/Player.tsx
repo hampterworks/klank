@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import styles from './player.module.css'
 import { Sheet, SheetToolbar, EditIcon } from '@klank/ui'
 import { useKlankStore } from '@klank/store'
+import { createJamHost, type JamHost, type JamSnapshot } from '@klank/platform-api'
 
-type SheetProps = {} & React.ComponentPropsWithRef<'section'>
+type PlayerProps = {} & React.ComponentPropsWithRef<'section'>
 
-export const Player: React.FC<SheetProps> = ({ ...props }) => {
+export const Player: React.FC<PlayerProps> = ({ ...props }) => {
   const setTabFontSize = useKlankStore().setTabFontSize
   const fontSize = useKlankStore().tab.fontSize
   const transpose = useKlankStore().tab.transpose
@@ -24,11 +25,25 @@ export const Player: React.FC<SheetProps> = ({ ...props }) => {
   const mode = useKlankStore().mode
   const setMode = useKlankStore().setMode
   const instrument = useKlankStore().instrument
+
+  // Jam state
+  const jamRole = useKlankStore((s) => s.jam.role)
+  const jamSnapshot = useKlankStore((s) => s.jam.snapshot)
+  const jamHostAddress = useKlankStore((s) => s.jam.hostAddress)
+
   const [tabData, setTabData] = useState<string | undefined>()
   const [editedContent, setEditedContent] = useState<string>('')
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' && window.innerWidth <= 599
   )
+
+  // Latest scroll fraction from Sheet — kept in a ref so broadcast doesn't
+  // need to re-subscribe every time the fraction changes.
+  const scrollFractionRef = useRef<number>(0)
+
+  // JamHost instance — created once when the component mounts; the host
+  // server is started/stopped from Settings, here we only use `.broadcast`.
+  const jamHostRef = useRef<JamHost | null>(null)
 
   const activePlaylist = playlists.find((p) => p.id === activePlaylistId)
   const playlistNav = activePlaylist && activePlaylistIndex !== null ? {
@@ -37,6 +52,9 @@ export const Player: React.FC<SheetProps> = ({ ...props }) => {
     onPrev: prevInPlaylist,
     onNext: nextInPlaylist,
   } : undefined
+
+  // Song name derived the same way the toolbar does.
+  const songName = tabPath?.split(/[/\\]/)?.slice(-1)[0]?.slice(0, -8) ?? ''
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 599)
@@ -51,6 +69,29 @@ export const Player: React.FC<SheetProps> = ({ ...props }) => {
       setEditedContent(data)
     })
   }, [tabPath, fileService])
+
+  // Acquire (or reuse) the JamHost instance when entering host mode.
+  useEffect(() => {
+    if (jamRole !== 'host') return
+    if (jamHostRef.current) return
+    createJamHost().then((host) => { jamHostRef.current = host })
+  }, [jamRole])
+
+  // Broadcast a snapshot whenever tab content or settings change (host only).
+  useEffect(() => {
+    if (jamRole !== 'host' || !jamHostRef.current) return
+    const snapshot: JamSnapshot = {
+      v: 1,
+      name: songName,
+      content: tabData ?? '',
+      transpose,
+      fontSize,
+      scrollSpeed: tabScrollSpeed,
+      scrolling: isScrolling,
+      fraction: scrollFractionRef.current,
+    }
+    jamHostRef.current.broadcast(snapshot)
+  }, [jamRole, tabData, transpose, fontSize, tabScrollSpeed, isScrolling, songName])
 
   const handleEditToggle = async () => {
     if (mode === 'Edit') {
@@ -67,6 +108,53 @@ export const Player: React.FC<SheetProps> = ({ ...props }) => {
     }
   }
 
+  // Callback passed to Sheet when hosting — updates the ref and broadcasts.
+  const handleScrollFraction = (fraction: number) => {
+    scrollFractionRef.current = fraction
+    if (!jamHostRef.current) return
+    const snapshot: JamSnapshot = {
+      v: 1,
+      name: songName,
+      content: tabData ?? '',
+      transpose,
+      fontSize,
+      scrollSpeed: tabScrollSpeed,
+      scrolling: isScrolling,
+      fraction,
+    }
+    jamHostRef.current.broadcast(snapshot)
+  }
+
+  // ── Guest render ──────────────────────────────────────────────────────────
+  if (jamRole === 'guest') {
+    const snap = jamSnapshot
+    return (
+      <section className={styles.container} {...props}>
+        <div className={styles.guestHeader}>
+          <span className={styles.guestLabel}>
+            {snap?.name ? snap.name : 'Jam'}
+          </span>
+          <span className={styles.guestStatus}>
+            Following {jamHostAddress}
+          </span>
+        </div>
+        <Sheet
+          tabScrollSpeed={snap?.scrollSpeed ?? 1}
+          isScrolling={false}
+          setTabIsScrolling={() => { /* guests don't own playback */ }}
+          tabData={snap?.content ?? ''}
+          transpose={snap?.transpose ?? 0}
+          instrument={instrument}
+          isMobile={isMobile}
+          scrollFraction={snap?.fraction ?? 0}
+          style={{ fontSize: `${snap?.fontSize ?? 12}px` }}
+        />
+      </section>
+    )
+  }
+
+  // ── Normal (off) + host render ─────────────────────────────────────────────
+  // When hosting the UI is identical; the only addition is onScrollFraction.
   return (
     <section className={styles.container} {...props}>
       {mode === 'Edit' && (
@@ -77,10 +165,7 @@ export const Player: React.FC<SheetProps> = ({ ...props }) => {
       )}
       <SheetToolbar
         fontSize={fontSize}
-        songName={tabPath
-          ?.split(/[/\\]/)
-          ?.slice(-1)[0]
-          ?.slice(0, -8)}
+        songName={songName}
         transpose={transpose}
         tabScrollSpeed={tabScrollSpeed}
         isScrolling={isScrolling}
@@ -109,9 +194,9 @@ export const Player: React.FC<SheetProps> = ({ ...props }) => {
           instrument={instrument}
           isMobile={isMobile}
           style={{ fontSize: `${fontSize}px` }}
+          onScrollFraction={jamRole === 'host' ? handleScrollFraction : undefined}
         />
       )}
     </section>
   )
 }
-

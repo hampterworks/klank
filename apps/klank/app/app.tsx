@@ -10,6 +10,7 @@ import {
 import { Menu } from './components/menu/Menu'
 import { Player } from './components/player/Player'
 import { useGitSync } from './useGitSync'
+import { useJam } from './useJam'
 import { SettingsPanel } from './routes/settings'
 import { HarmonyPanel } from './routes/harmony'
 
@@ -38,6 +39,9 @@ export function App() {
 
   // Background git sync: refresh the file tree when a sync pulls remote changes.
   useGitSync(() => setNeedsUpdate(true))
+
+  // Manage the guest WebSocket lifecycle for Jam mode.
+  useJam()
 
   useEffect(() => {
     setServerMode(!isTauri)

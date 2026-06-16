@@ -10,3 +10,4 @@ export * from './lib/sheet-lines';
 export * from './lib/userAgent';
 export * from './lib/download';
 export * from './lib/app';
+export * from './lib/jam';

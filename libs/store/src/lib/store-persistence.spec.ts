@@ -66,6 +66,18 @@ describe('klank-storage migration and shape', () => {
     expect(parsed.state).toHaveProperty('customTunings')
   })
 
+  it('never persists the ephemeral jam slice', async () => {
+    const { useKlankStore } = await import('./store.js')
+
+    // Enter host mode (and force a persisted write so the entry is fresh).
+    useKlankStore.getState().setJamHosting({ port: 7070, urls: ['http://192.168.50.50:7070'] })
+    useKlankStore.getState().setTheme('Dark')
+
+    const parsed = JSON.parse(localStorageData['klank-storage']) as { state: Record<string, unknown> }
+    expect(parsed.state).not.toHaveProperty('jam')
+    expect(JSON.stringify(parsed)).not.toContain('192.168.50.50')
+  })
+
   it('migrate fills in default sync settings for older persisted state', async () => {
     const { useKlankStore } = await import('./store.js')
     const { syncSettings } = useKlankStore.getState()

@@ -11,6 +11,7 @@
     "dialog:default",
     "allow-scrape-ug",
     "allow-git",
+    "allow-jam",
     {
       "identifier": "fs:read-all",
       "allow": [

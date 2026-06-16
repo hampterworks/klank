@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Klank Jam</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #111; color: #e8e8e8; font-family: ui-monospace, 'Cascadia Code', 'Fira Mono', monospace; }
+  #header {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 16px;
+    background: #1a1a1a; border-bottom: 1px solid #333;
+    z-index: 10; font-size: 13px; line-height: 1;
+  }
+  #dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #555; flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  #dot.connected { background: #4caf50; }
+  #dot.reconnecting { background: #f59e0b; }
+  #name { font-weight: 600; color: #ddd; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #sheet {
+    position: absolute; top: 36px; left: 0; right: 0; bottom: 0;
+    overflow-y: auto; overflow-x: auto;
+    padding: 20px 24px 40px;
+  }
+  pre {
+    white-space: pre; line-height: 1.55; tab-size: 4;
+    color: #e8e8e8; font-family: inherit;
+    margin: 0;
+  }
+</style>
+</head>
+<body>
+<div id="header">
+  <div id="dot"></div>
+  <span id="name">Klank Jam</span>
+</div>
+<div id="sheet"><pre id="content"></pre></div>
+<script>
+(function () {
+  var dot = document.getElementById('dot');
+  var nameEl = document.getElementById('name');
+  var pre = document.getElementById('content');
+  var sheet = document.getElementById('sheet');
+  var ws = null;
+  var closed = false;
+  var delay = 1000;
+  var reconnectTimer = null;
+  var lastContent = null;
+
+  function setStatus(st) {
+    dot.className = st;
+  }
+
+  function applySnapshot(s) {
+    if (s.name) nameEl.textContent = s.name;
+    // Only rewrite the text node when content actually changes — snapshots
+    // stream ~15/sec during scroll, and reflowing a large tab each time janks.
+    if (typeof s.content === 'string' && s.content !== lastContent) {
+      pre.textContent = s.content;
+      lastContent = s.content;
+    }
+    var fs = Math.max(10, s.fontSize || 14);
+    pre.style.fontSize = fs + 'px';
+    if (typeof s.fraction === 'number') {
+      var el = sheet;
+      var scrollable = el.scrollHeight - el.clientHeight;
+      if (scrollable > 0) el.scrollTop = s.fraction * scrollable;
+    }
+  }
+
+  function connect() {
+    if (closed) return;
+    ws = new WebSocket('ws://' + location.host + '/jam');
+    ws.onopen = function () {
+      setStatus('connected');
+      delay = 1000;
+    };
+    ws.onmessage = function (evt) {
+      try { applySnapshot(JSON.parse(evt.data)); } catch (_) {}
+    };
+    ws.onclose = function () {
+      setStatus('reconnecting');
+      if (!closed) reconnectTimer = setTimeout(connect, delay = Math.min(delay * 2, 5000));
+    };
+    ws.onerror = function () {
+      ws.close();
+    };
+  }
+
+  connect();
+})();
+</script>
+</body>
+</html>
