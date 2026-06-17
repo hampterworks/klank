@@ -139,8 +139,9 @@
 
   /* Cancel the desktop z-index:2 on the SheetToolbar (direct div child).
      Without this, SheetToolbar creates a stacking context that can paint
-     above the mobile drawer overlay (z-index: 200). */
-  .container > div {
+     above the mobile drawer overlay (z-index: 200). Excludes floatingActions,
+     which relies on position:fixed to float above the toolbar. */
+  .container > div:not(.floatingActions) {
     position: static;
     z-index: auto;
   }
