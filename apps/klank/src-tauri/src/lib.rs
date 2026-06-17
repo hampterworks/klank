@@ -29,6 +29,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_ug_scraper::init())
+        .plugin(tauri_plugin_multicast_lock::init())
         .manage(jam::JamState::default());
 
     // The hidden-webview import stage (and its IPC) is desktop-only; Android

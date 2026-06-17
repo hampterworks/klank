@@ -44,6 +44,8 @@ html-escape = "0.2"
 git2 = { version = "0.19", default-features = false, features = ["https", "vendored-libgit2", "vendored-openssl"] }
 # Android-only scraper plugin (self-owned WebView). No-op shell on desktop.
 tauri-plugin-ug-scraper = { path = "tauri-plugin-ug-scraper" }
+# Android-only Wi-Fi MulticastLock for mDNS jam discovery. No-op shell on desktop.
+tauri-plugin-multicast-lock = { path = "tauri-plugin-multicast-lock" }
 
 # Size-optimized release profile. The unstripped native cdylib is the dominant
 # source of APK bloat; `strip` alone reclaims the bulk of it, the rest trims
