@@ -36,7 +36,9 @@
   padding-right: var(--safe-right);
   padding-bottom: var(--safe-bottom);
 
-  > div {
+  /* floatingActions is excluded — it must keep its own position:fixed
+     (this rule's higher specificity would otherwise override it). */
+  > div:not(.floatingActions) {
     position: relative;
     z-index: 2;
   }
@@ -57,16 +59,21 @@
   box-sizing: border-box;
 }
 
-.floatingSave {
+.floatingActions {
   position: fixed;
   bottom: calc(2rem + var(--safe-bottom));
   right: calc(2rem + var(--safe-right));
   z-index: 100;
   display: flex;
   align-items: center;
+  gap: 0.75rem;
+}
+
+.floatingSave,
+.floatingCancel {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
-  background: var(--klank-color-text);
-  color: var(--klank-color-background);
   border: none;
   border-radius: 999px;
   padding: 0.75rem 1.5rem;
@@ -87,12 +94,31 @@
   }
 }
 
+.floatingSave {
+  background: var(--klank-color-text);
+  color: var(--klank-color-background);
+}
+
+.floatingCancel {
+  background: var(--klank-color-secondary-background);
+  color: var(--klank-color-text);
+  border: 1px solid var(--klank-color-border);
+}
+
 @media (max-width: 599px) {
-  .floatingSave {
+  .floatingActions {
     /* On mobile the toolbar is at the bottom — float above it */
     bottom: calc(4.5rem + var(--safe-bottom));
     right: calc(1rem + var(--safe-right));
   }
+}
+
+/* Connected-guest count shown in the jam guest header. */
+.jamCount {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--klank-color-success);
+  white-space: nowrap;
 }
 
 @media (max-width: 599px) {
@@ -115,8 +141,9 @@
 
   /* Cancel the desktop z-index:2 on the SheetToolbar (direct div child).
      Without this, SheetToolbar creates a stacking context that can paint
-     above the mobile drawer overlay (z-index: 200). */
-  .container > div {
+     above the mobile drawer overlay (z-index: 200). Excludes floatingActions,
+     which relies on position:fixed to float above the toolbar. */
+  .container > div:not(.floatingActions) {
     position: static;
     z-index: auto;
   }

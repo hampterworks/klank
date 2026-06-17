@@ -29,6 +29,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_ug_scraper::init())
+        .plugin(tauri_plugin_multicast_lock::init())
         .manage(jam::JamState::default());
 
     // The hidden-webview import stage (and its IPC) is desktop-only; Android
@@ -60,7 +61,8 @@ pub fn run() {
             jam::jam_start,
             jam::jam_stop,
             jam::jam_broadcast,
-            jam::jam_status
+            jam::jam_status,
+            jam::jam_discover
         ]);
     #[cfg(not(desktop))]
     let builder = builder.invoke_handler(tauri::generate_handler![
@@ -84,7 +86,8 @@ pub fn run() {
         jam::jam_start,
         jam::jam_stop,
         jam::jam_broadcast,
-        jam::jam_status
+        jam::jam_status,
+        jam::jam_discover
     ]);
 
     builder

@@ -24,6 +24,9 @@ log = "0.4"
 tauri = { version = "2.11.2", features = [] }
 tokio = { version = "1", features = ["sync", "time", "net", "rt-multi-thread", "io-util"] }
 axum = { version = "0.7", default-features = false, features = ["ws", "http1", "tokio"] }
+# LAN jam discovery — advertise/browse a _klank-jam._tcp service. Pure-Rust,
+# cross-compiles to Android (multicast lock still required there at runtime).
+mdns-sd = "0.20"
 tauri-plugin-log = "2.0.0"
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2.0"
@@ -41,6 +44,8 @@ html-escape = "0.2"
 git2 = { version = "0.19", default-features = false, features = ["https", "vendored-libgit2", "vendored-openssl"] }
 # Android-only scraper plugin (self-owned WebView). No-op shell on desktop.
 tauri-plugin-ug-scraper = { path = "tauri-plugin-ug-scraper" }
+# Android-only Wi-Fi MulticastLock for mDNS jam discovery. No-op shell on desktop.
+tauri-plugin-multicast-lock = { path = "tauri-plugin-multicast-lock" }
 
 # Size-optimized release profile. The unstripped native cdylib is the dominant
 # source of APK bloat; `strip` alone reclaims the bulk of it, the rest trims
