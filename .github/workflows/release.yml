@@ -23,10 +23,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Find the latest published (non-prerelease) release and bump the patch.
-          # Falls back to v2.0.0 if no releases exist yet.
-          LATEST=$(gh release view --repo "$GITHUB_REPOSITORY" --latest --json tagName --jq '.tagName' 2>/dev/null || echo "v2.0.0")
+          # Bump the patch of the latest published release and use that as this
+          # build's version. The REST releases/latest endpoint returns the most
+          # recent release excluding drafts and prereleases (so the pr-* preview
+          # builds are ignored), and 404s when none exist — in which case, or if
+          # the tag isn't semver, we fall back to v2.0.0 and start at v2.0.1.
+          LATEST=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq '.tag_name' 2>/dev/null || echo "v2.0.0")
           LATEST="${LATEST#v}"
+          if [[ ! "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            LATEST="2.0.0"
+          fi
           MAJOR=$(echo "$LATEST" | cut -d. -f1)
           MINOR=$(echo "$LATEST" | cut -d. -f2)
           PATCH=$(echo "$LATEST" | cut -d. -f3)
