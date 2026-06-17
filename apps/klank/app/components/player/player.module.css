@@ -36,7 +36,9 @@
   padding-right: var(--safe-right);
   padding-bottom: var(--safe-bottom);
 
-  > div {
+  /* floatingActions is excluded — it must keep its own position:fixed
+     (this rule's higher specificity would otherwise override it). */
+  > div:not(.floatingActions) {
     position: relative;
     z-index: 2;
   }
