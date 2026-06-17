@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-acquire"
+description = "Enables the acquire command without any pre-configured scope."
+commands.allow = ["acquire"]
+
+[[permission]]
+identifier = "deny-acquire"
+description = "Denies the acquire command without any pre-configured scope."
+commands.deny = ["acquire"]

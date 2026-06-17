@@ -1,0 +1,13 @@
+[package]
+name = "tauri-plugin-multicast-lock"
+version = "0.1.0"
+edition = "2021"
+description = "Android-only Tauri plugin that holds a Wi-Fi MulticastLock so mDNS jam discovery can send and receive multicast on the LAN."
+links = "tauri-plugin-multicast-lock"
+
+[dependencies]
+tauri = { version = "2.11.2" }
+serde = { version = "1", features = ["derive"] }
+
+[build-dependencies]
+tauri-plugin = { version = "2", features = ["build"] }

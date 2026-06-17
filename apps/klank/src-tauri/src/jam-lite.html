@@ -21,6 +21,7 @@
   #dot.connected { background: #4caf50; }
   #dot.reconnecting { background: #f59e0b; }
   #name { font-weight: 600; color: #ddd; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #count { margin-left: auto; color: #4caf50; flex-shrink: 0; }
   #sheet {
     position: absolute; top: 36px; left: 0; right: 0; bottom: 0;
     overflow-y: auto; overflow-x: auto;
@@ -37,12 +38,14 @@
 <div id="header">
   <div id="dot"></div>
   <span id="name">Klank Jam</span>
+  <span id="count"></span>
 </div>
 <div id="sheet"><pre id="content"></pre></div>
 <script>
 (function () {
   var dot = document.getElementById('dot');
   var nameEl = document.getElementById('name');
+  var countEl = document.getElementById('count');
   var pre = document.getElementById('content');
   var sheet = document.getElementById('sheet');
   var ws = null;
@@ -57,6 +60,7 @@
 
   function applySnapshot(s) {
     if (s.name) nameEl.textContent = s.name;
+    if (typeof s.clients === 'number') countEl.textContent = '● ' + s.clients + ' connected';
     // Only rewrite the text node when content actually changes — snapshots
     // stream ~15/sec during scroll, and reflowing a large tab each time janks.
     if (typeof s.content === 'string' && s.content !== lastContent) {

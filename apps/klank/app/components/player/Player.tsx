@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import styles from './player.module.css'
-import { Sheet, SheetToolbar, EditIcon } from '@klank/ui'
+import { Sheet, SheetToolbar, EditIcon, CloseIcon } from '@klank/ui'
 import { useKlankStore } from '@klank/store'
 import { createJamHost, type JamHost, type JamSnapshot } from '@klank/platform-api'
 
@@ -30,6 +30,8 @@ export const Player: React.FC<PlayerProps> = ({ ...props }) => {
   const jamRole = useKlankStore((s) => s.jam.role)
   const jamSnapshot = useKlankStore((s) => s.jam.snapshot)
   const jamHostAddress = useKlankStore((s) => s.jam.hostAddress)
+  const jamClients = useKlankStore((s) => s.jam.clients)
+  const jamConnected = useKlankStore((s) => s.jam.connected)
 
   const [tabData, setTabData] = useState<string | undefined>()
   const [editedContent, setEditedContent] = useState<string>('')
@@ -108,6 +110,12 @@ export const Player: React.FC<PlayerProps> = ({ ...props }) => {
     }
   }
 
+  // Discard unsaved edits and leave edit mode without writing to disk.
+  const handleEditCancel = () => {
+    setEditedContent(tabData ?? '')
+    setMode('Read')
+  }
+
   // Callback passed to Sheet when hosting — updates the ref and broadcasts.
   const handleScrollFraction = (fraction: number) => {
     scrollFractionRef.current = fraction
@@ -137,6 +145,11 @@ export const Player: React.FC<PlayerProps> = ({ ...props }) => {
           <span className={styles.guestStatus}>
             Following {jamHostAddress}
           </span>
+          {jamConnected && jamClients > 0 && (
+            <span className={styles.jamCount} title="People connected to this jam">
+              ● {jamClients} connected
+            </span>
+          )}
         </div>
         <Sheet
           tabScrollSpeed={snap?.scrollSpeed ?? 1}
@@ -158,10 +171,16 @@ export const Player: React.FC<PlayerProps> = ({ ...props }) => {
   return (
     <section className={styles.container} {...props}>
       {mode === 'Edit' && (
-        <button className={styles.floatingSave} onClick={handleEditToggle} aria-label="Save">
-          <EditIcon />
-          <span>Save</span>
-        </button>
+        <div className={styles.floatingActions}>
+          <button className={styles.floatingCancel} onClick={handleEditCancel} aria-label="Cancel">
+            <CloseIcon />
+            <span>Cancel</span>
+          </button>
+          <button className={styles.floatingSave} onClick={handleEditToggle} aria-label="Save">
+            <EditIcon />
+            <span>Save</span>
+          </button>
+        </div>
       )}
       <SheetToolbar
         fontSize={fontSize}
