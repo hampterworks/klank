@@ -6,6 +6,7 @@ import { SheetToolbar } from './SheetToolbar.js'
 
 const DEFAULT_PROPS = {
   songName: 'Test Song',
+  songKey: undefined as string | undefined,
   fontSize: 14,
   transpose: 0,
   tabScrollSpeed: 3,
@@ -45,6 +46,26 @@ describe('SheetToolbar — existing functionality', () => {
   it('does not render a save button even in Edit mode (save is a floating FAB in Player)', () => {
     renderToolbar({ mode: 'Edit' })
     expect(screen.queryByRole('button', { name: /save/i })).toBeNull()
+  })
+})
+
+describe('SheetToolbar — detected key badge', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('renders the badge with the given songKey text when provided', () => {
+    renderToolbar({ songKey: 'G' })
+    expect(screen.getByLabelText('Detected key')).toBeTruthy()
+    expect(screen.getByText('G')).toBeTruthy()
+  })
+
+  it('renders a key-change badge text as given', () => {
+    renderToolbar({ songKey: 'G → D' })
+    expect(screen.getByText('G → D')).toBeTruthy()
+  })
+
+  it('does not render the badge when songKey is undefined', () => {
+    renderToolbar()
+    expect(screen.queryByLabelText('Detected key')).toBeNull()
   })
 })
 
