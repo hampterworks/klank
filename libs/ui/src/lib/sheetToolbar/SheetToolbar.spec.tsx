@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, fireEvent, screen, act } from '@testing-library/react'
 import { SheetToolbar } from './SheetToolbar.js'
+import styles from './sheetToolbar.module.css'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const DEFAULT_PROPS = {
   songName: 'Test Song',
+  songKey: undefined as string | undefined,
   fontSize: 14,
   transpose: 0,
   tabScrollSpeed: 3,
@@ -45,6 +47,40 @@ describe('SheetToolbar — existing functionality', () => {
   it('does not render a save button even in Edit mode (save is a floating FAB in Player)', () => {
     renderToolbar({ mode: 'Edit' })
     expect(screen.queryByRole('button', { name: /save/i })).toBeNull()
+  })
+})
+
+describe('SheetToolbar — detected key badge', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('renders the badge with the given songKey text when provided', () => {
+    renderToolbar({ songKey: 'G' })
+    expect(screen.getByLabelText('Detected key')).toBeTruthy()
+    expect(screen.getByText('G')).toBeTruthy()
+  })
+
+  it('renders a key-change badge text as given', () => {
+    renderToolbar({ songKey: 'G → D' })
+    const badge = screen.getByLabelText('Detected key')
+    expect(badge.textContent).toBe('G→D')
+    // Both keys appear in order, separated by the arrow glyph.
+    const text = badge.textContent ?? ''
+    expect(text.indexOf('G')).toBeLessThan(text.indexOf('D'))
+    expect(text).toContain('→')
+  })
+
+  it('does not render the badge when songKey is undefined', () => {
+    renderToolbar()
+    expect(screen.queryByLabelText('Detected key')).toBeNull()
+  })
+
+  it('renders a minor-key suffix in distinct markup from the root letter', () => {
+    renderToolbar({ songKey: 'Cm' })
+    const badge = screen.getByLabelText('Detected key')
+    expect(badge.textContent).toBe('Cm')
+    const suffix = badge.querySelector(`.${styles.songKeyQuality}`)
+    expect(suffix).toBeTruthy()
+    expect(suffix?.textContent).toBe('m')
   })
 })
 

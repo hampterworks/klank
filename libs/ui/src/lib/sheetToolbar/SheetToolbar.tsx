@@ -22,6 +22,7 @@ type PlaylistNav = {
 
 type SheetToolbarProps = {
   songName: string
+  songKey?: string
   fontSize: number
   transpose: number
   tabScrollSpeed: number
@@ -37,6 +38,7 @@ type SheetToolbarProps = {
 
 export const SheetToolbar: React.FC<SheetToolbarProps> = ({
   songName,
+  songKey,
   fontSize,
   setTabFontSize,
   transpose,
@@ -173,6 +175,23 @@ export const SheetToolbar: React.FC<SheetToolbarProps> = ({
       <span className={styles.songName}>{songName}</span>
 
       <div className={styles.controls}>
+        {songKey && (
+          <span className={styles.songKey} aria-label="Detected key">
+            {songKey.split(' → ').map((key, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && <span className={styles.songKeyArrow}>→</span>}
+                {key.endsWith('m') ? (
+                  <>
+                    {key.slice(0, -1)}
+                    <span className={styles.songKeyQuality}>m</span>
+                  </>
+                ) : (
+                  key
+                )}
+              </React.Fragment>
+            ))}
+          </span>
+        )}
         <IncrementButton
           value={fontSize}
           setValue={setTabFontSize}

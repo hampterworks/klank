@@ -7,6 +7,7 @@ export * from './lib/chord-diagrams';
 export * from './lib/chord-theory';
 export * from './lib/scales';
 export * from './lib/sheet-lines';
+export * from './lib/song-key';
 export * from './lib/userAgent';
 export * from './lib/download';
 export * from './lib/app';

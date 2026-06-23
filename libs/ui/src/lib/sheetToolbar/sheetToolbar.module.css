@@ -20,6 +20,38 @@
   font-weight: 700;
 }
 
+/* Detected song key — informational badge, not interactive */
+.songKey {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  white-space: nowrap;
+  background: var(--klank-color-secondary-background);
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--klank-color-text);
+  line-height: 1;
+}
+
+/* "m" (minor) suffix — smaller, lighter weight so it reads as a distinct
+   lowercase qualifier rather than blending into the root letter */
+.songKeyQuality {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  opacity: 0.75;
+  margin-left: 0.0625rem;
+}
+
+.songKeyArrow {
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0.6;
+  margin: 0 0.1875rem;
+}
+
 /* All controls stay in a fixed-width group on the right */
 .controls {
   display: flex;
