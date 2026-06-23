@@ -12,15 +12,8 @@ import { testHeader } from './chords.js'
 
 export type SongKey = { rootPitch: number; isMinor: boolean }
 
-export type SongKeyResult =
-  | { kind: 'single'; key: SongKey }
-  | { kind: 'change'; from: SongKey; to: SongKey; atSection: string }
-
-/** A chord occurrence as written in the tab, tagged with the index of the
- *  section it appeared in (sections are numbered in order of first line). */
-type ChordOccurrence = { rootPitch: number; suffix: string; section: number }
-
-type Section = { name: string; occurrences: ChordOccurrence[] }
+/** A chord occurrence as written in the tab. */
+type ChordOccurrence = { rootPitch: number; suffix: string }
 
 const MOD12 = (n: number): number => ((n % 12) + 12) % 12
 
@@ -54,33 +47,67 @@ const DIATONIC_BONUS = 0.001
 const SCORE_EPSILON = 1e-9
 
 /**
- * Walks `tabData` line by line, grouping chord occurrences by section
- * (text between `[Header]` lines, in order of first appearance). Detection
+ * Walks `tabData` line by line and collects every chord occurrence. Detection
  * always runs untransposed (transpose 0): the caller shifts the *displayed*
  * result by the live transpose, since transposition is a uniform pitch shift.
+ * `[Header]` lines are skipped (they carry no chords).
  */
-const extractSections = (tabData: string): Section[] => {
-  const sections: Section[] = [{ name: 'Intro', occurrences: [] }]
+const extractOccurrences = (tabData: string): ChordOccurrence[] => {
+  const occurrences: ChordOccurrence[] = []
 
   for (const line of tabData.split(/\r\n|\r|\n/)) {
-    if (testHeader(line)) {
-      sections.push({ name: line.trim(), occurrences: [] })
-      continue
-    }
+    if (testHeader(line)) continue
 
     const classified = classifySheetLine(line, 0)
     if (classified.kind !== 'chord-line') continue
 
-    const current = sections[sections.length - 1]
     for (const token of classified.tokens) {
       if (token.kind !== 'chord') continue
       const parsed = parseChordSymbol(token.raw)
       if (parsed === null) continue
-      current.occurrences.push({ rootPitch: parsed.rootPitch, suffix: parsed.suffix, section: sections.length - 1 })
+      occurrences.push({ rootPitch: parsed.rootPitch, suffix: parsed.suffix })
     }
   }
 
-  return sections
+  return occurrences
+}
+
+/** Spelled-out fret numbers a capo annotation might use ("Capo on the second fret"). */
+const CAPO_WORDS: Record<string, number> = {
+  first: 1, one: 1, second: 2, two: 2, third: 3, three: 3, fourth: 4, four: 4,
+  fifth: 5, five: 5, sixth: 6, six: 6, seventh: 7, seven: 7, eighth: 8, eight: 8,
+  ninth: 9, nine: 9, tenth: 10, ten: 10, eleventh: 11, eleven: 11,
+}
+/** Roman-numeral fret numbers a capo annotation might use ("Capo II"). */
+const CAPO_ROMAN: Record<string, number> = {
+  i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10, xi: 11,
+}
+
+/**
+ * Reads the capo fret (1–11) from the tab's text so the detected key can be
+ * shifted up to the *sounding* pitch. Returns 0 when there is no capo, it is
+ * explicitly "no/none/off", or the fret is unparseable or out of range.
+ * Handles digits ("Capo 2"), spelled numbers ("Capo on the second fret") and
+ * Roman numerals ("Capo II"). Reads the first capo line only.
+ */
+const parseCapo = (tabData: string): number => {
+  for (const line of tabData.split(/\r\n|\r|\n/)) {
+    const match = line.match(/\bcapo\b(.*)/i)
+    if (match === null) continue
+    const tokens = match[1].toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)
+    if (tokens[0] === 'no' || tokens[0] === 'none' || tokens[0] === 'off' || tokens.includes('without')) return 0
+    for (const token of tokens) {
+      const digit = token.match(/^(\d+)/)
+      if (digit !== null) {
+        const fret = Number(digit[1])
+        return fret >= 1 && fret <= 11 ? fret : 0
+      }
+      if (token in CAPO_WORDS) return CAPO_WORDS[token]
+      if (token in CAPO_ROMAN) return CAPO_ROMAN[token]
+    }
+    return 0
+  }
+  return 0
 }
 
 /** True when a chord's quality reads as the major tonic for a major candidate,
@@ -123,14 +150,6 @@ const diatonicQualityByRoot = (rootPitch: number, isMinor: boolean): Map<number,
 }
 
 const sameKey = (a: SongKey, b: SongKey): boolean => a.rootPitch === b.rootPitch && a.isMinor === b.isMinor
-
-/** True when `a` and `b` are an exact relative major/minor pair (e.g. C / Am). */
-const isRelativePair = (a: SongKey, b: SongKey): boolean => {
-  if (a.isMinor === b.isMinor) return false
-  const minor = a.isMinor ? a : b
-  const major = a.isMinor ? b : a
-  return MOD12(minor.rootPitch + 3) === major.rootPitch
-}
 
 /**
  * Scores every one of the 24 candidate keys (12 roots × major/minor) against
@@ -196,54 +215,22 @@ const detectKeyForOccurrences = (occurrences: ChordOccurrence[]): SongKey | null
 }
 
 /**
- * Detects the song's key (or a single clean key change) from its chords.
+ * Detects the song's key from its chords, returning the *sounding* key (the
+ * detected as-written key shifted up by any capo annotation), or `null` when
+ * the evidence is too thin or genuinely ambiguous.
  *
- * - One section (no headers, or only one) → `{ kind: 'single' }` when
- *   confident, else `null`.
- * - Multiple sections → each is scored independently; sections too thin on
- *   chords to meet `MIN_OCCURRENCES` are skipped (neither help nor hurt).
- *   Consecutive identical keys collapse into runs. Zero runs → `null`. One
- *   run → `{ kind: 'single' }`. Exactly two runs (a clean A→B switch that
- *   never returns to A) → `{ kind: 'change' }`. Three or more runs, or A
- *   reappearing after B, is "too complex" → `null`.
+ * Every chord in the tab is pooled and scored as one body of evidence rather
+ * than section-by-section. Per-section scoring looked sensitive to which tonic
+ * a section happened to emphasise, so a single-key song that leaned on its IV
+ * or V (or relative minor) in one section split into a false "key change"; two
+ * closely-related keys share nearly all their chord *roots*, which is all this
+ * detector sees. Pooling judges the song as a whole, which is far more robust.
  */
-export const detectSongKey = (tabData: string): SongKeyResult | null => {
-  const sections = extractSections(tabData)
-
-  if (sections.length <= 1) {
-    const key = detectKeyForOccurrences(sections[0]?.occurrences ?? [])
-    return key === null ? null : { kind: 'single', key }
-  }
-
-  const runs: { key: SongKey; sectionName: string }[] = []
-  for (const section of sections) {
-    const key = detectKeyForOccurrences(section.occurrences)
-    if (key === null) continue
-    const last = runs[runs.length - 1]
-    if (last !== undefined) {
-      if (sameKey(last.key, key)) continue
-      // Root-membership scoring can't tell a relative major/minor pair apart
-      // with confidence (they share every diatonic chord) — a section landing
-      // on one side and another section landing on the other isn't a real key
-      // change, just the same ambiguity resolving differently. Keep the run
-      // going, defaulting to the major side, consistent with the single-section
-      // tie-break above.
-      if (isRelativePair(last.key, key)) {
-        if (last.key.isMinor && !key.isMinor) last.key = key
-        continue
-      }
-    }
-    runs.push({ key, sectionName: section.name })
-  }
-
-  if (runs.length === 0) return null
-  if (runs.length === 1) return { kind: 'single', key: runs[0].key }
-  if (runs.length === 2) {
-    return { kind: 'change', from: runs[0].key, to: runs[1].key, atSection: runs[1].sectionName }
-  }
-  // 3+ runs, or a key reappearing after a switch (which also yields 3+ runs
-  // since the collapse only merges *consecutive* duplicates) — too complex.
-  return null
+export const detectSongKey = (tabData: string): SongKey | null => {
+  const key = detectKeyForOccurrences(extractOccurrences(tabData))
+  if (key === null) return null
+  const capo = parseCapo(tabData)
+  return capo === 0 ? key : { rootPitch: MOD12(key.rootPitch + capo), isMinor: key.isMinor }
 }
 
 /**

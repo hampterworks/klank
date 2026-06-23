@@ -64,13 +64,8 @@ export const Player: React.FC<PlayerProps> = ({ ...props }) => {
   // Song name derived the same way the toolbar does.
   const songName = tabPath?.split(/[/\\]/)?.slice(-1)[0]?.slice(0, -8) ?? ''
 
-  const songKeyResult = useMemo(() => detectSongKey(tabData ?? ''), [tabData])
-  const songKey =
-    songKeyResult === null
-      ? undefined
-      : songKeyResult.kind === 'single'
-        ? formatSongKey(songKeyResult.key, transpose)
-        : `${formatSongKey(songKeyResult.from, transpose)} → ${formatSongKey(songKeyResult.to, transpose)}`
+  const detectedKey = useMemo(() => detectSongKey(tabData ?? ''), [tabData])
+  const songKey = detectedKey === null ? undefined : formatSongKey(detectedKey, transpose)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 599)
