@@ -29,6 +29,37 @@ describe('detectSongKey', () => {
     })
   })
 
+  it('collapses sections that land on a relative major/minor pair into a single (major) key', () => {
+    // Root-membership scoring can't distinguish a relative major/minor pair
+    // with confidence - one section ties toward the major (the existing
+    // tie-break default), another section's tonic weighting tips it toward
+    // the relative minor. That's the same ambiguity resolving two different
+    // ways, not an audible key change.
+    const section = (chords: string) => Array.from({ length: 5 }, () => chords).join('\n')
+    const tab = [
+      '[Chorus]',
+      section('C    F    G    Am'),
+      '[Verse]',
+      section('Am    Am    F    G    Em'),
+      '[Chorus 2]',
+      section('C    F    G    Am'),
+    ].join('\n')
+    expect(detectSongKey(tab)).toEqual({ kind: 'single', key: { rootPitch: 0, isMinor: false } })
+  })
+
+  it('collapses a relative-pair wobble that starts on the minor side into the major key', () => {
+    const section = (chords: string) => Array.from({ length: 5 }, () => chords).join('\n')
+    const tab = [
+      '[Verse]',
+      section('Am    Am    F    G    Em'),
+      '[Bridge]',
+      section('C    F    G    Am'),
+      '[Verse 2]',
+      section('Am    Am    F    G    Em'),
+    ].join('\n')
+    expect(detectSongKey(tab)).toEqual({ kind: 'single', key: { rootPitch: 0, isMinor: false } })
+  })
+
   it('returns null when three or more distinct keys appear across sections', () => {
     const section = (chords: string) => Array.from({ length: 5 }, () => chords).join('\n')
     const tab = [

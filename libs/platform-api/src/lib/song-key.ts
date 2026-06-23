@@ -124,6 +124,14 @@ const diatonicQualityByRoot = (rootPitch: number, isMinor: boolean): Map<number,
 
 const sameKey = (a: SongKey, b: SongKey): boolean => a.rootPitch === b.rootPitch && a.isMinor === b.isMinor
 
+/** True when `a` and `b` are an exact relative major/minor pair (e.g. C / Am). */
+const isRelativePair = (a: SongKey, b: SongKey): boolean => {
+  if (a.isMinor === b.isMinor) return false
+  const minor = a.isMinor ? a : b
+  const major = a.isMinor ? b : a
+  return MOD12(minor.rootPitch + 3) === major.rootPitch
+}
+
 /**
  * Scores every one of the 24 candidate keys (12 roots × major/minor) against
  * `occurrences` and returns the best one, or `null` when no candidate clears
@@ -212,7 +220,19 @@ export const detectSongKey = (tabData: string): SongKeyResult | null => {
     const key = detectKeyForOccurrences(section.occurrences)
     if (key === null) continue
     const last = runs[runs.length - 1]
-    if (last !== undefined && sameKey(last.key, key)) continue
+    if (last !== undefined) {
+      if (sameKey(last.key, key)) continue
+      // Root-membership scoring can't tell a relative major/minor pair apart
+      // with confidence (they share every diatonic chord) — a section landing
+      // on one side and another section landing on the other isn't a real key
+      // change, just the same ambiguity resolving differently. Keep the run
+      // going, defaulting to the major side, consistent with the single-section
+      // tie-break above.
+      if (isRelativePair(last.key, key)) {
+        if (last.key.isMinor && !key.isMinor) last.key = key
+        continue
+      }
+    }
     runs.push({ key, sectionName: section.name })
   }
 
