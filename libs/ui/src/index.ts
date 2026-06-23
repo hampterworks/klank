@@ -29,7 +29,6 @@ export { TargetIcon } from './lib/icons/TargetIcon';
 export { FolderIcon } from './lib/icons/FolderIcon';
 export { ThemeIcon } from './lib/icons/ThemeIcon';
 export { FileIcon } from './lib/icons/FileIcon';
-export { KeyIcon } from './lib/icons/KeyIcon';
 export { ChevronIcon } from './lib/icons/ChevronIcon';
 export { SearchIcon } from './lib/icons/SearchIcon';
 export { MoveLeftIcon } from './lib/icons/MoveLeftIcon';

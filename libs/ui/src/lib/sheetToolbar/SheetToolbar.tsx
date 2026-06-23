@@ -8,7 +8,6 @@ import { StopIcon } from '../icons/StopIcon'
 import { ChevronIcon } from '../icons/ChevronIcon'
 import { MetronomeIcon } from '../icons/MetronomeIcon'
 import { TuningForkIcon } from '../icons/TuningForkIcon'
-import { KeyIcon } from '../icons/KeyIcon'
 import { ToolTip } from '../toolTip/ToolTip'
 import { MetronomePanel } from '../metronomePanel/MetronomePanel'
 import { TunerPanel } from '../tunerPanel/TunerPanel'
@@ -178,8 +177,19 @@ export const SheetToolbar: React.FC<SheetToolbarProps> = ({
       <div className={styles.controls}>
         {songKey && (
           <span className={styles.songKey} aria-label="Detected key">
-            <KeyIcon />
-            {songKey}
+            {songKey.split(' → ').map((key, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && <span className={styles.songKeyArrow}>→</span>}
+                {key.endsWith('m') ? (
+                  <>
+                    {key.slice(0, -1)}
+                    <span className={styles.songKeyQuality}>m</span>
+                  </>
+                ) : (
+                  key
+                )}
+              </React.Fragment>
+            ))}
           </span>
         )}
         <IncrementButton

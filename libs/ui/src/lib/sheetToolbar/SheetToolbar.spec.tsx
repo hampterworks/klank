@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, fireEvent, screen, act } from '@testing-library/react'
 import { SheetToolbar } from './SheetToolbar.js'
+import styles from './sheetToolbar.module.css'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -60,12 +61,26 @@ describe('SheetToolbar — detected key badge', () => {
 
   it('renders a key-change badge text as given', () => {
     renderToolbar({ songKey: 'G → D' })
-    expect(screen.getByText('G → D')).toBeTruthy()
+    const badge = screen.getByLabelText('Detected key')
+    expect(badge.textContent).toBe('G→D')
+    // Both keys appear in order, separated by the arrow glyph.
+    const text = badge.textContent ?? ''
+    expect(text.indexOf('G')).toBeLessThan(text.indexOf('D'))
+    expect(text).toContain('→')
   })
 
   it('does not render the badge when songKey is undefined', () => {
     renderToolbar()
     expect(screen.queryByLabelText('Detected key')).toBeNull()
+  })
+
+  it('renders a minor-key suffix in distinct markup from the root letter', () => {
+    renderToolbar({ songKey: 'Cm' })
+    const badge = screen.getByLabelText('Detected key')
+    expect(badge.textContent).toBe('Cm')
+    const suffix = badge.querySelector(`.${styles.songKeyQuality}`)
+    expect(suffix).toBeTruthy()
+    expect(suffix?.textContent).toBe('m')
   })
 })
 
