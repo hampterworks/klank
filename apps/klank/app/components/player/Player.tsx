@@ -1,8 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import styles from './player.module.css'
 import { Sheet, SheetToolbar, EditIcon, CloseIcon } from '@klank/ui'
 import { useKlankStore } from '@klank/store'
-import { createJamHost, type JamHost, type JamSnapshot } from '@klank/platform-api'
+import {
+  createJamHost,
+  detectSongKey,
+  formatSongKey,
+  type JamHost,
+  type JamSnapshot,
+} from '@klank/platform-api'
 
 type PlayerProps = {} & React.ComponentPropsWithRef<'section'>
 
@@ -57,6 +63,9 @@ export const Player: React.FC<PlayerProps> = ({ ...props }) => {
 
   // Song name derived the same way the toolbar does.
   const songName = tabPath?.split(/[/\\]/)?.slice(-1)[0]?.slice(0, -8) ?? ''
+
+  const detectedKey = useMemo(() => detectSongKey(tabData ?? ''), [tabData])
+  const songKey = detectedKey === null ? undefined : formatSongKey(detectedKey, transpose)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 599)
@@ -185,6 +194,7 @@ export const Player: React.FC<PlayerProps> = ({ ...props }) => {
       <SheetToolbar
         fontSize={fontSize}
         songName={songName}
+        songKey={songKey}
         transpose={transpose}
         tabScrollSpeed={tabScrollSpeed}
         isScrolling={isScrolling}
