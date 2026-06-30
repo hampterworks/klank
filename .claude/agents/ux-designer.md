@@ -34,6 +34,7 @@ Key UX concerns for klank: tab readability at varying font sizes (`tab.fontSize`
 
 - `run` - start the app to review the existing flow
 - `develop-clean` - after implementing small UI changes
+- `develop-consolidate` - audit for component/design-token drift and merge duplicates into shared primitives
 
 ## Hard Constraints
 

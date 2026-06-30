@@ -31,6 +31,7 @@ tools:
 - `run` - start the Tauri app to verify visually
 - `run-tests` - run Vitest after changes
 - `develop-clean` - optional cleanup pass before commit
+- `develop-consolidate` - merge one-off components and snap magic values back to `libs/ui` and the token scale
 
 ## Hard Constraints
 
