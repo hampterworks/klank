@@ -33,6 +33,8 @@
   `.claude/skills/develop-clean/`
 - **develop-configure** - Configures a project's type checker and build for strictness, correct module resolution, and fast builds. Loads a stack reference (e.g. typescript). Use when creating or tuning toolchain config.  
   `.claude/skills/develop-configure/`
+- **develop-consolidate** - Audits for one-off UI components and design-token drift (spacing, type, color, height), merging duplicates into shared primitives. Use for a consistency pass, not general cleanup or code review.  
+  `.claude/skills/develop-consolidate/`
 - **develop-maintain** - Upgrades toolchain versions and migrates code to stricter types, removing escape hatches. Loads a stack reference (e.g. typescript). Use when bumping versions or migrating to stricter checks.  
   `.claude/skills/develop-maintain/`
 - **develop-publish** - Ships a library so types and entry points resolve for every consumer, validated before release. Loads a stack reference (e.g. typescript). Use when packaging for publish or debugging resolution.  

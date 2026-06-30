@@ -8,7 +8,7 @@ argument-hint: "<scope: diff|area|repo> <intensity: light|standard|exhaustive> <
 
 Improve existing code's quality without changing what it does (unless explicitly allowed), at a dial-able effort and risk. This is the active application of `dev-principles` (least code) to code that already exists - cut the bloat, keep the guardrail.
 
-Use to tidy or refactor existing code. To find what to fix see `develop-review`; for version/strictness upgrades see `develop-maintain`; for new code see `develop-write`.
+Use to tidy or refactor existing code. To find what to fix see `develop-review`; for version/strictness upgrades see `develop-maintain`; for new code see `develop-write`; for UI component/design-token drift see `develop-consolidate`.
 
 ## Parameters
 
