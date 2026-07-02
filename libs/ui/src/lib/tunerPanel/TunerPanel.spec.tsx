@@ -168,20 +168,18 @@ describe('TunerPanel — string interaction', () => {
     expect(engine.playedFrequencies).toContain(strings[1].frequency)
   })
 
-  it('clicking the active string again calls engine.stop', async () => {
+  it('clicking the same string again replays it instead of stopping', async () => {
     const engine = makeFakeEngine()
     renderPanel(engine)
 
     const strings = tuningStrings('guitar-standard')
     const btn = screen.getByRole('button', { name: new RegExp(`Play ${strings[0].label} string`, 'i') })
 
-    // First click — play
     await act(async () => { fireEvent.click(btn) })
-    const stopBefore = engine.stopCallCount
+    await act(async () => { fireEvent.click(btn) })
 
-    // Second click — stop
-    await act(async () => { fireEvent.click(btn) })
-    expect(engine.stopCallCount).toBeGreaterThan(stopBefore)
+    expect(engine.playedFrequencies).toEqual([strings[0].frequency, strings[0].frequency])
+    expect(engine.stopCallCount).toBe(0)
   })
 
   it('active string button has aria-pressed=true', async () => {
@@ -278,17 +276,16 @@ describe('TunerPanel — keyboard', () => {
     expect(engine.playedFrequencies).toContain(strings[1].frequency)
   })
 
-  it('digit key on active string stops it', async () => {
+  it('digit key on the sounding string replays it instead of stopping', async () => {
     const engine = makeFakeEngine()
     renderPanel(engine)
 
-    // Play string 1
+    const strings = tuningStrings('guitar-standard')
     await act(async () => { fireEvent.keyDown(document, { key: '1' }) })
-    const stopBefore = engine.stopCallCount
+    await act(async () => { fireEvent.keyDown(document, { key: '1' }) })
 
-    // Press 1 again — should stop
-    await act(async () => { fireEvent.keyDown(document, { key: '1' }) })
-    expect(engine.stopCallCount).toBeGreaterThan(stopBefore)
+    expect(engine.playedFrequencies).toEqual([strings[0].frequency, strings[0].frequency])
+    expect(engine.stopCallCount).toBe(0)
   })
 
   it('Escape key calls onClose', async () => {
