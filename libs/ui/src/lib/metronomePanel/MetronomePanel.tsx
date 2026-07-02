@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import ReactDOM from 'react-dom'
 import {
-  createMetronomeEngine,
   tapTempo as computeTapTempo,
   type MetronomeEngine,
   type MetronomeConfig,
@@ -10,13 +9,18 @@ import {
 import { CloseIcon } from '../icons/CloseIcon.js'
 import { type PopoverPosition } from '../hooks/usePopoverPosition.js'
 import { usePopoverChrome, popoverStyle } from '../hooks/usePopoverChrome.js'
+import {
+  acquireMetronomeEngine,
+  metronomeSession,
+  setMetronomeTickListener,
+  startMetronome,
+  type SubdivisionLabel,
+} from './metronome-controller.js'
 import styles from './metronomePanel.module.css'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-type SubdivisionLabel = 'quarter' | 'eighth' | 'triplet'
 
 const SUBDIVISION_MAP: Record<SubdivisionLabel, Subdivision> = {
   quarter: 1,
@@ -52,12 +56,15 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
   onClose,
   engineFactory,
 }) => {
-  const [bpm, setBpm] = useState(120)
-  const [isRunning, setIsRunning] = useState(false)
-  const [timeSignatureNum, setTimeSignatureNum] = useState(4)
-  const [timeSignatureDen, setTimeSignatureDen] = useState(4)
-  const [accentDownbeat, setAccentDownbeat] = useState(true)
-  const [subdivision, setSubdivision] = useState<SubdivisionLabel>('quarter')
+  // Engine and settings live in the module-level controller so the metronome
+  // keeps running (and remembers its config) while the panel is closed.
+  const [engine] = useState(() => acquireMetronomeEngine(engineFactory))
+  const [bpm, setBpm] = useState(metronomeSession.bpm)
+  const [isRunning, setIsRunning] = useState(engine.isRunning())
+  const [timeSignatureNum, setTimeSignatureNum] = useState(metronomeSession.timeSignatureNum)
+  const [timeSignatureDen, setTimeSignatureDen] = useState(metronomeSession.timeSignatureDen)
+  const [accentDownbeat, setAccentDownbeat] = useState(metronomeSession.accentDownbeat)
+  const [subdivision, setSubdivision] = useState<SubdivisionLabel>(metronomeSession.subdivision)
   // Fix 7: tap history is internal-only state, never rendered — use a ref
   const tapTimesRef = useRef<number[]>([])
   const [currentBeatIndex, setCurrentBeatIndex] = useState(-1)
@@ -65,18 +72,27 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
 
   const panelRef = useRef<HTMLDivElement>(null)
   const startStopRef = useRef<HTMLButtonElement>(null)
-  const engineRef = useRef<MetronomeEngine | null>(null)
 
-  // Create engine on mount
   useEffect(() => {
-    const factory = engineFactory ?? createMetronomeEngine
-    engineRef.current = factory()
-    setAudioAvailable(engineRef.current.isAvailable())
-    return () => {
-      engineRef.current?.dispose()
-      engineRef.current = null
-    }
-  }, [engineFactory])
+    setAudioAvailable(engine.isAvailable())
+  }, [engine])
+
+  // Receive beat ticks while mounted; the engine keeps ticking after detach.
+  useEffect(() => {
+    setMetronomeTickListener((info) => setCurrentBeatIndex(info.index))
+    return () => setMetronomeTickListener(null)
+  }, [])
+
+  // Remember settings across panel close/reopen.
+  useEffect(() => {
+    Object.assign(metronomeSession, {
+      bpm,
+      timeSignatureNum,
+      timeSignatureDen,
+      accentDownbeat,
+      subdivision,
+    })
+  }, [bpm, timeSignatureNum, timeSignatureDen, accentDownbeat, subdivision])
 
   // Focus first interactive element on open
   useEffect(() => {
@@ -128,24 +144,12 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
   }), [bpm, timeSignatureNum, timeSignatureDen, subdivision, accentDownbeat])
 
   useEffect(() => {
-    if (isRunning && engineRef.current) {
-      engineRef.current.setConfig(buildConfig())
+    if (isRunning) {
+      engine.setConfig(buildConfig())
     }
-  }, [bpm, timeSignatureNum, timeSignatureDen, accentDownbeat, subdivision, isRunning, buildConfig])
-
-  // Stop engine when panel unmounts
-  useEffect(() => {
-    return () => {
-      if (engineRef.current?.isRunning()) {
-        engineRef.current.stop()
-      }
-    }
-  }, [])
+  }, [bpm, timeSignatureNum, timeSignatureDen, accentDownbeat, subdivision, isRunning, engine, buildConfig])
 
   const handleStartStop = () => {
-    const engine = engineRef.current
-    if (!engine) return
-
     // Check availability on first interaction
     const available = engine.isAvailable()
     setAudioAvailable(available)
@@ -156,10 +160,7 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
       setIsRunning(false)
       setCurrentBeatIndex(-1)
     } else {
-      const config = buildConfig()
-      engine.start(config, (info) => {
-        setCurrentBeatIndex(info.index)
-      })
+      startMetronome(buildConfig())
       setIsRunning(true)
     }
   }
@@ -187,8 +188,8 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
     setTimeSignatureNum(val)
     // Reset beat index so no stale dot lights until the next engine tick
     setCurrentBeatIndex(-1)
-    if (isRunning && engineRef.current) {
-      engineRef.current.setConfig({ timeSignatureTop: val })
+    if (isRunning) {
+      engine.setConfig({ timeSignatureTop: val })
     }
   }
 
@@ -197,15 +198,15 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
     setTimeSignatureDen(val)
     // Reset beat index — compound/simple grouping changes the accent pattern
     setCurrentBeatIndex(-1)
-    if (isRunning && engineRef.current) {
-      engineRef.current.setConfig({ timeSignatureBottom: val })
+    if (isRunning) {
+      engine.setConfig({ timeSignatureBottom: val })
     }
   }
 
   const handleAccentChange = (on: boolean) => {
     setAccentDownbeat(on)
-    if (isRunning && engineRef.current) {
-      engineRef.current.setConfig({ accent: on })
+    if (isRunning) {
+      engine.setConfig({ accent: on })
     }
   }
 
@@ -213,8 +214,8 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
     setSubdivision(sub)
     // Fix 3: reset beat index so no stale dot lights under the new subdivision
     setCurrentBeatIndex(-1)
-    if (isRunning && engineRef.current) {
-      engineRef.current.setConfig({ subdivision: SUBDIVISION_MAP[sub] })
+    if (isRunning) {
+      engine.setConfig({ subdivision: SUBDIVISION_MAP[sub] })
     }
   }
 

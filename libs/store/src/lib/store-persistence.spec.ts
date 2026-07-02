@@ -53,7 +53,7 @@ describe('klank-storage migration and shape', () => {
     const raw = localStorageData['klank-storage']
     expect(raw).toBeDefined()
     const parsed = JSON.parse(raw) as { version: number; state: Record<string, unknown> }
-    expect(parsed.version).toBe(4)
+    expect(parsed.version).toBe(5)
     expect(parsed.state).not.toHaveProperty('playlists')
     expect(parsed.state).toHaveProperty('activePlaylistId')
     expect(parsed.state).toHaveProperty('activePlaylistIndex')
@@ -96,6 +96,26 @@ describe('klank-storage migration and shape', () => {
     const { customTunings } = useKlankStore.getState()
     // The seed state was a v0 blob with no customTunings — migrate must default to [].
     expect(customTunings).toEqual([])
+  })
+})
+
+describe('klank-storage v4 migration', () => {
+  it('a v4 persisted ui blob (no isPlaylistSectionCollapsed) migrates with the flag defaulted and existing values intact', async () => {
+    const v4State = {
+      version: 4,
+      state: {
+        theme: 'Light',
+        ui: { isMenuExtended: false, menuWidth: 300 },
+      },
+    }
+    Object.keys(localStorageData).forEach((k) => delete localStorageData[k])
+    localStorageData['klank-storage'] = JSON.stringify(v4State)
+
+    const { useKlankStore } = await import('./store.js')
+    await useKlankStore.persist.rehydrate()
+
+    const { ui } = useKlankStore.getState()
+    expect(ui).toEqual({ isMenuExtended: false, menuWidth: 300, isPlaylistSectionCollapsed: false })
   })
 })
 

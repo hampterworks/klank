@@ -124,7 +124,7 @@ export const TunerPanel: React.FC<TunerPanelProps> = ({
       // Skip when target is a form control that needs keys
       if (target?.tagName === 'SELECT') return
 
-      // Digit keys 1..N: play/stop the Nth string
+      // Digit keys 1..N: play the Nth string
       const digit = parseInt(e.key, 10)
       if (!isNaN(digit) && digit >= 1) {
         // Guard: ignore when target is INPUT/SELECT/TEXTAREA
@@ -143,7 +143,7 @@ export const TunerPanel: React.FC<TunerPanelProps> = ({
     document.addEventListener('keydown', handleKeyDown, true)
     return () => document.removeEventListener('keydown', handleKeyDown, true)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tuning, soundingIndex, strings])
+  }, [tuning, strings])
 
   const handleStringClick = useCallback((idx: number, frequency: number) => {
     const engine = engineRef.current
@@ -153,14 +153,9 @@ export const TunerPanel: React.FC<TunerPanelProps> = ({
     setAudioAvailable(available)
     if (!available) return
 
-    if (soundingIndex === idx) {
-      engine.stop()
-      setSoundingIndex(null)
-    } else {
-      engine.playFrequency(frequency)
-      setSoundingIndex(idx)
-    }
-  }, [soundingIndex])
+    engine.playFrequency(frequency)
+    setSoundingIndex(idx)
+  }, [])
 
   const handleInstrumentChange = (inst: Instrument) => {
     engineRef.current?.stop()

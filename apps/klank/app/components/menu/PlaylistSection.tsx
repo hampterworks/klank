@@ -34,8 +34,9 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
   const removeTabFromPlaylist = useKlankStore().removeTabFromPlaylist
   const reorderPlaylist = useKlankStore().reorderPlaylist
   const setActivePlaylist = useKlankStore().setActivePlaylist
+  const isCollapsed = useKlankStore().ui.isPlaylistSectionCollapsed
+  const setPlaylistSectionCollapsed = useKlankStore().setPlaylistSectionCollapsed
 
-  const [isCollapsed, setIsCollapsed] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [contextMenuId, setContextMenuId] = useState<string | null>(null)
   const [contextMenuPos, setContextMenuPos] = useState<{ top: number; right: number } | null>(null)
@@ -64,12 +65,12 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
     if (playlists.length > prevLengthRef.current) {
       const newest = [...playlists].sort((a, b) => b.createdAt - a.createdAt)[0]
       if (newest) {
-        setIsCollapsed(false)
+        setPlaylistSectionCollapsed(false)
         setExpandedId(newest.id)
       }
     }
     prevLengthRef.current = playlists.length
-  }, [playlists])
+  }, [playlists, setPlaylistSectionCollapsed])
 
   const handleRenameCommit = (id: string) => {
     if (editingName.trim()) renamePlaylist(id, editingName.trim())
@@ -163,7 +164,7 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
       <div className={styles.header}>
         <button
           className={styles.headerToggle}
-          onClick={() => setIsCollapsed((v) => !v)}
+          onClick={() => setPlaylistSectionCollapsed(!isCollapsed)}
         >
           <ChevronIcon className={isCollapsed ? styles.rotated : ''} />
           <span>Playlists</span>
