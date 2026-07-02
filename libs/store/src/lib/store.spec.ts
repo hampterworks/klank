@@ -545,6 +545,19 @@ describe('syncSettings', () => {
   })
 })
 
+describe('setPlaylistSectionCollapsed', () => {
+  it('sets the flag without disturbing the rest of the ui slice', () => {
+    const before = useKlankStore.getState().ui
+    useKlankStore.getState().setPlaylistSectionCollapsed(true)
+    expect(useKlankStore.getState().ui.isPlaylistSectionCollapsed).toBe(true)
+    expect(useKlankStore.getState().ui.isMenuExtended).toBe(before.isMenuExtended)
+    expect(useKlankStore.getState().ui.menuWidth).toBe(before.menuWidth)
+
+    useKlankStore.getState().setPlaylistSectionCollapsed(false)
+    expect(useKlankStore.getState().ui.isPlaylistSectionCollapsed).toBe(false)
+  })
+})
+
 describe('harmony slice — property-based', () => {
   const harmonyPartialArb = fc.record(
     {

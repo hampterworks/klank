@@ -37,6 +37,7 @@ export type Theme = "Light" | "Dark"
 export type Ui = {
   isMenuExtended: boolean
   menuWidth: number
+  isPlaylistSectionCollapsed: boolean
 }
 
 /**
@@ -148,6 +149,7 @@ type KlankState = {
   setMenuWidth: (width: number) => void
   /** Atomically update menu open state and optionally its width in one render. */
   setMenuState: (isMenuExtended: boolean, menuWidth?: number) => void
+  setPlaylistSectionCollapsed: (isPlaylistSectionCollapsed: boolean) => void
   /** Per-file saved settings keyed by full file path. Loaded from and written to tab-settings.json. */
   tabSettingByPath: Record<string, PerTabSettings>
   setBaseDirectory: (directory: string) => void
@@ -274,6 +276,7 @@ export const useKlankStore = create<KlankState>()(
         ui: {
           isMenuExtended: true,
           menuWidth: 400,
+          isPlaylistSectionCollapsed: false,
         },
         tab: {
           path: "",
@@ -300,6 +303,7 @@ export const useKlankStore = create<KlankState>()(
           ...state,
           ui: { ...state.ui, isMenuExtended, ...(menuWidth !== undefined ? { menuWidth } : {}) },
         })),
+        setPlaylistSectionCollapsed: (isPlaylistSectionCollapsed) => set((state) => ({...state, ui: {...state.ui, isPlaylistSectionCollapsed}})),
         setTheme: (theme) => set((state) => ({...state, theme})),
         setInstrument: (instrument) => set((state) => ({...state, instrument})),
         harmony: DEFAULT_HARMONY_SETTINGS,
@@ -578,17 +582,19 @@ export const useKlankStore = create<KlankState>()(
       }),
       {
         name: 'klank-storage',
-        version: 4,
+        version: 5,
         // v0 persisted playlists in localStorage; they now live in
         // .klank-settings.json, so stale localStorage copies are dropped.
         // v2 adds syncSettings; defaults fill in for older persisted state.
         // v3 persists instrument and the Harmony section settings.
         // v4 adds customTunings; older persisted state gets customTunings: [].
+        // v5 adds ui.isPlaylistSectionCollapsed; defaults fill in for older ui blobs.
         migrate: (persistedState) => {
           const state = { ...((persistedState ?? {}) as Record<string, unknown>) }
           delete state['playlists']
           return {
             ...state,
+            ui: { isMenuExtended: true, menuWidth: 400, isPlaylistSectionCollapsed: false, ...(state.ui as Partial<Ui> | undefined) },
             syncSettings: { ...DEFAULT_SYNC_SETTINGS, ...(state.syncSettings as Partial<SyncSettings> | undefined) },
             instrument: (state.instrument as Instrument | undefined) ?? 'guitar',
             harmony: { ...DEFAULT_HARMONY_SETTINGS, ...(state.harmony as Partial<HarmonySettings> | undefined) },
