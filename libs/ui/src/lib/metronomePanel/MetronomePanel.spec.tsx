@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, fireEvent, screen, act } from '@testing-library/react'
 import * as React from 'react'
 import { MetronomePanel } from './MetronomePanel.js'
+import { resetMetronomeController } from './metronome-controller.js'
 import type { MetronomeEngine, MetronomeConfig, TickInfo } from '@klank/audio'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -58,6 +59,9 @@ function renderPanel(engine: MetronomeEngine, onClose = vi.fn()) {
 describe('MetronomePanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // The controller caches the first engine for the app's lifetime — reset it
+    // so each test gets its own fake engine.
+    resetMetronomeController()
   })
 
   it('renders with correct ARIA roles', () => {
@@ -353,6 +357,36 @@ describe('MetronomePanel', () => {
     })
 
     expect(setConfigSpy).toHaveBeenCalledWith(expect.objectContaining({ timeSignatureBottom: 16 }))
+  })
+
+  it('keeps the engine running when the panel unmounts', async () => {
+    const engine = makeFakeEngine()
+    const { unmount } = renderPanel(engine)
+
+    const startBtn = screen.getByRole('button', { name: /start metronome/i })
+    await act(async () => { fireEvent.click(startBtn) })
+
+    unmount()
+
+    expect(engine.isRunning()).toBe(true)
+    expect(engine.stopCallCount).toBe(0)
+  })
+
+  it('reopening the panel restores the running state and settings', async () => {
+    const engine = makeFakeEngine()
+    const { unmount } = renderPanel(engine)
+
+    const incBtn = screen.getByRole('button', { name: /increase bpm/i })
+    await act(async () => { fireEvent.click(incBtn) })
+    const startBtn = screen.getByRole('button', { name: /start metronome/i })
+    await act(async () => { fireEvent.click(startBtn) })
+
+    unmount()
+    renderPanel(engine)
+
+    // The reopened panel reflects the still-running engine and the edited BPM
+    expect(screen.getByRole('button', { name: /stop metronome/i })).toBeTruthy()
+    expect(document.querySelector('[aria-live="polite"]')?.textContent).toBe('121')
   })
 
   it('returns null when position is null', () => {
