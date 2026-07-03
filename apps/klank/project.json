@@ -30,6 +30,13 @@
         "command": "tauri build --bundles nsis,msi",
         "cwd": "apps/klank"
       }
+    },
+    "tauri:android:dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tauri android dev",
+        "cwd": "apps/klank"
+      }
     }
   }
 }

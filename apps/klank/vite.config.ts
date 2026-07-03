@@ -2,16 +2,18 @@ import { defineConfig } from 'vite';
 import { reactRouter } from '@react-router/dev/vite';
 import { resolve } from 'path';
 
+const mobileHost = process.env.TAURI_DEV_HOST;
+
 export default defineConfig(() => ({
   root: __dirname,
   cacheDir: '../../node_modules/.vite/apps/klank',
   server: {
     port: 4200,
-    host: 'localhost',
+    host: mobileHost || 'localhost',
     middlewareMode: false,
     hmr: {
       port: 4201,
-      host: 'localhost'
+      host: mobileHost || 'localhost'
     },
     fs: {
       // Allow serving files from the monorepo root

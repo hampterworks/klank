@@ -11,7 +11,7 @@
     "tauri:dev": "nx run klank:tauri:dev",
     "tauri:build": "nx run klank:tauri:build",
     "tauri:build:windows": "nx run klank:tauri:build:windows",
-    "tauri:android:dev": "tauri android dev"
+    "tauri:android:dev": "nx run klank:tauri:android:dev"
   },
   "dependencies": {
     "@react-router/node": "^7.16.0",
