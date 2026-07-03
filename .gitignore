@@ -2,9 +2,11 @@
 
 # compiled output
 dist
+dist-apk
 tmp
 out-tsc
 opt
+*.apk
 # dependencies
 node_modules
 

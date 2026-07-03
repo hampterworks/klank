@@ -15,10 +15,12 @@
 //! added to any command from silently reintroducing the freeze.
 
 use git2::{
-    build::{CheckoutBuilder, RepoBuilder},
+    build::CheckoutBuilder,
     BranchType, Commit, Cred, CredentialType, Error, ErrorCode, FetchOptions, Index, IndexConflict,
     Oid, PushOptions, RemoteCallbacks, Repository, Signature, StatusOptions, Tree,
 };
+#[cfg(target_os = "android")]
+use git2::CertificateCheckStatus;
 use serde::Serialize;
 use serde_json::{Map, Value};
 use std::collections::{BTreeMap, BTreeSet};
@@ -260,7 +262,38 @@ fn callbacks(app: tauri::AppHandle) -> RemoteCallbacks<'static> {
             "no usable git credentials — set a token in Settings",
         ))
     });
+    #[cfg(target_os = "android")]
+    add_android_cert_check(&mut cb);
     cb
+}
+
+/// The vendored OpenSSL Android build is compiled with `no-stdio` (upstream
+/// `openssl-src`), which disables `BIO_new_file` — so no CA file/dir can ever be
+/// loaded, and libgit2's own `SSL_get_verify_result` check always reports the
+/// cert as invalid, regardless of content. Delegate to reqwest's rustls +
+/// webpki-roots stack instead, which does full chain + hostname validation with
+/// no file I/O. Desktop keeps libgit2's normal OS-trust-store check untouched.
+///
+/// Runs on one of Tauri's tokio worker threads, where plain `block_on` panics
+/// ("cannot start a runtime from within a runtime") and `reqwest::blocking`
+/// panics on drop for the same reason. `block_in_place` is the documented way
+/// to synchronously drive an async call from a worker thread: it hands this
+/// thread's other queued tasks to another worker for the duration of the call.
+#[cfg(target_os = "android")]
+fn add_android_cert_check(cb: &mut RemoteCallbacks<'_>) {
+    cb.certificate_check(|_cert, host| {
+        let url = format!("https://{host}/");
+        let result = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current()
+                .block_on(async { reqwest::Client::new().head(&url).send().await })
+        });
+        match result {
+            Ok(_) => Ok(CertificateCheckStatus::CertificateOk),
+            Err(e) => Err(Error::from_str(&format!(
+                "TLS certificate validation failed for {host}: {e}"
+            ))),
+        }
+    });
 }
 
 /// Credential callbacks that use ONLY the OS credential helper (no stored PAT), so
@@ -278,6 +311,8 @@ fn callbacks_system_only() -> RemoteCallbacks<'static> {
         }
         Err(Error::from_str("no system git credentials"))
     });
+    #[cfg(target_os = "android")]
+    add_android_cert_check(&mut cb);
     cb
 }
 
@@ -327,6 +362,7 @@ pub fn git_commit(dir: String, message: String) -> GitResult {
 
 fn commit_inner(dir: &str, message: &str) -> Result<(), Error> {
     let repo = Repository::discover(dir)?;
+    ensure_git_excludes(&repo)?;
     let mut index = repo.index()?;
     index.add_all(["*"].iter(), git2::IndexAddOption::DEFAULT, None)?;
     index.write()?;
@@ -446,12 +482,95 @@ pub fn git_clone(app: tauri::AppHandle, url: String, dir: String) -> GitResult {
     }
 }
 
+/// Clones by init + fetch + checkout rather than `RepoBuilder::clone`, which
+/// refuses any non-empty target directory. On Android the tab directory *is*
+/// the app's config dir (see `token_path`), so it already holds `git_token`
+/// and `.klank-settings.json` by the time a user clicks Clone — a plain
+/// libgit2 clone fails there every time with "exists and is not an empty
+/// directory". `checkout_head` only writes paths present in the remote tree,
+/// so pre-existing unrelated files (config, WebView cache dirs) are left alone.
 fn clone_inner(app: tauri::AppHandle, url: &str, dir: &str) -> Result<(), Error> {
+    let path = Path::new(dir);
+    std::fs::create_dir_all(path).map_err(|e| Error::from_str(&e.to_string()))?;
+
+    let repo = Repository::init(path)?;
+    ensure_git_excludes(&repo)?;
+    // A prior failed clone attempt (e.g. a network/auth error) can leave `origin`
+    // already configured; reuse and repoint it instead of erroring on retry.
+    let mut remote = match repo.find_remote("origin") {
+        Ok(_) => {
+            repo.remote_set_url("origin", url)?;
+            repo.find_remote("origin")?
+        }
+        Err(_) => repo.remote("origin", url)?,
+    };
+
+    // The default branch is only known after connecting to the remote, but
+    // remains readable after disconnecting — so scope the connection guard
+    // (its `Drop` disconnects) to end the mutable borrow before we use `remote`
+    // again below.
+    {
+        remote.connect_auth(git2::Direction::Fetch, Some(callbacks(app.clone())), None)?;
+    }
+    let default_branch = remote
+        .default_branch()?
+        .as_str()
+        .unwrap_or("refs/heads/main")
+        .to_string();
+
     let mut fo = FetchOptions::new();
     fo.remote_callbacks(callbacks(app));
-    let mut builder = RepoBuilder::new();
-    builder.fetch_options(fo);
-    builder.clone(url, Path::new(dir))?;
+    remote.fetch(&[] as &[&str], Some(&mut fo), None)?;
+
+    let branch_name = default_branch.strip_prefix("refs/heads/").unwrap_or(&default_branch);
+    let remote_ref = format!("refs/remotes/origin/{branch_name}");
+    let target = repo.find_reference(&remote_ref)?.peel_to_commit()?;
+
+    let mut local_branch = repo.branch(branch_name, &target, true)?;
+    local_branch.set_upstream(Some(&format!("origin/{branch_name}")))?;
+    repo.set_head(&format!("refs/heads/{branch_name}"))?;
+    repo.checkout_head(Some(CheckoutBuilder::new().force()))?;
+    Ok(())
+}
+
+/// Ensures the repo-local (untracked, never committed) exclude file always hides
+/// klank's own config files and, on Android, the WebView/cache directories that
+/// live alongside them. Needed because on Android the clone directory doubles as
+/// the app's private data root, so `git_token`/`git_cred_mode` and the whole
+/// Chromium profile (cookies, leveldb, HTTP/code caches, prefs, logs) sit right
+/// next to the repo content — without this they'd be swept into the first
+/// `git add -A` and pushed to the user's remote (the token in plaintext, the rest
+/// as multi-megabyte churn on every commit). Same directory names `fs.ts`'s
+/// `INTERNAL_DIRS` skips when scanning the tab tree — keep them in sync.
+fn ensure_git_excludes(repo: &Repository) -> Result<(), Error> {
+    let exclude_path = repo.path().join("info").join("exclude");
+    let existing = std::fs::read_to_string(&exclude_path).unwrap_or_default();
+    let mut lines: Vec<&str> = existing.lines().collect();
+    let mut changed = false;
+    for entry in [
+        TOKEN_FILE,
+        CRED_MODE_FILE,
+        "app_webview",
+        "cache",
+        "code_cache",
+        "shared_prefs",
+        "no_backup",
+        "logs",
+        "app_textures",
+        "files",
+    ] {
+        if !lines.contains(&entry) {
+            lines.push(entry);
+            changed = true;
+        }
+    }
+    if changed {
+        if let Some(parent) = exclude_path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| Error::from_str(&e.to_string()))?;
+        }
+        std::fs::write(&exclude_path, lines.join("\n") + "\n")
+            .map_err(|e| Error::from_str(&e.to_string()))?;
+    }
     Ok(())
 }
 
@@ -677,6 +796,7 @@ fn current_branch_name(repo: &Repository) -> Result<String, Error> {
 /// Stages every change (untracked, modified, deleted) and commits. `.gitignore` is
 /// honored. Returns whether anything was committed and the generated message.
 fn auto_commit(repo: &Repository) -> Result<(bool, String), Error> {
+    ensure_git_excludes(repo)?;
     let mut opts = StatusOptions::new();
     opts.include_untracked(true).recurse_untracked_dirs(true);
     let statuses = repo.statuses(Some(&mut opts))?;
