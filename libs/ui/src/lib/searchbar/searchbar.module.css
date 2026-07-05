@@ -30,6 +30,19 @@
   margin-top: auto;
 }
 
+/* The recency toggle sits left of the collapse button; only the collapse
+   button should keep its rotate transition, so reset the sort icon. */
+.sortToggle svg {
+  transition: none;
+  transform: none;
+}
+
+.sortActive {
+  background: var(--klank-color-highlight);
+  border-radius: 4px;
+  opacity: 1;
+}
+
 @media (max-width: 599px) {
   /* In the mobile top bar the Searchbar only shows its toggle button */
   .container,
@@ -46,6 +59,11 @@
   /* Never show the search Input in the top bar — it lives in the drawer only */
   .container:not(.inDrawer) > div {
     display: none !important;
+  }
+
+  /* The recency toggle also belongs to the tree, not the mobile top bar */
+  .container:not(.inDrawer) .sortToggle {
+    display: none;
   }
 
   /* In the drawer the Input must be fully visible and fill available width */

@@ -1,5 +1,5 @@
 import styles from './fileTreeview.module.css'
-import { FileEntry, sortByArtist } from '@klank/platform-api'
+import { FileEntry, PlayMetric, formatRelativeTime, sortByArtist, sortByRecency } from '@klank/platform-api'
 import { ChevronIcon } from '../icons/ChevronIcon'
 import { FileIcon } from '../icons/FileIcon'
 import * as React from 'react'
@@ -14,6 +14,8 @@ type ContextMenuState = {
 type RenderTreeOptions = {
   files: FileEntry[]
   searchFilter: string
+  songSort: 'artist' | 'recent'
+  playMetricByPath: Record<string, PlayMetric>
   currentTabPath: string
   setTabPath: (path: string) => void
   collapsedArtists: string[]
@@ -26,10 +28,18 @@ type RenderTreeOptions = {
   songButtonRefs: React.MutableRefObject<Map<string, HTMLButtonElement | null>>
 }
 
+/** A song title with its play-info hover tooltip. Empty when never played. */
+const playInfoTitle = (metric: PlayMetric | undefined): string =>
+  metric
+    ? `Played ${metric.playCount}× · last played ${formatRelativeTime(metric.lastPlayedAt)}`
+    : 'Not played yet'
+
 const renderTreeStructure = (opts: RenderTreeOptions) => {
   const {
     files,
     searchFilter,
+    songSort,
+    playMetricByPath,
     currentTabPath,
     setTabPath,
     collapsedArtists,
@@ -41,6 +51,71 @@ const renderTreeStructure = (opts: RenderTreeOptions) => {
     onContextMenuRequest,
     songButtonRefs,
   } = opts
+
+  // A single song row — shared by the artist-grouped and recency views.
+  const renderSongItem = (item: FileEntry) => {
+    const alreadyInPlaylist = activePlaylistPaths?.includes(item.path)
+    return (
+      <li
+        id={currentTabPath === item.path ? 'active' : undefined}
+        className={currentTabPath === item.path ? styles.active : ''}
+        key={item.path}
+      >
+        <button
+          ref={(el) => {
+            if (el === null) songButtonRefs.current.delete(item.path)
+            else songButtonRefs.current.set(item.path, el)
+          }}
+          title={playInfoTitle(playMetricByPath[item.path])}
+          aria-haspopup={(onDeleteTab || onEditTab) ? 'menu' : undefined}
+          onClick={() => setTabPath(item.path)}
+          onContextMenu={(e) => {
+            if (!onDeleteTab && !onEditTab) return
+            e.preventDefault()
+            e.stopPropagation()
+            onContextMenuRequest(item.path, { top: e.clientY, left: e.clientX })
+          }}
+          onKeyDown={(e) => {
+            if (!onDeleteTab) return
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+              e.preventDefault()
+              const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
+              onContextMenuRequest(item.path, { top: rect.bottom, left: rect.left })
+            }
+          }}
+        >
+          <FileIcon />
+          <span>{songSort === 'recent' ? item.name : (item.song ?? item.artist)}</span>
+        </button>
+        {onAddToPlaylist && !alreadyInPlaylist && (
+          <button
+            className={styles.addToPlaylistButton}
+            onClick={(e) => { e.stopPropagation(); onAddToPlaylist(item.path) }}
+            title="Add to active playlist"
+            aria-label="Add to active playlist"
+          >
+            +
+          </button>
+        )}
+      </li>
+    )
+  }
+
+  if (songSort === 'recent') {
+    const ordered = sortByRecency(files, playMetricByPath, searchFilter)
+    if (ordered.length === 0) return (
+      <li className={styles.noItems}>
+        {searchFilter.length > 0 ? 'No results found' : 'No files found'}
+      </li>
+    )
+    return (
+      <li className={styles.menuItem}>
+        <ul className={styles.songList}>
+          {ordered.map(renderSongItem)}
+        </ul>
+      </li>
+    )
+  }
 
   const currentTree = sortByArtist(files, searchFilter)
   const treeKeys = Object.keys(currentTree)
@@ -70,52 +145,7 @@ const renderTreeStructure = (opts: RenderTreeOptions) => {
         </button>
         {!collapsedArtists.includes(artist) && (
           <ul className={styles.songList}>
-            {currentTree[artist].map((item) => {
-              const alreadyInPlaylist = activePlaylistPaths?.includes(item.path)
-              return (
-                <li
-                  id={currentTabPath === item.path ? 'active' : undefined}
-                  className={currentTabPath === item.path ? styles.active : ''}
-                  key={item.path}
-                >
-                  <button
-                    ref={(el) => {
-                      if (el === null) songButtonRefs.current.delete(item.path)
-                      else songButtonRefs.current.set(item.path, el)
-                    }}
-                    aria-haspopup={(onDeleteTab || onEditTab) ? 'menu' : undefined}
-                    onClick={() => setTabPath(item.path)}
-                    onContextMenu={(e) => {
-                      if (!onDeleteTab && !onEditTab) return
-                      e.preventDefault()
-                      e.stopPropagation()
-                      onContextMenuRequest(item.path, { top: e.clientY, left: e.clientX })
-                    }}
-                    onKeyDown={(e) => {
-                      if (!onDeleteTab) return
-                      if (e.key === 'Delete' || e.key === 'Backspace') {
-                        e.preventDefault()
-                        const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
-                        onContextMenuRequest(item.path, { top: rect.bottom, left: rect.left })
-                      }
-                    }}
-                  >
-                    <FileIcon />
-                    <span>{item.song ?? item.artist}</span>
-                  </button>
-                  {onAddToPlaylist && !alreadyInPlaylist && (
-                    <button
-                      className={styles.addToPlaylistButton}
-                      onClick={(e) => { e.stopPropagation(); onAddToPlaylist(item.path) }}
-                      title="Add to active playlist"
-                      aria-label="Add to active playlist"
-                    >
-                      +
-                    </button>
-                  )}
-                </li>
-              )
-            })}
+            {currentTree[artist].map(renderSongItem)}
           </ul>
         )}
       </li>
@@ -128,6 +158,8 @@ type FileTreeViewProps = {
   currentTabPath: string
   setTabPath: (path: string) => void
   searchFilter: string
+  songSort?: 'artist' | 'recent'
+  playMetricByPath?: Record<string, PlayMetric>
   onAddToPlaylist?: (path: string) => void
   activePlaylistPaths?: string[]
   onDeleteTab?: (path: string) => void
@@ -139,6 +171,8 @@ export const FileTreeView: React.FC<FileTreeViewProps> = ({
   currentTabPath,
   setTabPath,
   searchFilter,
+  songSort = 'artist',
+  playMetricByPath = {},
   onAddToPlaylist,
   activePlaylistPaths,
   onDeleteTab,
@@ -283,6 +317,8 @@ export const FileTreeView: React.FC<FileTreeViewProps> = ({
         {renderTreeStructure({
           files: tree,
           searchFilter,
+          songSort,
+          playMetricByPath,
           currentTabPath,
           setTabPath,
           collapsedArtists,

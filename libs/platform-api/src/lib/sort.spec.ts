@@ -1,5 +1,5 @@
-import { sortByArtist } from './sort.js'
-import { FileEntry } from './fs.js'
+import { sortByArtist, sortByRecency, formatRelativeTime } from './sort.js'
+import { FileEntry, PlayMetric } from './fs.js'
 
 const fixtures: FileEntry[] = [
   {
@@ -158,5 +158,94 @@ describe('sortByArtist', () => {
       const result = sortByArtist(single)
       expect(result['unknown']).toHaveLength(1)
     })
+  })
+})
+
+describe('sortByRecency', () => {
+  const metrics: Record<string, PlayMetric> = {
+    // Creep played most recently, Hey Jude before it, Karma Police oldest
+    '/tabs/Radiohead - Creep.tab.txt': { playCount: 3, lastPlayedAt: 3000 },
+    '/tabs/Beatles - Hey Jude.tab.txt': { playCount: 1, lastPlayedAt: 2000 },
+    '/tabs/Radiohead - Karma Police.tab.txt': { playCount: 5, lastPlayedAt: 1000 },
+  }
+
+  it('orders played songs most-recent first', () => {
+    // Given three played songs with distinct lastPlayedAt timestamps
+    // When sortByRecency is called
+    // Then they appear in descending timestamp order
+    const result = sortByRecency(fixtures, metrics)
+    const played = result.slice(0, 3).map((f) => f.name)
+    expect(played).toEqual([
+      'Radiohead - Creep.tab.txt',
+      'Beatles - Hey Jude.tab.txt',
+      'Radiohead - Karma Police.tab.txt',
+    ])
+  })
+
+  it('appends never-played songs alphabetically after played ones', () => {
+    // Given two songs with no play metric ("Let It Be" and "Unknown")
+    // When sortByRecency is called
+    // Then they come after every played song, sorted by name
+    const result = sortByRecency(fixtures, metrics)
+    const neverPlayed = result.slice(3).map((f) => f.name)
+    expect(neverPlayed).toEqual([
+      'beatles - Let It Be.tab.txt',
+      'Unknown.tab.txt',
+    ])
+  })
+
+  it('returns every entry exactly once', () => {
+    const result = sortByRecency(fixtures, metrics)
+    expect(result).toHaveLength(fixtures.length)
+  })
+
+  it('places all songs in the never-played group when metrics are empty', () => {
+    // Given no play metrics
+    // When sortByRecency is called
+    // Then all songs are returned sorted alphabetically by name
+    const result = sortByRecency(fixtures, {})
+    expect(result.map((f) => f.name)).toEqual(
+      [...fixtures].map((f) => f.name).sort((a, b) => a.localeCompare(b))
+    )
+  })
+
+  it('applies the name filter before ordering', () => {
+    // Given a filter of "radio"
+    // When sortByRecency is called
+    // Then only Radiohead entries are returned, most-recent first
+    const result = sortByRecency(fixtures, metrics, 'radio')
+    expect(result.map((f) => f.name)).toEqual([
+      'Radiohead - Creep.tab.txt',
+      'Radiohead - Karma Police.tab.txt',
+    ])
+  })
+
+  it('returns an empty array when nothing matches the filter', () => {
+    expect(sortByRecency(fixtures, metrics, 'xyz')).toEqual([])
+  })
+})
+
+describe('formatRelativeTime', () => {
+  const now = 1_000_000_000_000
+
+  it('returns "just now" for very recent timestamps', () => {
+    expect(formatRelativeTime(now - 10 * 1000, now)).toBe('just now')
+  })
+
+  it('formats minutes, hours, and days', () => {
+    expect(formatRelativeTime(now - 5 * 60 * 1000, now)).toBe('5m ago')
+    expect(formatRelativeTime(now - 3 * 60 * 60 * 1000, now)).toBe('3h ago')
+    expect(formatRelativeTime(now - 2 * 24 * 60 * 60 * 1000, now)).toBe('2d ago')
+  })
+
+  it('formats weeks, months, and years', () => {
+    expect(formatRelativeTime(now - 2 * 7 * 24 * 60 * 60 * 1000, now)).toBe('2w ago')
+    expect(formatRelativeTime(now - 60 * 24 * 60 * 60 * 1000, now)).toBe('2mo ago')
+    expect(formatRelativeTime(now - 400 * 24 * 60 * 60 * 1000, now)).toBe('1y ago')
+  })
+
+  it('never returns a negative or zero magnitude for future/now timestamps', () => {
+    expect(formatRelativeTime(now, now)).toBe('just now')
+    expect(formatRelativeTime(now + 5000, now)).toBe('just now')
   })
 })
