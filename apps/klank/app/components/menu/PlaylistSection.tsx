@@ -36,8 +36,11 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
   const setActivePlaylist = useKlankStore().setActivePlaylist
   const isCollapsed = useKlankStore().ui.isPlaylistSectionCollapsed
   const setPlaylistSectionCollapsed = useKlankStore().setPlaylistSectionCollapsed
+  // Persisted in the store (ui slice) so the open playlist survives main-menu
+  // toggles (which unmount this component) and app reloads.
+  const expandedId = useKlankStore().ui.expandedPlaylistId
+  const setExpandedId = useKlankStore().setExpandedPlaylistId
 
-  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [contextMenuId, setContextMenuId] = useState<string | null>(null)
   const [contextMenuPos, setContextMenuPos] = useState<{ top: number; right: number } | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -220,7 +223,7 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
                   ) : (
                     <button
                       className={styles.nameButton}
-                      onClick={() => setExpandedId((v) => (v === playlist.id ? null : playlist.id))}
+                      onClick={() => setExpandedId(expandedId === playlist.id ? null : playlist.id)}
                     >
                       {playlist.name}
                     </button>
