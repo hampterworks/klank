@@ -53,7 +53,7 @@ describe('klank-storage migration and shape', () => {
     const raw = localStorageData['klank-storage']
     expect(raw).toBeDefined()
     const parsed = JSON.parse(raw) as { version: number; state: Record<string, unknown> }
-    expect(parsed.version).toBe(5)
+    expect(parsed.version).toBe(6)
     expect(parsed.state).not.toHaveProperty('playlists')
     expect(parsed.state).toHaveProperty('activePlaylistId')
     expect(parsed.state).toHaveProperty('activePlaylistIndex')
@@ -115,7 +115,20 @@ describe('klank-storage v4 migration', () => {
     await useKlankStore.persist.rehydrate()
 
     const { ui } = useKlankStore.getState()
-    expect(ui).toEqual({ isMenuExtended: false, menuWidth: 300, isPlaylistSectionCollapsed: false })
+    expect(ui).toEqual({ isMenuExtended: false, menuWidth: 300, isPlaylistSectionCollapsed: false, expandedPlaylistId: null })
+  })
+})
+
+describe('klank-storage v6 — expanded playlist persistence', () => {
+  it('persists ui.expandedPlaylistId to klank-storage so it survives reloads', async () => {
+    Object.keys(localStorageData).forEach((k) => delete localStorageData[k])
+    const { useKlankStore } = await import('./store.js')
+
+    useKlankStore.getState().setExpandedPlaylistId('pl-42')
+    expect(useKlankStore.getState().ui.expandedPlaylistId).toBe('pl-42')
+
+    const parsed = JSON.parse(localStorageData['klank-storage']) as { state: { ui: { expandedPlaylistId: string | null } } }
+    expect(parsed.state.ui.expandedPlaylistId).toBe('pl-42')
   })
 })
 

@@ -14,6 +14,35 @@
   will-change: transform;
 }
 
+/* Read-only scroll-position indicator, shown only during auto-scroll (when the
+   native scrollbar is hidden). Absolutely positioned so the .content transform
+   never moves it. */
+.scrollIndicator {
+  position: absolute;
+  top: 6px;
+  right: 4px;
+  bottom: 6px;
+  width: 8px;
+  border-radius: 4px;
+  /* Barely-there track; the divider var is a subtle per-theme tint. */
+  background: var(--klank-color-divider);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.scrollThumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  border-radius: 4px;
+  /* Text colour inverts per theme, so at 45% it stays clearly visible on
+     both the near-white light background and the near-black dark one. */
+  background: var(--klank-color-text);
+  opacity: 0.45;
+  will-change: transform;
+}
+
 /* Chord pill styling — no block-level margins; spacing lives on .chordLine */
 .chord {
   display: inline-block;

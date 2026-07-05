@@ -38,6 +38,8 @@ export type Ui = {
   isMenuExtended: boolean
   menuWidth: number
   isPlaylistSectionCollapsed: boolean
+  /** Id of the playlist whose song list is expanded, or null when none is. */
+  expandedPlaylistId: string | null
 }
 
 /**
@@ -150,6 +152,7 @@ type KlankState = {
   /** Atomically update menu open state and optionally its width in one render. */
   setMenuState: (isMenuExtended: boolean, menuWidth?: number) => void
   setPlaylistSectionCollapsed: (isPlaylistSectionCollapsed: boolean) => void
+  setExpandedPlaylistId: (id: string | null) => void
   /** Per-file saved settings keyed by full file path. Loaded from and written to tab-settings.json. */
   tabSettingByPath: Record<string, PerTabSettings>
   setBaseDirectory: (directory: string) => void
@@ -277,6 +280,7 @@ export const useKlankStore = create<KlankState>()(
           isMenuExtended: true,
           menuWidth: 400,
           isPlaylistSectionCollapsed: false,
+          expandedPlaylistId: null,
         },
         tab: {
           path: "",
@@ -304,6 +308,7 @@ export const useKlankStore = create<KlankState>()(
           ui: { ...state.ui, isMenuExtended, ...(menuWidth !== undefined ? { menuWidth } : {}) },
         })),
         setPlaylistSectionCollapsed: (isPlaylistSectionCollapsed) => set((state) => ({...state, ui: {...state.ui, isPlaylistSectionCollapsed}})),
+        setExpandedPlaylistId: (expandedPlaylistId) => set((state) => ({...state, ui: {...state.ui, expandedPlaylistId}})),
         setTheme: (theme) => set((state) => ({...state, theme})),
         setInstrument: (instrument) => set((state) => ({...state, instrument})),
         harmony: DEFAULT_HARMONY_SETTINGS,
@@ -452,6 +457,7 @@ export const useKlankStore = create<KlankState>()(
             playlists,
             activePlaylistId: state.activePlaylistId === id ? null : state.activePlaylistId,
             activePlaylistIndex: state.activePlaylistId === id ? null : state.activePlaylistIndex,
+            ui: state.ui.expandedPlaylistId === id ? { ...state.ui, expandedPlaylistId: null } : state.ui,
           }
         }),
         renamePlaylist: (id, name) => set((state) => {
@@ -582,19 +588,20 @@ export const useKlankStore = create<KlankState>()(
       }),
       {
         name: 'klank-storage',
-        version: 5,
+        version: 6,
         // v0 persisted playlists in localStorage; they now live in
         // .klank-settings.json, so stale localStorage copies are dropped.
         // v2 adds syncSettings; defaults fill in for older persisted state.
         // v3 persists instrument and the Harmony section settings.
         // v4 adds customTunings; older persisted state gets customTunings: [].
         // v5 adds ui.isPlaylistSectionCollapsed; defaults fill in for older ui blobs.
+        // v6 adds ui.expandedPlaylistId; defaults fill in for older ui blobs.
         migrate: (persistedState) => {
           const state = { ...((persistedState ?? {}) as Record<string, unknown>) }
           delete state['playlists']
           return {
             ...state,
-            ui: { isMenuExtended: true, menuWidth: 400, isPlaylistSectionCollapsed: false, ...(state.ui as Partial<Ui> | undefined) },
+            ui: { isMenuExtended: true, menuWidth: 400, isPlaylistSectionCollapsed: false, expandedPlaylistId: null, ...(state.ui as Partial<Ui> | undefined) },
             syncSettings: { ...DEFAULT_SYNC_SETTINGS, ...(state.syncSettings as Partial<SyncSettings> | undefined) },
             instrument: (state.instrument as Instrument | undefined) ?? 'guitar',
             harmony: { ...DEFAULT_HARMONY_SETTINGS, ...(state.harmony as Partial<HarmonySettings> | undefined) },
