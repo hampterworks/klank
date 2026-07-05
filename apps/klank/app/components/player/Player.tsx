@@ -21,6 +21,7 @@ export const Player: React.FC<PlayerProps> = ({ ...props }) => {
   const tabScrollSpeed = useKlankStore().tab.scrollSpeed
   const isScrolling = useKlankStore().tab.isScrolling
   const setTabIsScrolling = useKlankStore().setTabIsScrolling
+  const markPlayed = useKlankStore().markPlayed
   const tabPath = useKlankStore().tab.path
   const fileService = useKlankStore().fileService
   const playlists = useKlankStore().playlists
@@ -164,6 +165,7 @@ export const Player: React.FC<PlayerProps> = ({ ...props }) => {
           tabScrollSpeed={snap?.scrollSpeed ?? 1}
           isScrolling={snap?.scrolling ?? false}
           setTabIsScrolling={() => { /* guests don't own playback */ }}
+          markPlayed={() => { /* guests don't record plays */ }}
           tabData={snap?.content ?? ''}
           transpose={snap?.transpose ?? 0}
           instrument={instrument}
@@ -218,6 +220,7 @@ export const Player: React.FC<PlayerProps> = ({ ...props }) => {
           tabScrollSpeed={tabScrollSpeed}
           isScrolling={isScrolling}
           setTabIsScrolling={setTabIsScrolling}
+          markPlayed={markPlayed}
           tabData={tabData ?? ''}
           transpose={transpose}
           instrument={instrument}

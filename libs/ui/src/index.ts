@@ -42,4 +42,5 @@ export { CloseIcon } from './lib/icons/CloseIcon';
 export { SpeedIcon } from './lib/icons/SpeedIcon';
 export { GripIcon } from './lib/icons/GripIcon';
 export { NewPlaylistIcon } from './lib/icons/NewPlaylistIcon';
+export { SortRecentIcon } from './lib/icons/SortRecentIcon';
 

@@ -240,3 +240,52 @@ describe('FileTreeView — issue #5: no empty artist group rendered', () => {
     expect(screen.getByText(/no files found/i)).toBeTruthy()
   })
 })
+
+describe('FileTreeView — recency sort mode', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  const metrics = {
+    '/tabs/Radiohead - Creep.tab.txt': { playCount: 3, lastPlayedAt: 3000 },
+    '/tabs/Beatles - Hey Jude.tab.txt': { playCount: 1, lastPlayedAt: 1000 },
+  }
+  const tree: FileEntry[] = [
+    makeEntry('Beatles', 'Hey Jude'),
+    makeEntry('Radiohead', 'Creep'),
+    makeEntry('Nirvana', 'Lithium'),
+  ]
+
+  it('orders songs most-recent first with never-played last, dropping artist headers', () => {
+    // Given: two played songs (Creep newest) and one never-played (Lithium)
+    // When: rendered in recency mode
+    // Then: song rows appear Creep, Hey Jude, Lithium and no artist header shows
+    const { container } = render(
+      <FileTreeView tree={tree} {...DEFAULT_PROPS} songSort="recent" playMetricByPath={metrics} />
+    )
+    const labels = Array.from(container.querySelectorAll('button')).map((b) => b.textContent?.trim())
+    expect(labels).toEqual([
+      'Radiohead - Creep',
+      'Beatles - Hey Jude',
+      'Nirvana - Lithium',
+    ])
+    // Artist grouping is dropped: no bare "Radiohead" header button exists.
+    expect(labels).not.toContain('Radiohead')
+  })
+
+  it('shows a play-info tooltip for played songs', () => {
+    render(
+      <FileTreeView tree={tree} {...DEFAULT_PROPS} songSort="recent" playMetricByPath={metrics} />
+    )
+    expect(getSongButton('Creep').getAttribute('title')).toMatch(/Played 3× · last played .+ ago/)
+  })
+
+  it('shows "Not played yet" for songs with no metric, in both sort modes', () => {
+    // artist mode (default) — no metrics passed
+    const { rerender } = render(<FileTreeView tree={[makeEntry('Nirvana', 'Lithium')]} {...DEFAULT_PROPS} />)
+    expect(getSongButton('Lithium').getAttribute('title')).toBe('Not played yet')
+    // recency mode — still no metric for Lithium
+    rerender(
+      <FileTreeView tree={tree} {...DEFAULT_PROPS} songSort="recent" playMetricByPath={metrics} />
+    )
+    expect(getSongButton('Lithium').getAttribute('title')).toBe('Not played yet')
+  })
+})

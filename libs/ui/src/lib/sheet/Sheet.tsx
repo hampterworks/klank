@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import styles from './sheet.module.css'
 import {
   classifySheetLine,
@@ -215,6 +215,12 @@ type SheetProps = {
   tabScrollSpeed: number
   isScrolling: boolean
   setTabIsScrolling: (isScrolling: boolean) => void
+  /**
+   * Called once when an auto-scroll play-through reaches the end of the tab
+   * (or immediately when PLAY is pressed on a tab too short to scroll). Guests
+   * pass a no-op since they never own playback.
+   */
+  markPlayed: () => void
   instrument?: Instrument
   /** When true, chord-line + lyric-line pairs are rendered as wrappable
    *  inline segments instead of two separate block lines. */
@@ -240,6 +246,7 @@ export const Sheet: React.FC<SheetProps> = ({
   tabScrollSpeed,
   isScrolling,
   setTabIsScrolling,
+  markPlayed,
   instrument,
   isMobile = false,
   onScrollFraction,
@@ -257,6 +264,22 @@ export const Sheet: React.FC<SheetProps> = ({
   const [colsPerRow, setColsPerRow] = useState<number>(Number.POSITIVE_INFINITY)
   // Last time onScrollFraction was called — used to throttle to ~15/sec.
   const lastFractionEmitRef = useRef<number>(0)
+  // Guards markPlayed to once per play session (reset when scrolling starts or
+  // the tab changes) so a completed play increments the count exactly once,
+  // whichever end-detector fires first.
+  const hasMarkedPlayedRef = useRef(false)
+  // Latest isScrolling, read by the sentinel observer whose effect deps don't
+  // include isScrolling (avoids a stale-closure false positive on manual scroll).
+  const isScrollingRef = useRef(isScrolling)
+  isScrollingRef.current = isScrolling
+  // markPlayed via a ref so markEnd stays stable and doesn't restart effects.
+  const markPlayedRef = useRef(markPlayed)
+  markPlayedRef.current = markPlayed
+  const markEnd = useCallback(() => {
+    if (hasMarkedPlayedRef.current) return
+    hasMarkedPlayedRef.current = true
+    markPlayedRef.current()
+  }, [])
 
   useEffect(() => {
     const container = containerRef.current
@@ -289,6 +312,9 @@ export const Sheet: React.FC<SheetProps> = ({
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
+            // Only count as a play when the bottom is reached during autoscroll —
+            // the RAF terminal branch may be pre-empted by this observer.
+            if (isScrollingRef.current) markEnd()
             setTabIsScrolling(false)
           }
         }
@@ -298,10 +324,11 @@ export const Sheet: React.FC<SheetProps> = ({
 
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [setTabIsScrolling])
+  }, [setTabIsScrolling, markEnd])
 
   useEffect(() => {
     virtualY.current = 0
+    hasMarkedPlayedRef.current = false
     if (contentRef.current) contentRef.current.style.transform = ''
     if (containerRef.current) {
       containerRef.current.scrollTop = 0
@@ -461,10 +488,16 @@ export const Sheet: React.FC<SheetProps> = ({
 
     if (!isScrolling) return
 
+    // A new play session begins — allow markPlayed to fire once for it.
+    hasMarkedPlayedRef.current = false
+
     // Recomputed on every use so a window resize or font-size change
     // mid-scroll doesn't stop early or scroll past the end.
     const getMaxScroll = () => container.scrollHeight - container.clientHeight
     if (getMaxScroll() <= 0) {
+      // Nothing to scroll — the whole tab already fits, so pressing PLAY counts
+      // as a play-through.
+      markEnd()
       setTabIsScrolling(false)
       return
     }
@@ -551,6 +584,7 @@ export const Sheet: React.FC<SheetProps> = ({
       if (virtualY.current < maxScroll) {
         rafId = requestAnimationFrame(step)
       } else {
+        markEnd()
         setTabIsScrolling(false)
       }
     }
@@ -564,7 +598,7 @@ export const Sheet: React.FC<SheetProps> = ({
       container.style.overflowY = ''
       container.scrollTop = pos
     }
-  }, [isScrolling, tabScrollSpeed, setTabIsScrolling, onScrollFraction, scrollFraction])
+  }, [isScrolling, tabScrollSpeed, setTabIsScrolling, onScrollFraction, scrollFraction, markEnd])
 
   // Line classification runs `classifySheetLine` over the whole tab — memoize
   // so toolbar-driven re-renders don't re-parse large sheets.
