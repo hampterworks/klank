@@ -688,3 +688,67 @@ describe('customTunings partialize', () => {
     expect(useKlankStore.getState().customTunings).toEqual([tuning])
   })
 })
+
+describe('markPlayed', () => {
+  beforeEach(() => {
+    useKlankStore.setState({
+      tab: { ...useKlankStore.getState().tab, path: '/tabs/Fuel - Shimmer.tab.txt' },
+      playMetricByPath: {},
+    })
+  })
+
+  it('creates a metric with count 1 and a timestamp on first play', () => {
+    const before = Date.now()
+    useKlankStore.getState().markPlayed()
+    const metric = useKlankStore.getState().playMetricByPath['/tabs/Fuel - Shimmer.tab.txt']
+    expect(metric.playCount).toBe(1)
+    expect(metric.lastPlayedAt).toBeGreaterThanOrEqual(before)
+  })
+
+  it('increments the count on repeated plays of the same tab', () => {
+    const state = useKlankStore.getState()
+    state.markPlayed()
+    state.markPlayed()
+    state.markPlayed()
+    expect(useKlankStore.getState().playMetricByPath['/tabs/Fuel - Shimmer.tab.txt'].playCount).toBe(3)
+  })
+
+  it('advances lastPlayedAt on a subsequent play', () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(1000)
+      useKlankStore.getState().markPlayed()
+      vi.setSystemTime(5000)
+      useKlankStore.getState().markPlayed()
+      expect(useKlankStore.getState().playMetricByPath['/tabs/Fuel - Shimmer.tab.txt'].lastPlayedAt).toBe(5000)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('is a no-op when no tab is open', () => {
+    useKlankStore.setState({ tab: { ...useKlankStore.getState().tab, path: '' }, playMetricByPath: {} })
+    useKlankStore.getState().markPlayed()
+    expect(useKlankStore.getState().playMetricByPath).toEqual({})
+  })
+
+  it('tracks metrics independently per tab path', () => {
+    const state = useKlankStore.getState()
+    state.markPlayed()
+    useKlankStore.setState({ tab: { ...useKlankStore.getState().tab, path: '/tabs/Foo - Bar.tab.txt' } })
+    useKlankStore.getState().markPlayed()
+    const metrics = useKlankStore.getState().playMetricByPath
+    expect(metrics['/tabs/Fuel - Shimmer.tab.txt'].playCount).toBe(1)
+    expect(metrics['/tabs/Foo - Bar.tab.txt'].playCount).toBe(1)
+  })
+})
+
+describe('toggleSongSort', () => {
+  it('flips between artist and recent and back', () => {
+    useKlankStore.setState({ songSort: 'artist' })
+    useKlankStore.getState().toggleSongSort()
+    expect(useKlankStore.getState().songSort).toBe('recent')
+    useKlankStore.getState().toggleSongSort()
+    expect(useKlankStore.getState().songSort).toBe('artist')
+  })
+})

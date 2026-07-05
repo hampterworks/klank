@@ -1,7 +1,7 @@
 import {create} from 'zustand'
 import {devtools, persist} from 'zustand/middleware'
 import type {} from '@redux-devtools/extension'
-import { FileService, PerTabSettings, type Instrument, type JamSnapshot, type Playlist, type SyncErrorKind } from '@klank/platform-api'
+import { FileService, PerTabSettings, type Instrument, type JamSnapshot, type PlayMetric, type Playlist, type SyncErrorKind } from '@klank/platform-api'
 import type { CustomTuning } from '@klank/audio'
 
 // JamSnapshot is defined once in @klank/platform-api; re-exported here so jam
@@ -137,6 +137,9 @@ type KlankState = {
   /** Ephemeral — not persisted. Which panel is shown on the right. */
   activeView: 'tab' | 'settings' | 'harmony'
   setActiveView: (view: 'tab' | 'settings' | 'harmony') => void
+  /** @persisted How the song menu is ordered: grouped by artist or flat by recency. */
+  songSort: 'artist' | 'recent'
+  toggleSongSort: () => void
   /** Active tab directory chosen by the user. Not persisted. */
   baseDirectory?: string
   /** True when running outside Tauri (browser/server). Not persisted. */
@@ -155,6 +158,10 @@ type KlankState = {
   setExpandedPlaylistId: (id: string | null) => void
   /** Per-file saved settings keyed by full file path. Loaded from and written to tab-settings.json. */
   tabSettingByPath: Record<string, PerTabSettings>
+  /** @persisted Per-song play tracking (count + last-played) keyed by full file path. */
+  playMetricByPath: Record<string, PlayMetric>
+  /** Records a completed play of the currently open tab: bumps count, stamps last-played. */
+  markPlayed: () => void
   setBaseDirectory: (directory: string) => void
   setFileService: (service: FileService) => void
   setMode: (mode: Mode) => void
@@ -239,7 +246,7 @@ export type ScrollSpeeds = typeof SCROLL_SPEEDS[number]
 /** The slice of KlankState saved to localStorage — must match what `partialize` returns. */
 type PersistedKlankState = Pick<
   KlankState,
-  'tab' | 'theme' | 'ui' | 'baseDirectory' | 'activePlaylistId' | 'activePlaylistIndex' | 'syncSettings' | 'instrument' | 'harmony' | 'customTunings'
+  'tab' | 'theme' | 'ui' | 'baseDirectory' | 'activePlaylistId' | 'activePlaylistIndex' | 'syncSettings' | 'instrument' | 'harmony' | 'customTunings' | 'playMetricByPath' | 'songSort'
 >
 
 /** Fire-and-forget write of all playlists to `.klank-settings.json`. No-op until a directory and FileService are set. */
@@ -276,6 +283,8 @@ export const useKlankStore = create<KlankState>()(
       (set) => ({
         activeView: 'tab' as const,
         setActiveView: (activeView) => set((state) => ({ ...state, activeView })),
+        songSort: 'artist' as const,
+        toggleSongSort: () => set((state) => ({ ...state, songSort: state.songSort === 'artist' ? 'recent' : 'artist' })),
         ui: {
           isMenuExtended: true,
           menuWidth: 400,
@@ -292,6 +301,7 @@ export const useKlankStore = create<KlankState>()(
           link: '',
         },
         tabSettingByPath: {},
+        playMetricByPath: {},
         mode: "Read",
         theme: (typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'Dark' : 'Light',
         instrument: "guitar" as Instrument,
@@ -423,6 +433,16 @@ export const useKlankStore = create<KlankState>()(
         setTabIsScrolling: (isScrolling) => set((state) => ({...state, tab: {...state.tab, isScrolling}})),
         setTabSettingByPath: (path, tabSetting) => set((state) => ({...state, tabSettingByPath: {...state.tabSettingByPath, [path]: tabSetting}})),
         setTabSettings: (tabSettingByPath) => set((state) => ({...state, tabSettingByPath})),
+        markPlayed: () => set((state) => {
+          const path = state.tab.path
+          if (!path) return state
+          const prev = state.playMetricByPath[path]
+          const entry: PlayMetric = {
+            playCount: (prev?.playCount ?? 0) + 1,
+            lastPlayedAt: Date.now(),
+          }
+          return { ...state, playMetricByPath: { ...state.playMetricByPath, [path]: entry } }
+        }),
         setTabDetails: (details) => set((state) => ({...state,tab: {...state.tab, details}})),
         setTabLink: (link) => set( state => ({...state, tab: {...state.tab, link}})),
         setServerMode: (serverMode) => set((state) => ({...state, serverMode})),
@@ -561,6 +581,8 @@ export const useKlankStore = create<KlankState>()(
         deleteTab: (path) => set((state) => {
           const tabSettingByPath = { ...state.tabSettingByPath }
           delete tabSettingByPath[path]
+          const playMetricByPath = { ...state.playMetricByPath }
+          delete playMetricByPath[path]
           const tab = state.tab.path === path
             ? { ...state.tab, path: "", isScrolling: false }
             : state.tab
@@ -583,7 +605,7 @@ export const useKlankStore = create<KlankState>()(
           })
           if (playlistsChanged) persistPlaylists(state, playlists)
 
-          return { ...state, tab, tabSettingByPath, playlists, activePlaylistIndex }
+          return { ...state, tab, tabSettingByPath, playMetricByPath, playlists, activePlaylistIndex }
         }),
       }),
       {
@@ -619,6 +641,8 @@ export const useKlankStore = create<KlankState>()(
           instrument: state.instrument,
           harmony: state.harmony,
           customTunings: state.customTunings,
+          playMetricByPath: state.playMetricByPath,
+          songSort: state.songSort,
         }),
       }
     )

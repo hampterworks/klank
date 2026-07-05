@@ -88,6 +88,9 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
   }, [])
   const currentTabPath = useKlankStore().tab.path
   const setTabPath = useKlankStore().setTabPath
+  const songSort = useKlankStore().songSort
+  const toggleSongSort = useKlankStore().toggleSongSort
+  const playMetricByPath = useKlankStore().playMetricByPath
   const baseDirectory = useKlankStore().baseDirectory
   const fileService = useKlankStore().fileService
   const activePlaylistId = useKlankStore().activePlaylistId
@@ -480,6 +483,8 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
                 currentTabPath={currentTabPath}
                 setTabPath={handleSelectSong}
                 searchFilter={searchFilter}
+                songSort={songSort}
+                playMetricByPath={playMetricByPath}
                 tree={tree}
                 onAddToPlaylist={activePlaylist ? (path) => addTabToPlaylist(activePlaylist.id, path) : undefined}
                 activePlaylistPaths={activePlaylist?.paths}
@@ -494,6 +499,8 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
           isMenuExtended={isMenuExtended}
           searchFilter={searchFilter}
           setSearchFilter={setSearchFilter}
+          songSort={songSort}
+          onToggleSort={toggleSongSort}
         />
       </ul>
       {createPlaylistModal}
@@ -564,6 +571,8 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
                   currentTabPath={currentTabPath}
                   setTabPath={handleSelectSong}
                   searchFilter={searchFilter}
+                  songSort={songSort}
+                  playMetricByPath={playMetricByPath}
                   tree={tree}
                   onAddToPlaylist={activePlaylist ? (path) => addTabToPlaylist(activePlaylist.id, path) : undefined}
                   activePlaylistPaths={activePlaylist?.paths}
@@ -579,6 +588,8 @@ export const Menu: React.FC<MenuProps> = ({ tree, setNeedsUpdate, ...props }) =>
                 isMenuExtended={isMenuExtended}
                 searchFilter={searchFilter}
                 setSearchFilter={setSearchFilter}
+                songSort={songSort}
+                onToggleSort={toggleSongSort}
               />
             </div>
           </div>

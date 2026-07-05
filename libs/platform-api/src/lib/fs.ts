@@ -44,6 +44,16 @@ export type PerTabSettings = {
 }
 
 /**
+ * Per-song play tracking, keyed by absolute file path.
+ * `playCount` is the number of completed play-throughs; `lastPlayedAt` is an
+ * epoch-millisecond timestamp of the most recent play.
+ */
+export type PlayMetric = {
+  playCount: number
+  lastPlayedAt: number
+}
+
+/**
  * A named, ordered collection of tab files.
  * Persisted under the reserved `"playlists"` key in `.klank-settings.json`;
  * paths are stored relative to the base directory in the file, but the
