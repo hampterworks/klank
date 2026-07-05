@@ -36,8 +36,11 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
   const setActivePlaylist = useKlankStore().setActivePlaylist
   const isCollapsed = useKlankStore().ui.isPlaylistSectionCollapsed
   const setPlaylistSectionCollapsed = useKlankStore().setPlaylistSectionCollapsed
+  // Persisted in the store (ui slice) so the open playlist survives main-menu
+  // toggles (which unmount this component) and app reloads.
+  const expandedId = useKlankStore().ui.expandedPlaylistId
+  const setExpandedId = useKlankStore().setExpandedPlaylistId
 
-  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [contextMenuId, setContextMenuId] = useState<string | null>(null)
   const [contextMenuPos, setContextMenuPos] = useState<{ top: number; right: number } | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -45,7 +48,12 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
   const editInputRef = useRef<HTMLInputElement>(null)
-  const prevLengthRef = useRef(playlists.length)
+  // When the component mounted. A playlist whose createdAt is newer than this
+  // was created by the user during this session; older ones came from disk.
+  const mountTimeRef = useRef(Date.now())
+  // Last playlist id we auto-expanded, so a genuine create expands exactly once
+  // and later edits to that playlist don't re-open a section the user collapsed.
+  const handledCreateRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (editingId && editInputRef.current) {
@@ -61,15 +69,21 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
     return () => window.removeEventListener('click', close)
   }, [contextMenuId])
 
+  // Auto-expand the section and song list only for a playlist the user just
+  // created — never for the async bulk-load from disk, which would otherwise
+  // clobber the persisted collapsed state on every launch. `createdAt` newer
+  // than mount marks a genuine create; hydrated playlists carry old timestamps.
   useEffect(() => {
-    if (playlists.length > prevLengthRef.current) {
-      const newest = [...playlists].sort((a, b) => b.createdAt - a.createdAt)[0]
-      if (newest) {
-        setPlaylistSectionCollapsed(false)
-        setExpandedId(newest.id)
-      }
+    const newest = [...playlists].sort((a, b) => b.createdAt - a.createdAt)[0]
+    if (
+      newest &&
+      newest.createdAt > mountTimeRef.current &&
+      newest.id !== handledCreateRef.current
+    ) {
+      handledCreateRef.current = newest.id
+      setPlaylistSectionCollapsed(false)
+      setExpandedId(newest.id)
     }
-    prevLengthRef.current = playlists.length
   }, [playlists, setPlaylistSectionCollapsed])
 
   const handleRenameCommit = (id: string) => {
@@ -209,7 +223,7 @@ export const PlaylistSection: React.FC<PlaylistSectionProps> = ({ currentTabPath
                   ) : (
                     <button
                       className={styles.nameButton}
-                      onClick={() => setExpandedId((v) => (v === playlist.id ? null : playlist.id))}
+                      onClick={() => setExpandedId(expandedId === playlist.id ? null : playlist.id)}
                     >
                       {playlist.name}
                     </button>

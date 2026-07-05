@@ -249,6 +249,8 @@ export const Sheet: React.FC<SheetProps> = ({
   const containerRef = useRef<HTMLPreElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
+  const scrollTrackRef = useRef<HTMLDivElement>(null)
+  const scrollThumbRef = useRef<HTMLDivElement>(null)
   const virtualY = useRef(0)
   const measureRef = useRef<HTMLSpanElement>(null)
   // How many monospace characters fit across the sheet, used to reflow tab.
@@ -474,6 +476,22 @@ export const Sheet: React.FC<SheetProps> = ({
     container.style.overflowY = 'hidden'
     content.style.transform = `translateY(-${virtualY.current}px)`
 
+    // Position the read-only scroll indicator from the current virtual offset.
+    // Only relevant during autoscroll, when the native scrollbar is hidden.
+    const updateThumb = () => {
+      const track = scrollTrackRef.current
+      const thumb = scrollThumbRef.current
+      if (!track || !thumb) return
+      const maxScroll = getMaxScroll()
+      const trackH = track.clientHeight
+      const ratio = container.clientHeight / container.scrollHeight
+      const thumbH = Math.max(24, trackH * ratio)
+      thumb.style.height = `${thumbH}px`
+      const frac = maxScroll > 0 ? virtualY.current / maxScroll : 0
+      thumb.style.transform = `translateY(${frac * (trackH - thumbH)}px)`
+    }
+    updateThumb()
+
     const THROTTLE_MS = 1000 / 15 // ~15/sec
 
     const onWheel = (e: WheelEvent) => {
@@ -519,6 +537,7 @@ export const Sheet: React.FC<SheetProps> = ({
       )
 
       content.style.transform = `translateY(-${virtualY.current}px)`
+      updateThumb()
 
       // Report scroll fraction to host callback (throttled to ~15/sec).
       if (onScrollFraction) {
@@ -630,6 +649,11 @@ export const Sheet: React.FC<SheetProps> = ({
         {renderedLines}
         <div ref={sentinelRef}>&nbsp;</div>
       </div>
+      {isScrolling && scrollFraction === undefined && (
+        <div ref={scrollTrackRef} className={styles.scrollIndicator} aria-hidden>
+          <div ref={scrollThumbRef} className={styles.scrollThumb} />
+        </div>
+      )}
     </pre>
   )
 }
