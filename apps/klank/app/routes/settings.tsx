@@ -62,6 +62,7 @@ export function SettingsPanel() {
   const fileService = useKlankStore().fileService
   const setTabSettings = useKlankStore().setTabSettings
   const setPlaylists = useKlankStore().setPlaylists
+  const setPlayMetrics = useKlankStore().setPlayMetrics
   const syncSettings = useKlankStore().syncSettings
   const setSyncSettings = useKlankStore().setSyncSettings
   const syncStatus = useKlankStore().syncStatus
@@ -183,12 +184,14 @@ export function SettingsPanel() {
 
   const rehydrate = async (dir: string) => {
     if (!fileService) return
-    const [settings, playlists] = await Promise.all([
+    const [settings, playlists, playMetrics] = await Promise.all([
       fileService.readTabSettings(dir),
       fileService.readPlaylists(dir),
+      fileService.readPlayMetrics(dir),
     ])
     setTabSettings(settings)
     setPlaylists(playlists)
+    setPlayMetrics(playMetrics)
   }
 
   useEffect(() => {

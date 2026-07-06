@@ -55,12 +55,13 @@ describe('runGitSync', () => {
     expect(useKlankStore.getState().syncStatus.message).toBe('No repository')
   })
 
-  it('re-hydrates settings + playlists and fires onChanged when the tree changed', async () => {
+  it('re-hydrates settings + playlists + play metrics and fires onChanged when the tree changed', async () => {
     const readTabSettings = vi
       .fn()
       .mockResolvedValue({ '/tabs/a.tab.txt': { fontSize: 1, transpose: 0, scrollSpeed: 1 } })
     const readPlaylists = vi.fn().mockResolvedValue([])
-    const fileService = { readTabSettings, readPlaylists } as unknown as FileService
+    const readPlayMetrics = vi.fn().mockResolvedValue({ '/tabs/a.tab.txt': { playCount: 2, lastPlayedAt: 5 } })
+    const fileService = { readTabSettings, readPlaylists, readPlayMetrics } as unknown as FileService
     const onChanged = vi.fn()
 
     await runGitSync(
@@ -72,6 +73,8 @@ describe('runGitSync', () => {
 
     expect(readTabSettings).toHaveBeenCalledWith(baseDir)
     expect(readPlaylists).toHaveBeenCalledWith(baseDir)
+    expect(readPlayMetrics).toHaveBeenCalledWith(baseDir)
+    expect(useKlankStore.getState().playMetricByPath).toEqual({ '/tabs/a.tab.txt': { playCount: 2, lastPlayedAt: 5 } })
     expect(onChanged).toHaveBeenCalledOnce()
     expect(useKlankStore.getState().syncStatus.state).toBe('idle')
     expect(useKlankStore.getState().syncStatus.lastSyncedAt).not.toBeNull()

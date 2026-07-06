@@ -158,10 +158,12 @@ type KlankState = {
   setExpandedPlaylistId: (id: string | null) => void
   /** Per-file saved settings keyed by full file path. Loaded from and written to tab-settings.json. */
   tabSettingByPath: Record<string, PerTabSettings>
-  /** @persisted Per-song play tracking (count + last-played) keyed by full file path. */
+  /** Per-song play tracking (count + last-played) keyed by full file path. Persisted to `.klank-settings.json`. */
   playMetricByPath: Record<string, PlayMetric>
   /** Records a completed play of the currently open tab: bumps count, stamps last-played. */
   markPlayed: () => void
+  /** Replaces all play metrics — used to hydrate from `.klank-settings.json` at startup. Does not write back. */
+  setPlayMetrics: (playMetricByPath: Record<string, PlayMetric>) => void
   setBaseDirectory: (directory: string) => void
   setFileService: (service: FileService) => void
   setMode: (mode: Mode) => void
@@ -246,7 +248,7 @@ export type ScrollSpeeds = typeof SCROLL_SPEEDS[number]
 /** The slice of KlankState saved to localStorage — must match what `partialize` returns. */
 type PersistedKlankState = Pick<
   KlankState,
-  'tab' | 'theme' | 'ui' | 'baseDirectory' | 'activePlaylistId' | 'activePlaylistIndex' | 'syncSettings' | 'instrument' | 'harmony' | 'customTunings' | 'playMetricByPath' | 'songSort'
+  'tab' | 'theme' | 'ui' | 'baseDirectory' | 'activePlaylistId' | 'activePlaylistIndex' | 'syncSettings' | 'instrument' | 'harmony' | 'customTunings' | 'songSort'
 >
 
 /** Fire-and-forget write of all playlists to `.klank-settings.json`. No-op until a directory and FileService are set. */
@@ -256,6 +258,17 @@ const persistPlaylists = (
 ) => {
   if (state.baseDirectory) {
     state.fileService?.writePlaylists(playlists, state.baseDirectory)
+    notifyTabsChanged()
+  }
+}
+
+/** Fire-and-forget write of all play metrics to `.klank-settings.json`. No-op until a directory and FileService are set. */
+const persistPlayMetrics = (
+  state: Pick<KlankState, 'fileService' | 'baseDirectory'>,
+  playMetricByPath: Record<string, PlayMetric>,
+) => {
+  if (state.baseDirectory) {
+    state.fileService?.writePlayMetrics(playMetricByPath, state.baseDirectory)
     notifyTabsChanged()
   }
 }
@@ -441,8 +454,11 @@ export const useKlankStore = create<KlankState>()(
             playCount: (prev?.playCount ?? 0) + 1,
             lastPlayedAt: Date.now(),
           }
-          return { ...state, playMetricByPath: { ...state.playMetricByPath, [path]: entry } }
+          const playMetricByPath = { ...state.playMetricByPath, [path]: entry }
+          persistPlayMetrics(state, playMetricByPath)
+          return { ...state, playMetricByPath }
         }),
+        setPlayMetrics: (playMetricByPath) => set((state) => ({ ...state, playMetricByPath })),
         setTabDetails: (details) => set((state) => ({...state,tab: {...state.tab, details}})),
         setTabLink: (link) => set( state => ({...state, tab: {...state.tab, link}})),
         setServerMode: (serverMode) => set((state) => ({...state, serverMode})),
@@ -582,7 +598,9 @@ export const useKlankStore = create<KlankState>()(
           const tabSettingByPath = { ...state.tabSettingByPath }
           delete tabSettingByPath[path]
           const playMetricByPath = { ...state.playMetricByPath }
+          const metricRemoved = path in playMetricByPath
           delete playMetricByPath[path]
+          if (metricRemoved) persistPlayMetrics(state, playMetricByPath)
           const tab = state.tab.path === path
             ? { ...state.tab, path: "", isScrolling: false }
             : state.tab
@@ -610,7 +628,7 @@ export const useKlankStore = create<KlankState>()(
       }),
       {
         name: 'klank-storage',
-        version: 6,
+        version: 7,
         // v0 persisted playlists in localStorage; they now live in
         // .klank-settings.json, so stale localStorage copies are dropped.
         // v2 adds syncSettings; defaults fill in for older persisted state.
@@ -618,9 +636,12 @@ export const useKlankStore = create<KlankState>()(
         // v4 adds customTunings; older persisted state gets customTunings: [].
         // v5 adds ui.isPlaylistSectionCollapsed; defaults fill in for older ui blobs.
         // v6 adds ui.expandedPlaylistId; defaults fill in for older ui blobs.
+        // v7 moves playMetricByPath to .klank-settings.json, like playlists;
+        // stale localStorage copies are dropped and re-hydrated from the file.
         migrate: (persistedState) => {
           const state = { ...((persistedState ?? {}) as Record<string, unknown>) }
           delete state['playlists']
+          delete state['playMetricByPath']
           return {
             ...state,
             ui: { isMenuExtended: true, menuWidth: 400, isPlaylistSectionCollapsed: false, expandedPlaylistId: null, ...(state.ui as Partial<Ui> | undefined) },
@@ -641,7 +662,6 @@ export const useKlankStore = create<KlankState>()(
           instrument: state.instrument,
           harmony: state.harmony,
           customTunings: state.customTunings,
-          playMetricByPath: state.playMetricByPath,
           songSort: state.songSort,
         }),
       }

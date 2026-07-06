@@ -53,8 +53,10 @@ describe('klank-storage migration and shape', () => {
     const raw = localStorageData['klank-storage']
     expect(raw).toBeDefined()
     const parsed = JSON.parse(raw) as { version: number; state: Record<string, unknown> }
-    expect(parsed.version).toBe(6)
+    expect(parsed.version).toBe(7)
     expect(parsed.state).not.toHaveProperty('playlists')
+    // Play metrics now live in .klank-settings.json — never in localStorage.
+    expect(parsed.state).not.toHaveProperty('playMetricByPath')
     expect(parsed.state).toHaveProperty('activePlaylistId')
     expect(parsed.state).toHaveProperty('activePlaylistIndex')
     // Sync cadence is persisted so it survives reloads.
