@@ -32,6 +32,7 @@ export function App() {
   const setFileService = useKlankStore().setFileService
   const setTabSettings = useKlankStore().setTabSettings
   const setPlaylists = useKlankStore().setPlaylists
+  const setPlayMetrics = useKlankStore().setPlayMetrics
   const [tree, setTree] = useState<FileEntry[]>()
   const [needsUpdate, setNeedsUpdate] = useState(false)
   const containerRef = useRef<HTMLElement>(null)
@@ -76,6 +77,10 @@ export function App() {
         if (cancelled) return
         setPlaylists(savedPlaylists)
 
+        const savedPlayMetrics = await fileService.readPlayMetrics(dir)
+        if (cancelled) return
+        setPlayMetrics(savedPlayMetrics)
+
         const data = await fileService.readDirectoryRecursively(
           dir,
           file => file.isDirectory || file.name.endsWith('.tab.txt')
@@ -90,7 +95,7 @@ export function App() {
 
     initializeApp()
     return () => { cancelled = true }
-  }, [baseDirectory, serverMode, setBaseDirectory, setFileService, setTabSettings, setPlaylists])
+  }, [baseDirectory, serverMode, setBaseDirectory, setFileService, setTabSettings, setPlaylists, setPlayMetrics])
 
   // Keep a ref so the ResizeObserver callback always reads the latest value
   // without needing isMenuExtended in the effect's dependency array.
