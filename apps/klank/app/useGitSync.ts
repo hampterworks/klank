@@ -19,7 +19,7 @@ export async function runGitSync(
   fileService: FileService | undefined,
   onChanged?: () => void,
 ): Promise<void> {
-  const { setSyncStatus, setTabSettings, setPlaylists } = useKlankStore.getState()
+  const { setSyncStatus, setTabSettings, setPlaylists, setPlayMetrics } = useKlankStore.getState()
   try {
     const [isRepo, authed] = await Promise.all([git.isGitRepo(baseDirectory), git.isAuthenticated()])
     if (!isRepo || !authed) {
@@ -42,12 +42,14 @@ export async function runGitSync(
     }
     setSyncStatus({ state: 'idle', lastSyncedAt: Date.now(), message: result.message, kind: undefined })
     if (result.changed && fileService) {
-      const [settings, playlists] = await Promise.all([
+      const [settings, playlists, playMetrics] = await Promise.all([
         fileService.readTabSettings(baseDirectory),
         fileService.readPlaylists(baseDirectory),
+        fileService.readPlayMetrics(baseDirectory),
       ])
       setTabSettings(settings)
       setPlaylists(playlists)
+      setPlayMetrics(playMetrics)
       onChanged?.()
     }
   } catch (e) {

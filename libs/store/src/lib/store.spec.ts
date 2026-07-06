@@ -13,7 +13,7 @@ vi.stubGlobal('localStorage', {
   key: vi.fn(() => null),
 })
 
-import type { FileService } from '@klank/platform-api'
+import type { FileService, PlayMetric } from '@klank/platform-api'
 import { notifyTabsChanged, onTabsChanged, useKlankStore, type CustomTuning, type Playlist } from './store.js'
 
 const makePlaylist = (overrides: Partial<Playlist> = {}): Playlist => ({
@@ -740,6 +740,67 @@ describe('markPlayed', () => {
     const metrics = useKlankStore.getState().playMetricByPath
     expect(metrics['/tabs/Fuel - Shimmer.tab.txt'].playCount).toBe(1)
     expect(metrics['/tabs/Foo - Bar.tab.txt'].playCount).toBe(1)
+  })
+})
+
+describe('play-metric write-through to the settings file', () => {
+  const baseDirectory = '/tabs'
+  const path = '/tabs/Fuel - Shimmer.tab.txt'
+  let writePlayMetrics: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    writePlayMetrics = vi.fn()
+    useKlankStore.setState({
+      baseDirectory,
+      fileService: { writePlayMetrics } as unknown as FileService,
+      tab: { ...useKlankStore.getState().tab, path },
+      playMetricByPath: {},
+    })
+  })
+
+  afterEach(() => {
+    useKlankStore.setState({ baseDirectory: undefined, fileService: undefined, playMetricByPath: {} })
+  })
+
+  it('markPlayed writes the updated metric map and base directory', () => {
+    useKlankStore.getState().markPlayed()
+
+    expect(writePlayMetrics).toHaveBeenCalledTimes(1)
+    const [metrics, dir] = writePlayMetrics.mock.calls[0] as [Record<string, PlayMetric>, string]
+    expect(dir).toBe(baseDirectory)
+    expect(metrics).toEqual(useKlankStore.getState().playMetricByPath)
+    expect(metrics[path].playCount).toBe(1)
+  })
+
+  it('deleteTab writes through only when the path had a metric', () => {
+    useKlankStore.setState({ playMetricByPath: { [path]: { playCount: 2, lastPlayedAt: 1 } } })
+
+    useKlankStore.getState().deleteTab('/tabs/Never - Played.tab.txt')
+    expect(writePlayMetrics).not.toHaveBeenCalled()
+
+    useKlankStore.getState().deleteTab(path)
+    expect(writePlayMetrics).toHaveBeenCalledTimes(1)
+    const [metrics] = writePlayMetrics.mock.calls[0] as [Record<string, PlayMetric>]
+    expect(metrics).toEqual({})
+  })
+
+  it('does not write when no base directory is set', () => {
+    useKlankStore.setState({ baseDirectory: undefined })
+
+    useKlankStore.getState().markPlayed()
+
+    expect(writePlayMetrics).not.toHaveBeenCalled()
+  })
+})
+
+describe('setPlayMetrics', () => {
+  it('replaces the play-metric map wholesale', () => {
+    useKlankStore.setState({ playMetricByPath: { '/tabs/Old.tab.txt': { playCount: 5, lastPlayedAt: 1 } } })
+
+    const next = { '/tabs/New.tab.txt': { playCount: 1, lastPlayedAt: 2 } }
+    useKlankStore.getState().setPlayMetrics(next)
+
+    expect(useKlankStore.getState().playMetricByPath).toEqual(next)
   })
 })
 

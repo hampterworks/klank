@@ -428,6 +428,137 @@ describe('tab-setting writes preserve playlists', () => {
   })
 })
 
+// ── Play metrics in .klank-settings.json ──────────────────────────────────────
+
+describe('readPlayMetrics', () => {
+  const baseDirectory = '/tabs'
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns an empty object when the settings file does not exist', async () => {
+    // Given: .klank-settings.json is missing
+    // When: readPlayMetrics is called
+    // Then: an empty object is returned without throwing
+    readTextFile.mockRejectedValue(new Error('No such file'))
+
+    const service = await getService()
+    await expect(service.readPlayMetrics(baseDirectory)).resolves.toEqual({})
+  })
+
+  it('returns an empty object when the file has no playMetrics key', async () => {
+    // Given: the file only contains per-tab entries
+    // When: readPlayMetrics is called
+    // Then: an empty object is returned
+    readTextFile.mockResolvedValue(JSON.stringify({
+      'Artist - Song.tab.txt': { fontSize: 14, transpose: 2, scrollSpeed: 3 },
+    }))
+
+    const service = await getService()
+    await expect(service.readPlayMetrics(baseDirectory)).resolves.toEqual({})
+  })
+
+  it('converts stored relative keys to absolute paths', async () => {
+    // Given: stored metrics keyed by forward-slash relative paths
+    // When: readPlayMetrics is called
+    // Then: keys are returned as absolute paths under baseDirectory
+    readTextFile.mockResolvedValue(JSON.stringify({
+      'Artist - Song.tab.txt': { fontSize: 14, transpose: 2, scrollSpeed: 3 },
+      playMetrics: {
+        'Artist - Song.tab.txt': { playCount: 3, lastPlayedAt: 1718000000000 },
+        'Sub/Other - Tune.tab.txt': { playCount: 1, lastPlayedAt: 1718000000001 },
+      },
+    }))
+
+    const service = await getService()
+    const metrics = await service.readPlayMetrics(baseDirectory)
+
+    expect(metrics).toEqual({
+      '/tabs/Artist - Song.tab.txt': { playCount: 3, lastPlayedAt: 1718000000000 },
+      '/tabs/Sub/Other - Tune.tab.txt': { playCount: 1, lastPlayedAt: 1718000000001 },
+    })
+  })
+})
+
+describe('writePlayMetrics', () => {
+  const baseDirectory = '/tabs'
+  const settingsPath = '/tabs/.klank-settings.json'
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('stores metrics under the reserved key with relative keys, preserving tab entries and playlists', async () => {
+    // Given: the file already contains per-tab entries and playlists
+    // When: writePlayMetrics is called with absolute-path keys
+    // Then: tab entries and playlists survive and metric keys are stored relative
+    const existing = {
+      'Artist - Song.tab.txt': { fontSize: 14, transpose: 2, scrollSpeed: 3 },
+      playlists: [makeStoredPlaylist()],
+    }
+    readTextFile.mockResolvedValue(JSON.stringify(existing))
+    writeTextFile.mockResolvedValue(undefined)
+
+    const service = await getService()
+    await service.writePlayMetrics(
+      { '/tabs/Sub/Other - Tune.tab.txt': { playCount: 2, lastPlayedAt: 5 } },
+      baseDirectory
+    )
+
+    expect(writeTextFile).toHaveBeenCalledTimes(1)
+    const [writtenPath, writtenContent] = writeTextFile.mock.calls[0] as [string, string]
+    expect(writtenPath).toBe(settingsPath)
+    const written = JSON.parse(writtenContent) as Record<string, unknown>
+    expect(written['Artist - Song.tab.txt']).toEqual(existing['Artist - Song.tab.txt'])
+    expect(written['playlists']).toEqual(existing.playlists)
+    expect(written['playMetrics']).toEqual({
+      'Sub/Other - Tune.tab.txt': { playCount: 2, lastPlayedAt: 5 },
+    })
+  })
+
+  it('replaces previously stored metrics instead of merging', async () => {
+    // Given: the file already contains a different metric
+    // When: writePlayMetrics is called with a new map
+    // Then: only the new map remains under the playMetrics key
+    readTextFile.mockResolvedValue(JSON.stringify({
+      playMetrics: { 'Old - Song.tab.txt': { playCount: 9, lastPlayedAt: 1 } },
+    }))
+    writeTextFile.mockResolvedValue(undefined)
+
+    const service = await getService()
+    await service.writePlayMetrics({ '/tabs/New - Song.tab.txt': { playCount: 1, lastPlayedAt: 2 } }, baseDirectory)
+
+    const [, writtenContent] = writeTextFile.mock.calls[0] as [string, string]
+    const written = JSON.parse(writtenContent) as { playMetrics: Record<string, unknown> }
+    expect(written.playMetrics).toEqual({ 'New - Song.tab.txt': { playCount: 1, lastPlayedAt: 2 } })
+  })
+})
+
+describe('readTabSettings skips the reserved playMetrics key', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    exists.mockResolvedValue(false) // no legacy .klankrc.json
+  })
+
+  it('returns only tab entries when playMetrics is present', async () => {
+    // Given: the file contains both tab entries and play metrics
+    // When: readTabSettings is called
+    // Then: only tab entries are returned, keyed by absolute path
+    readTextFile.mockResolvedValue(JSON.stringify({
+      'Artist - Song.tab.txt': { fontSize: 14, transpose: 2, scrollSpeed: 3 },
+      playMetrics: { 'Artist - Song.tab.txt': { playCount: 3, lastPlayedAt: 1 } },
+    }))
+
+    const service = await getService()
+    const settings = await service.readTabSettings('/tabs')
+
+    expect(settings).toEqual({
+      '/tabs/Artist - Song.tab.txt': { fontSize: 14, transpose: 2, scrollSpeed: 3 },
+    })
+  })
+})
+
 describe('readDirectoryRecursively', () => {
   const readDir = pluginFs.readDir as Mock
   const tabFilter = (f: { isDirectory: boolean; name: string }) =>

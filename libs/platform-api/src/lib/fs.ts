@@ -133,6 +133,20 @@ export type FileService = {
    * (forward-slash separated, portable).
    */
   writePlaylists: (playlists: Playlist[], baseDirectory: string) => Promise<void>
+  /**
+   * Reads the per-song play metrics stored under the reserved `"playMetrics"`
+   * key in `.klank-settings.json` in `baseDirectory`. Keys in the returned map
+   * are absolute paths. Returns an empty object when the file or the key does
+   * not exist.
+   */
+  readPlayMetrics: (baseDirectory: string) => Promise<Record<string, PlayMetric>>
+  /**
+   * Persists all play metrics under the reserved `"playMetrics"` key in
+   * `.klank-settings.json` in `baseDirectory`, leaving per-tab entries and
+   * playlists untouched. Keys are stored relative to `baseDirectory`
+   * (forward-slash separated, portable).
+   */
+  writePlayMetrics: (playMetricByPath: Record<string, PlayMetric>, baseDirectory: string) => Promise<void>
 }
 
 /**
@@ -169,9 +183,13 @@ export const mapTreeStructure = (
 
 const SETTINGS_FILE = '.klank-settings.json'
 const LEGACY_RC_FILE = '.klankrc.json'
-// Reserved top-level key in .klank-settings.json. Cannot collide with tab
+// Reserved top-level keys in .klank-settings.json. Cannot collide with tab
 // entries because tab keys always end in `.tab.txt`.
 const PLAYLISTS_KEY = 'playlists'
+const PLAY_METRICS_KEY = 'playMetrics'
+// Every reserved key must be skipped when reading per-tab settings, otherwise
+// its non-PerTabSettings value would be mapped as if it were a tab entry.
+const RESERVED_KEYS = new Set<string>([PLAYLISTS_KEY, PLAY_METRICS_KEY])
 
 type LegacyKlankEntry = {
   fontSize: number
@@ -382,11 +400,11 @@ const createTauriFileService = async (): Promise<FileService> => {
 
         const content = await readTextFile(settingsPath)
         const raw = JSON.parse(content) as Record<string, PerTabSettings>
-        // Convert relative keys back to absolute paths, skipping the reserved
-        // playlists key (read via readPlaylists instead)
+        // Convert relative keys back to absolute paths, skipping reserved keys
+        // (playlists and playMetrics are read via their own methods instead)
         return Object.fromEntries(
           Object.entries(raw)
-            .filter(([rel]) => rel !== PLAYLISTS_KEY)
+            .filter(([rel]) => !RESERVED_KEYS.has(rel))
             .map(([rel, val]) => [toAbsPath(rel, baseDirectory), val])
         )
       } catch {
@@ -461,6 +479,50 @@ const createTauriFileService = async (): Promise<FileService> => {
         await writeTextFile(settingsPath, JSON.stringify(sorted, null, 2))
       } catch (error) {
         console.error('Failed to write playlists:', error)
+      }
+      })
+    },
+
+    async readPlayMetrics(baseDirectory) {
+      try {
+        const settingsPath = await join(baseDirectory, SETTINGS_FILE)
+        const content = await readTextFile(settingsPath)
+        const raw = JSON.parse(content) as Record<string, unknown>
+        const stored = raw[PLAY_METRICS_KEY]
+        if (stored === null || typeof stored !== 'object' || Array.isArray(stored)) return {}
+        return Object.fromEntries(
+          Object.entries(stored as Record<string, PlayMetric>)
+            .map(([rel, val]) => [toAbsPath(rel, baseDirectory), val])
+        )
+      } catch {
+        return {}
+      }
+    },
+
+    writePlayMetrics(playMetricByPath, baseDirectory) {
+      return withSettingsLock(async () => {
+      try {
+        const settingsPath = await join(baseDirectory, SETTINGS_FILE)
+        // Read current file, replace the playMetrics key, sort keys, write back
+        let current: Record<string, unknown> = {}
+        try {
+          const content = await readTextFile(settingsPath)
+          current = JSON.parse(content) as Record<string, unknown>
+        } catch { /* file doesn't exist yet */ }
+
+        const metrics = Object.fromEntries(
+          Object.entries(playMetricByPath)
+            .map(([abs, val]): [string, PlayMetric] => [toRelativeKey(abs, baseDirectory), val])
+            .sort(([a], [b]) => a.localeCompare(b))
+        )
+        current[PLAY_METRICS_KEY] = metrics
+
+        const sorted = Object.fromEntries(
+          Object.entries(current).sort(([a], [b]) => a.localeCompare(b))
+        )
+        await writeTextFile(settingsPath, JSON.stringify(sorted, null, 2))
+      } catch (error) {
+        console.error('Failed to write play metrics:', error)
       }
       })
     },
