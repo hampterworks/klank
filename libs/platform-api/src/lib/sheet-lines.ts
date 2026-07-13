@@ -84,7 +84,8 @@ export const classifySheetLine = (line: string, transpose: number): SheetLine =>
   const sanitizedTokens = tokens.filter((token) => !testSpaces(token))
 
   const hasValidChords = tokens.some((token) => testChords(token) || token === 'e')
-  const isMixedContent = hasValidChords && testTokenContext(sanitizedTokens)
+  const hasWideGaps = /\S\s{2,}\S/.test(line)
+  const isMixedContent = hasValidChords && testTokenContext(sanitizedTokens, hasWideGaps)
 
   if (hasValidChords && !isMixedContent) {
     const isTablature = isTablatureLine(line)

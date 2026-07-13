@@ -248,6 +248,14 @@ describe('testTokenContext', () => {
     expect(testTokenContext(['Am', 'C', 'hello'])).toBe(false)
   })
 
+  it('breaks a chord/word tie toward chord line only when the layout is column-aligned', () => {
+    // Given a 1:1 tie between a chord and a word (e.g. `C7        Riff`)
+    // When hasWideGaps signals column-aligned layout
+    // Then it returns false (chord line); without the signal the tie stays mixed
+    expect(testTokenContext(['C7', 'Riff'], true)).toBe(false)
+    expect(testTokenContext(['C7', 'Riff'])).toBe(true)
+  })
+
   it('returns false when second token is | (tablature line detection)', () => {
     // Given a token array where tokens[1] === '|'
     // When testTokenContext is called
