@@ -65,6 +65,8 @@ pnpm tauri:dev
 
 > **Windows prerequisites**: The NSIS and MSI bundlers require [NSIS](https://nsis.sourceforge.io/) and the [WiX Toolset](https://wixtoolset.org/) to be installed and available on `PATH`. Tauri will prompt with install instructions if they are missing.
 >
+> **Updater signing**: `createUpdaterArtifacts` is enabled, so desktop release builds require the updater signing key in `TAURI_SIGNING_PRIVATE_KEY` (and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`). CI provides them from repository secrets; for a local bundle, export them or temporarily set `bundle.createUpdaterArtifacts` to `false` in `tauri.conf.json`.
+>
 > Output artifacts land in `apps/klank/src-tauri/target/release/bundle/`.
 
 For monorepo structure, lib boundaries, naming conventions, and code-style constraints, see `AGENTS.md`.

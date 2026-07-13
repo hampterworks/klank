@@ -87,8 +87,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # createUpdaterArtifacts in tauri.conf.json requires the signing key even
+      # for PR builds (the bundler signs the NSIS installer unconditionally).
       - name: Build Windows installers
         run: pnpm tauri:build:windows
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Publish rolling prerelease
         id: release

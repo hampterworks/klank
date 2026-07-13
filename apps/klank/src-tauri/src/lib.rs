@@ -28,6 +28,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_ug_scraper::init())
         .plugin(tauri_plugin_multicast_lock::init())
         .manage(jam::JamState::default());
@@ -37,6 +38,8 @@ pub fn run() {
     // commands are libgit2-based and run on every platform.
     #[cfg(desktop)]
     let builder = builder
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(import::desktop::UgWebviewState::default())
         .invoke_handler(tauri::generate_handler![
             scrape_ug,
