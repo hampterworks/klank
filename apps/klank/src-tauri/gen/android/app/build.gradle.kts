@@ -13,6 +13,17 @@ val tauriProperties = Properties().apply {
     }
 }
 
+// Release signing. Populated from a gitignored keystore.properties (local dev)
+// or written by CI from the KEYSTORE_* secrets before the build runs. Absent
+// either way, release builds fall back to unsigned (installable only via
+// `adb install -r` with signature checks disabled, not a real distribution).
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+
 android {
     compileSdk = 36
     namespace = "io.github.hampterworks.klank"
@@ -23,6 +34,24 @@ android {
         targetSdk = 36
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
+    }
+    signingConfigs {
+        val keyAlias = keystoreProperties.getProperty("keyAlias")
+        val keyPassword = keystoreProperties.getProperty("keyPassword")
+        val storeFile = keystoreProperties.getProperty("storeFile")
+        val storePassword = keystoreProperties.getProperty("storePassword")
+        if (!keyAlias.isNullOrEmpty() && !keyPassword.isNullOrEmpty() &&
+            !storeFile.isNullOrEmpty() && !storePassword.isNullOrEmpty()
+        ) {
+            create("release") {
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+                this.storeFile = file(storeFile)
+                this.storePassword = storePassword
+            }
+        } else {
+            println("Warning: no keystore.properties found. Release APK will be unsigned.")
+        }
     }
     buildTypes {
         getByName("debug") {
@@ -47,6 +76,9 @@ android {
                     .plus(getDefaultProguardFile("proguard-android-optimize.txt"))
                     .toList().toTypedArray()
             )
+            if (signingConfigs.findByName("release") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     kotlinOptions {

@@ -108,8 +108,9 @@ jobs:
           if-no-files-found: error
 
   # -----------------------------------------------------------------------
-  # Android APK (arm64-v8a only, unsigned). Cross-compiling for Android needs
-  # the Linux NDK toolchain, so this runs on Ubuntu in parallel with Windows.
+  # Android APK (arm64-v8a only), signed with the KEYSTORE_* secrets.
+  # Cross-compiling for Android needs the Linux NDK toolchain, so this runs on
+  # Ubuntu in parallel with Windows.
   # -----------------------------------------------------------------------
   android:
     name: Android APK (arm64)
@@ -178,6 +179,22 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # Decode the release signing keystore and write the properties file that
+      # gen/android/app/build.gradle.kts reads its signingConfig from. Without
+      # this the release build type has no signingConfig and produces an
+      # unsigned APK that can't be installed on a device.
+      - name: Create keystore from secret
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > apps/klank/src-tauri/my-release-key.keystore
+
+      - name: Create keystore.properties
+        run: |
+          cat > apps/klank/src-tauri/gen/android/keystore.properties << EOF
+          storeFile=../../../my-release-key.keystore
+          keyAlias=${{ secrets.KEYSTORE_KEY_ALIAS || 'my-app' }}
+          storePassword=${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          keyPassword=${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          EOF
 
       # --target aarch64 builds only the arm64 product flavor, emitting a single
       # arm64-v8a APK instead of the all-ABI universal one.
