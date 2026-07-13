@@ -2,3 +2,7 @@
 # will have compiled files and executables
 /target/
 /gen/schemas
+
+# Release signing keystore, decoded from the KEYSTORE_BASE64 secret in CI or
+# placed locally for testing - never commit the real signing key.
+*.keystore
