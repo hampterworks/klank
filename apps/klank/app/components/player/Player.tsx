@@ -10,9 +10,11 @@ import {
   type JamSnapshot,
 } from '@klank/platform-api'
 
-type PlayerProps = {} & React.ComponentPropsWithRef<'section'>
+type PlayerProps = {
+  setNeedsUpdate: React.Dispatch<React.SetStateAction<boolean>>
+} & React.ComponentPropsWithRef<'section'>
 
-export const Player: React.FC<PlayerProps> = ({ ...props }) => {
+export const Player: React.FC<PlayerProps> = ({ setNeedsUpdate, ...props }) => {
   const setTabFontSize = useKlankStore().setTabFontSize
   const fontSize = useKlankStore().tab.fontSize
   const transpose = useKlankStore().tab.transpose
@@ -31,6 +33,7 @@ export const Player: React.FC<PlayerProps> = ({ ...props }) => {
   const prevInPlaylist = useKlankStore().prevInPlaylist
   const mode = useKlankStore().mode
   const setMode = useKlankStore().setMode
+  const renameTab = useKlankStore().renameTab
   const instrument = useKlankStore().instrument
 
   // Jam state
@@ -42,6 +45,9 @@ export const Player: React.FC<PlayerProps> = ({ ...props }) => {
 
   const [tabData, setTabData] = useState<string | undefined>()
   const [editedContent, setEditedContent] = useState<string>('')
+  const [editedArtist, setEditedArtist] = useState<string>('')
+  const [editedSong, setEditedSong] = useState<string>('')
+  const [renameError, setRenameError] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' && window.innerWidth <= 599
   )
@@ -105,15 +111,54 @@ export const Player: React.FC<PlayerProps> = ({ ...props }) => {
     jamHostRef.current.broadcast(snapshot)
   }, [jamRole, tabData, transpose, fontSize, tabScrollSpeed, isScrolling, songName])
 
+  // Seed the name fields whenever edit mode is entered (toolbar or sidebar
+  // context menu); split on the first " - " so a separator inside the song
+  // title survives (matches mapTreeStructure).
+  useEffect(() => {
+    if (mode !== 'Edit') return
+    const base = tabPath?.split(/[/\\]/)?.slice(-1)[0]?.replace(/\.tab\.txt$/, '') ?? ''
+    const sep = base.indexOf(' - ')
+    setEditedArtist(sep === -1 ? '' : base.slice(0, sep))
+    setEditedSong(sep === -1 ? base : base.slice(sep + 3))
+    setRenameError(null)
+  }, [mode, tabPath])
+
   const handleEditToggle = async () => {
     if (mode === 'Edit') {
       if (fileService?.writeTabFile && tabPath) {
         const segments = tabPath.split(/[/\\]/)
-        const filename = segments[segments.length - 1]
+        const oldFilename = segments[segments.length - 1]
         const target = segments.slice(0, -1).join('/')
-        await fileService.writeTabFile(filename, target, editedContent)
+        const artist = editedArtist.trim()
+        const song = editedSong.trim()
+        const newBase = artist ? `${artist} - ${song}` : song
+        const newFilename = `${newBase}.tab.txt`
+        // Empty song or path separators in a name → save in place, no rename.
+        const renameValid = song !== '' && !/[/\\]/.test(newBase)
+
+        if (!renameValid || newFilename === oldFilename) {
+          await fileService.writeTabFile(oldFilename, target, editedContent)
+        } else {
+          if (await fileService.pathExists(`${target}/${newFilename}`)) {
+            setRenameError(`A file named "${newFilename}" already exists.`)
+            return
+          }
+          const writtenPath = await fileService.writeTabFile(newFilename, target, editedContent)
+          if (!writtenPath.endsWith('.tab.txt')) {
+            setRenameError(writtenPath)
+            return
+          }
+          try {
+            await fileService.deleteTabFile(tabPath)
+          } catch {
+            // The new file is already written; a stale duplicate is recoverable.
+          }
+          renameTab(tabPath, writtenPath)
+          setNeedsUpdate(true)
+        }
         setTabData(editedContent)
       }
+      setRenameError(null)
       setMode('Read')
     } else {
       setMode('Edit')
@@ -123,6 +168,7 @@ export const Player: React.FC<PlayerProps> = ({ ...props }) => {
   // Discard unsaved edits and leave edit mode without writing to disk.
   const handleEditCancel = () => {
     setEditedContent(tabData ?? '')
+    setRenameError(null)
     setMode('Read')
   }
 
@@ -209,12 +255,31 @@ export const Player: React.FC<PlayerProps> = ({ ...props }) => {
         playlist={playlistNav}
       />
       {mode === 'Edit' ? (
-        <textarea
-          className={styles.editTextarea}
-          value={editedContent}
-          onChange={(e) => setEditedContent(e.target.value)}
-          style={{ fontSize: `${fontSize}px` }}
-        />
+        <div className={styles.editContainer}>
+          <div className={styles.editNameRow}>
+            <input
+              className={styles.editNameInput}
+              value={editedArtist}
+              onChange={(e) => setEditedArtist(e.target.value)}
+              placeholder="Artist"
+              aria-label="Artist"
+            />
+            <input
+              className={styles.editNameInput}
+              value={editedSong}
+              onChange={(e) => setEditedSong(e.target.value)}
+              placeholder="Song"
+              aria-label="Song"
+            />
+            {renameError && <span className={styles.renameError}>{renameError}</span>}
+          </div>
+          <textarea
+            className={styles.editTextarea}
+            value={editedContent}
+            onChange={(e) => setEditedContent(e.target.value)}
+            style={{ fontSize: `${fontSize}px` }}
+          />
+        </div>
       ) : (
         <Sheet
           tabScrollSpeed={tabScrollSpeed}
