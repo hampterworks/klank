@@ -16,8 +16,9 @@ import {
 //
 // The decision logic of the old Sheet.tsx lineMatcher, reproduced without JSX
 // (including the `.replace('|', '')` it applied during detection, kept here
-// verbatim to prove it was dead code). classifySheetLine must classify every
-// line identically.
+// verbatim to prove it was dead code), plus the later wide-gap tie-break so it
+// tracks intended behavior. classifySheetLine must classify every line
+// identically.
 
 type LegacyDecision =
   | { kind: 'blank' }
@@ -35,7 +36,8 @@ const legacyLineMatcher = (line: string): LegacyDecision => {
   const hasValidChords = tokens.some(
     (token) => testChords(token.replace('|', '')) || token === 'e',
   )
-  const isMixedContent = hasValidChords && testTokenContext(sanitizedTokens)
+  const isMixedContent =
+    hasValidChords && testTokenContext(sanitizedTokens, /\S\s{2,}\S/.test(line))
 
   if (hasValidChords && !isMixedContent) {
     return {
@@ -311,9 +313,24 @@ describe('classifySheetLine examples', () => {
 
   it('classifies voicing-definition lines with trailing non-chord text as plain', () => {
     // F#2 also parses as a sus2 chord. On the definition line it appears with
-    // a trailing ' ?' which creates a 1:1 chord/non-chord tie. The strict-
-    // majority rule (chords must outnumber non-chords) sends ties to plain,
-    // preventing F#2 from being boxed on lines like this.
+    // a trailing ' ?' which creates a 1:1 chord/non-chord tie. Single-space
+    // layout keeps the tie on the plain side, preventing F#2 from being boxed
+    // on lines like this.
     expect(classifySheetLine('F#2 - (2X0210) (Dm7sus2/F#) ?', 0).kind).toBe('plain')
+  })
+
+  it('classifies a column-aligned single-chord annotation line as a chord line', () => {
+    // A lone chord tied 1:1 with an annotation word — the wide whitespace gap
+    // marks the column-aligned chord layout, so the tie breaks toward chord line.
+    const result = classifySheetLine('                    C7        Riff', 0)
+    expect(result.kind).toBe('chord-line')
+    const chordRaws = chordLineTokens(result)
+      .filter((t) => t.kind === 'chord')
+      .map((t) => t.raw)
+    expect(chordRaws).toEqual(['C7'])
+  })
+
+  it('keeps a single-spaced chord/word tie as plain', () => {
+    expect(classifySheetLine('C7 Riff', 0)).toEqual({ kind: 'plain', text: 'C7 Riff' })
   })
 })
