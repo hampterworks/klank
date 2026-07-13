@@ -35,8 +35,10 @@
       "identifier": "http:allow-fetch",
       "allow": [
         { "url": "https://tabs.ultimate-guitar.com/*" },
-        { "url": "https://www.ultimate-guitar.com/*" }
+        { "url": "https://www.ultimate-guitar.com/*" },
+        { "url": "https://api.github.com/repos/hampterworks/klank/*" }
       ]
-    }
+    },
+    "opener:default"
   ]
 }

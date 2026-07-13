@@ -1,6 +1,6 @@
 import styles from './settings.module.css'
 import { useEffect, useRef, useState } from 'react'
-import { createGitService, createJamHost, discoverJams, getAppVersion, isMobileDevice, type BranchInfo, type DiscoveredJam, type GitService, type JamHost } from '@klank/platform-api'
+import { checkForUpdate, createGitService, createJamHost, discoverJams, getAppVersion, installUpdate, isMobileDevice, openUpdateUrl, type BranchInfo, type DiscoveredJam, type GitService, type JamHost, type UpdateCheck } from '@klank/platform-api'
 import { useKlankStore, type SyncStatus } from '@klank/store'
 import { runGitSync } from '../useGitSync'
 
@@ -167,6 +167,10 @@ export function SettingsPanel() {
   const [status, setStatus] = useState<Status>(null)
   const [busy, setBusy] = useState(false)
   const [version, setVersion] = useState<string>('')
+  const [updateBusy, setUpdateBusy] = useState(false)
+  const [updateInfo, setUpdateInfo] = useState<UpdateCheck | null>(null)
+  const [updateProgress, setUpdateProgress] = useState<number | null>(null)
+  const [updateStatus, setUpdateStatus] = useState<Status>(null)
   const [token, setTokenValue] = useState('')
   const [hasToken, setHasToken] = useState(false)
   const [systemCreds, setSystemCreds] = useState(false)
@@ -227,6 +231,44 @@ export function SettingsPanel() {
     if (!fileService) return
     const path = await fileService.getDirectoryPath()
     if (path) setBaseDirectory(path)
+  }
+
+  const handleCheckUpdate = async () => {
+    if (updateBusy) return
+    setUpdateBusy(true)
+    setUpdateStatus(null)
+    try {
+      const result = await checkForUpdate(version)
+      setUpdateInfo(result)
+      if (result.kind === 'upToDate') setUpdateStatus({ ok: true, message: 'You’re on the latest version.' })
+    } catch (e) {
+      setUpdateStatus({ ok: false, message: e instanceof Error ? e.message : 'Could not check for updates' })
+    } finally {
+      setUpdateBusy(false)
+    }
+  }
+
+  const handleInstallUpdate = async () => {
+    if (updateBusy || !updateInfo || updateInfo.kind === 'upToDate') return
+    if (updateInfo.kind === 'android') {
+      try {
+        await openUpdateUrl(updateInfo.url)
+      } catch (e) {
+        setUpdateStatus({ ok: false, message: e instanceof Error ? e.message : 'Could not open the download page' })
+      }
+      return
+    }
+    setUpdateBusy(true)
+    setUpdateProgress(0)
+    try {
+      // On success the installer restarts the app, so this never settles the
+      // busy state back - the button stays on "Installing…" until relaunch.
+      await installUpdate(setUpdateProgress)
+    } catch (e) {
+      setUpdateStatus({ ok: false, message: e instanceof Error ? e.message : 'Update failed' })
+      setUpdateProgress(null)
+      setUpdateBusy(false)
+    }
   }
 
   const handleSaveToken = async () => {
@@ -354,6 +396,33 @@ export function SettingsPanel() {
             <span className={styles.label}>Version</span>
             <span className={styles.dirPath}>{version || '…'}</span>
           </div>
+
+          <div className={styles.row}>
+            <span className={styles.label}>Updates</span>
+            {updateInfo && updateInfo.kind !== 'upToDate' ? (
+              <>
+                <span className={styles.dirPath}>v{updateInfo.version} available</span>
+                <button className={styles.button} onClick={handleInstallUpdate} disabled={updateBusy}>
+                  {updateProgress !== null
+                    ? updateProgress < 100
+                      ? `Downloading… ${updateProgress}%`
+                      : 'Installing…'
+                    : updateInfo.kind === 'android'
+                      ? 'Download APK'
+                      : 'Install & restart'}
+                </button>
+              </>
+            ) : (
+              <button className={styles.button} onClick={handleCheckUpdate} disabled={updateBusy}>
+                {updateBusy ? 'Checking…' : 'Check for updates'}
+              </button>
+            )}
+          </div>
+          {updateStatus && (
+            <div className={`${styles.statusLine} ${updateStatus.ok ? styles.success : styles.error}`}>
+              {updateStatus.message}
+            </div>
+          )}
 
           <div className={styles.row}>
             <span className={styles.label}>Theme</span>

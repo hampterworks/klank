@@ -12,3 +12,4 @@ export * from './lib/userAgent';
 export * from './lib/download';
 export * from './lib/app';
 export * from './lib/jam';
+export * from './lib/update';
