@@ -67,12 +67,14 @@ export const transposeChord = (chord: string, transpose: number): string => {
  *
  * Returns false if all tokens are chords (chord line), all tokens are non-chords
  * (lyric-only line), or chords are in the majority (strictly more than other
- * tokens). Ties → mixed → plain. Also returns false immediately if `tokens[1]`
- * is `|` (tablature line).
+ * tokens). Ties → mixed → plain, unless `hasWideGaps` marks the line as
+ * column-aligned (tokens separated by 2+-space runs, the layout of chord lines
+ * positioned over lyrics), which breaks the tie toward chord line. Also returns
+ * false immediately if `tokens[1]` is `|` (tablature line).
  *
  * Parenthesized tokens are stripped before counting.
  */
-export const testTokenContext = (tokens: string[]) => {
+export const testTokenContext = (tokens: string[], hasWideGaps = false) => {
   if (tokens[1] === '|') return false
 
   const tokensWithoutParentheses =  tokens.reduce<{ result: string[], skip: boolean }>((acc, token) => {
@@ -98,6 +100,11 @@ export const testTokenContext = (tokens: string[]) => {
   }, {chords: 0, other: 0})
 
   if (tokenCount.chords > tokenCount.other) return false
+
+  // A 1:1 tie is ambiguous by token shape alone: `C7  Riff` is a chord
+  // annotation, but `F#2 ... ?` is a voicing definition (F#2 also parses as a
+  // sus2 chord). Layout disambiguates — only column-aligned lines win the tie.
+  if (tokenCount.chords === tokenCount.other && hasWideGaps) return false
 
   return true
 }
