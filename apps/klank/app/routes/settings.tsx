@@ -6,6 +6,10 @@ import { runGitSync } from '../useGitSync'
 
 type Status = { ok: boolean; message: string } | null
 
+// Tauri IPC rejections are plain strings, not Error instances - surface both.
+const errorText = (e: unknown, fallback: string): string =>
+  e instanceof Error ? e.message : typeof e === 'string' && e ? e : fallback
+
 const formatSince = (ts: number | null): string => {
   if (!ts) return 'never'
   const mins = Math.floor((Date.now() - ts) / 60000)
@@ -242,7 +246,7 @@ export function SettingsPanel() {
       setUpdateInfo(result)
       if (result.kind === 'upToDate') setUpdateStatus({ ok: true, message: 'You’re on the latest version.' })
     } catch (e) {
-      setUpdateStatus({ ok: false, message: e instanceof Error ? e.message : 'Could not check for updates' })
+      setUpdateStatus({ ok: false, message: errorText(e, 'Could not check for updates') })
     } finally {
       setUpdateBusy(false)
     }
@@ -254,7 +258,7 @@ export function SettingsPanel() {
       try {
         await openUpdateUrl(updateInfo.url)
       } catch (e) {
-        setUpdateStatus({ ok: false, message: e instanceof Error ? e.message : 'Could not open the download page' })
+        setUpdateStatus({ ok: false, message: errorText(e, 'Could not open the download page') })
       }
       return
     }
@@ -265,7 +269,7 @@ export function SettingsPanel() {
       // busy state back - the button stays on "Installing…" until relaunch.
       await installUpdate(setUpdateProgress)
     } catch (e) {
-      setUpdateStatus({ ok: false, message: e instanceof Error ? e.message : 'Update failed' })
+      setUpdateStatus({ ok: false, message: errorText(e, 'Update failed') })
       setUpdateProgress(null)
       setUpdateBusy(false)
     }
