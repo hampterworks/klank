@@ -86,13 +86,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # createUpdaterArtifacts in tauri.conf.json makes the build sign the NSIS
+      # installer (emitting a sibling .exe.sig) for the in-app updater; the
+      # build hard-fails if the signing key secret is missing.
       - name: Build Windows installers
         run: pnpm tauri:build:windows
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - uses: actions/upload-artifact@v4
         with:
           name: klank-nsis-${{ needs.version.outputs.version }}
-          path: apps/klank/src-tauri/target/release/bundle/nsis/*.exe
+          path: apps/klank/src-tauri/target/release/bundle/nsis/*.exe*
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
@@ -200,15 +206,32 @@ jobs:
         with:
           path: artifacts
 
+      # The in-app updater polls releases/latest/download/latest.json, so every
+      # release must carry a manifest pointing at its signed NSIS installer.
+      - name: Generate updater manifest (latest.json)
+        run: |
+          ver='${{ needs.version.outputs.version }}'
+          setup=$(find artifacts -name '*-setup.exe' | head -1)
+          jq -n \
+            --arg version "$ver" \
+            --arg notes "klank v$ver" \
+            --arg pub_date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg url "https://github.com/${{ github.repository }}/releases/download/v$ver/$(basename "$setup")" \
+            --arg signature "$(cat "${setup}.sig")" \
+            '{version: $version, notes: $notes, pub_date: $pub_date,
+              platforms: {"windows-x86_64": {signature: $signature, url: $url}}}' \
+            > latest.json
+          cat latest.json
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
           ver='${{ needs.version.outputs.version }}'
-          files=$(find artifacts -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.apk' \))
+          files=$(find artifacts -type f \( -name '*.exe' -o -name '*.exe.sig' -o -name '*.msi' -o -name '*.apk' \))
           echo "Attaching:"; echo "$files"
           gh release create "v$ver" \
             --title "klank v$ver" \
             --notes "Windows installers (NSIS + MSI) and Android arm64 APK for klank v$ver." \
-            $files
+            $files latest.json
