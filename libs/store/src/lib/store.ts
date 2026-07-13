@@ -212,6 +212,14 @@ type KlankState = {
    * Does not touch the file system — callers delete the file via FileService first.
    */
   deleteTab: (path: string) => void
+  /**
+   * Remaps all state keyed by a tab file path after the file was renamed on
+   * disk: `tab.path` if it was open, its `tabSettingByPath` and
+   * `playMetricByPath` entries, every playlist reference, and the persisted
+   * entries in `.klank-settings.json`.
+   * Does not touch the tab file itself — callers rename it via FileService first.
+   */
+  renameTab: (oldPath: string, newPath: string) => void
   /** @persisted Auto-sync cadence (interval, debounce, on/off). */
   syncSettings: SyncSettings
   setSyncSettings: (partial: Partial<SyncSettings>) => void
@@ -624,6 +632,40 @@ export const useKlankStore = create<KlankState>()(
           if (playlistsChanged) persistPlaylists(state, playlists)
 
           return { ...state, tab, tabSettingByPath, playMetricByPath, playlists, activePlaylistIndex }
+        }),
+        renameTab: (oldPath, newPath) => set((state) => {
+          const tab = state.tab.path === oldPath
+            ? { ...state.tab, path: newPath }
+            : state.tab
+
+          const tabSettingByPath = { ...state.tabSettingByPath }
+          const setting = tabSettingByPath[oldPath]
+          if (setting) {
+            delete tabSettingByPath[oldPath]
+            tabSettingByPath[newPath] = setting
+            if (state.baseDirectory) {
+              state.fileService?.writeTabSetting(newPath, setting, state.baseDirectory)
+              state.fileService?.deleteTabSetting(oldPath, state.baseDirectory)
+              notifyTabsChanged()
+            }
+          }
+
+          const playMetricByPath = { ...state.playMetricByPath }
+          if (oldPath in playMetricByPath) {
+            playMetricByPath[newPath] = playMetricByPath[oldPath]
+            delete playMetricByPath[oldPath]
+            persistPlayMetrics(state, playMetricByPath)
+          }
+
+          const playlistsChanged = state.playlists.some((p) => p.paths.includes(oldPath))
+          const playlists = playlistsChanged
+            ? state.playlists.map((p) => p.paths.includes(oldPath)
+              ? { ...p, paths: p.paths.map((x) => (x === oldPath ? newPath : x)) }
+              : p)
+            : state.playlists
+          if (playlistsChanged) persistPlaylists(state, playlists)
+
+          return { ...state, tab, tabSettingByPath, playMetricByPath, playlists }
         }),
       }),
       {

@@ -211,7 +211,7 @@ export function App() {
       />
       {activeView === 'settings' ? <SettingsPanel /> :
        activeView === 'harmony' ? <HarmonyPanel /> :
-       <Player />}
+       <Player setNeedsUpdate={setNeedsUpdate} />}
     </main>
   );
 }
