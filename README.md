@@ -69,4 +69,28 @@ pnpm tauri:dev
 >
 > Output artifacts land in `apps/klank/src-tauri/target/release/bundle/`.
 
+## Docker (web build)
+
+The Docker image serves the static web build (SPA) via nginx. The app runs in "server mode" — file access, git sync, and tab downloads require a future server service and are unavailable until it exists.
+
+**Local usage**
+
+```sh
+docker build -t klank-web .
+docker run --rm -p 8080:80 klank-web   # http://localhost:8080
+docker compose up --build
+```
+
+**`KLANK_API_UPSTREAM`**
+
+nginx reverse-proxies `/api/*` to this URL. It defaults to a closed port, so `/api/*` returns 502 until a server service is wired up. The full path including `/api` is forwarded.
+
+```sh
+docker run --rm -p 8080:80 -e KLANK_API_UPSTREAM=http://server:3000 klank-web
+```
+
+**CI publishing**
+
+`.github/workflows/docker.yml` pushes to Docker Hub on pushes to the default branch as `<DOCKERHUB_USERNAME>/klank:latest`, plus `sha-*` and branch tags. Requires repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (a Docker Hub access token with Read/Write scope, not the account password).
+
 For monorepo structure, lib boundaries, naming conventions, and code-style constraints, see `AGENTS.md`.
