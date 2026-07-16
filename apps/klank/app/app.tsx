@@ -93,7 +93,9 @@ export function App() {
       }
     }
 
-    initializeApp()
+    // serverMode starts undefined; the effect above resolves it from isTauri.
+    // Only touch Tauri-backed services once we know we're NOT in server mode.
+    if (serverMode === false) initializeApp()
     return () => { cancelled = true }
   }, [baseDirectory, serverMode, setBaseDirectory, setFileService, setTabSettings, setPlaylists, setPlayMetrics])
 
@@ -200,6 +202,11 @@ export function App() {
       className={styles.container}
       style={{ gridTemplateColumns: `${currentWidth}px 1fr` }}
     >
+      {serverMode && (
+        <div className={styles.serverNotice} role="status">
+          Server backend not connected — running in the browser without a backend service.
+        </div>
+      )}
       <nav>
         <Menu tree={tree ?? []} setNeedsUpdate={setNeedsUpdate}/>
       </nav>

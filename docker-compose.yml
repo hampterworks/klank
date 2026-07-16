@@ -1,0 +1,16 @@
+services:
+  klank:
+    build: .
+    image: klank-web
+    ports:
+      - "8080:80"
+    # environment:
+    #   KLANK_API_UPSTREAM: http://server:3000
+
+  # Future backend — uncomment when the server service exists.
+  # NOTE: nginx resolves a hostname upstream at startup; add
+  # `depends_on: [server]` to klank (plus the environment block above).
+  # server:
+  #   image: klank-server
+  #   ports:
+  #     - "3000:3000"

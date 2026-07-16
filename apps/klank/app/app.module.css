@@ -52,3 +52,18 @@
     overflow: clip;
   }
 }
+
+/* Shown when running in a plain browser (server mode) with no backend service. */
+.serverNotice {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 6px 14px;
+  border: 1px solid var(--klank-color-border);
+  border-radius: 4px;
+  background: var(--klank-color-background);
+  color: var(--klank-color-text);
+  font-size: 0.85rem;
+}
