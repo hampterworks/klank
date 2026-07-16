@@ -81,7 +81,7 @@ export const Player: React.FC<PlayerProps> = ({ setNeedsUpdate, ...props }) => {
   }, [])
 
   useEffect(() => {
-    if (!fileService?.readTabFile) return
+    if (!tabPath || !fileService?.readTabFile) return
     fileService.readTabFile(tabPath).then((data) => {
       setTabData(data)
       setEditedContent(data)

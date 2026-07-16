@@ -13,6 +13,11 @@ vi.mock('@tauri-apps/api/core', () => {
 import { invoke } from '@tauri-apps/api/core'
 import { getSheetFromUG, type ImportProgress } from './download.js'
 
+// getSheetFromUG branches on isTauri(); present a Tauri webview so these tests
+// exercise the scrape_ug path (the HTTP NDJSON path is covered in
+// http-services.spec.ts).
+vi.stubGlobal('window', { __TAURI_INTERNALS__: {} })
+
 const invokeMock = invoke as Mock
 
 describe('getSheetFromUG', () => {

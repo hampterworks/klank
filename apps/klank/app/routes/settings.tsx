@@ -59,6 +59,7 @@ const toneClass: Record<SyncTone, string> = {
 export function SettingsPanel() {
   const baseDirectory = useKlankStore().baseDirectory
   const setBaseDirectory = useKlankStore().setBaseDirectory
+  const serverMode = useKlankStore().serverMode
   const setTheme = useKlankStore().setTheme
   const theme = useKlankStore().theme
   const instrument = useKlankStore().instrument
@@ -387,9 +388,9 @@ export function SettingsPanel() {
             <span className={styles.dirPath} title={baseDirectory ?? ''}>
               {baseDirectory ?? 'Not set'}
             </span>
-            {/* The native folder picker isn't available on mobile, where tabs
-                live in app-private storage. */}
-            {!isMobileDevice() && (
+            {/* The native folder picker isn't available on mobile (tabs live in
+                app-private storage) or in server mode (fixed server root). */}
+            {!isMobileDevice() && !serverMode && (
               <button className={styles.button} onClick={handleChangeFolder} disabled={!fileService}>
                 Change
               </button>
@@ -401,31 +402,36 @@ export function SettingsPanel() {
             <span className={styles.dirPath}>{version || '…'}</span>
           </div>
 
-          <div className={styles.row}>
-            <span className={styles.label}>Updates</span>
-            {updateInfo && updateInfo.kind !== 'upToDate' ? (
-              <>
-                <span className={styles.dirPath}>v{updateInfo.version} available</span>
-                <button className={styles.button} onClick={handleInstallUpdate} disabled={updateBusy}>
-                  {updateProgress !== null
-                    ? updateProgress < 100
-                      ? `Downloading… ${updateProgress}%`
-                      : 'Installing…'
-                    : updateInfo.kind === 'android'
-                      ? 'Download APK'
-                      : 'Install & restart'}
-                </button>
-              </>
-            ) : (
-              <button className={styles.button} onClick={handleCheckUpdate} disabled={updateBusy}>
-                {updateBusy ? 'Checking…' : 'Check for updates'}
-              </button>
-            )}
-          </div>
-          {updateStatus && (
-            <div className={`${styles.statusLine} ${updateStatus.ok ? styles.success : styles.error}`}>
-              {updateStatus.message}
-            </div>
+          {/* App self-update is meaningless in a browser (server mode). */}
+          {!serverMode && (
+            <>
+              <div className={styles.row}>
+                <span className={styles.label}>Updates</span>
+                {updateInfo && updateInfo.kind !== 'upToDate' ? (
+                  <>
+                    <span className={styles.dirPath}>v{updateInfo.version} available</span>
+                    <button className={styles.button} onClick={handleInstallUpdate} disabled={updateBusy}>
+                      {updateProgress !== null
+                        ? updateProgress < 100
+                          ? `Downloading… ${updateProgress}%`
+                          : 'Installing…'
+                        : updateInfo.kind === 'android'
+                          ? 'Download APK'
+                          : 'Install & restart'}
+                    </button>
+                  </>
+                ) : (
+                  <button className={styles.button} onClick={handleCheckUpdate} disabled={updateBusy}>
+                    {updateBusy ? 'Checking…' : 'Check for updates'}
+                  </button>
+                )}
+              </div>
+              {updateStatus && (
+                <div className={`${styles.statusLine} ${updateStatus.ok ? styles.success : styles.error}`}>
+                  {updateStatus.message}
+                </div>
+              )}
+            </>
           )}
 
           <div className={styles.row}>
@@ -461,8 +467,8 @@ export function SettingsPanel() {
           <h2>Sync</h2>
 
           {/* Access: desktop gets one-click system credentials; PAT is the
-              cross-platform fallback (and the only option on mobile). */}
-          {!isMobile && (
+              cross-platform fallback (and the only option on mobile / server). */}
+          {!isMobile && !serverMode && (
             <div className={styles.row}>
               <span className={styles.label}>Account</span>
               {systemCreds ? (
@@ -480,8 +486,9 @@ export function SettingsPanel() {
             </div>
           )}
 
-          {/* Mobile has no credential helper, so the token is the primary control. */}
-          {isMobile ? (
+          {/* Mobile and server mode have no credential helper, so the token is
+              the primary (and only) auth control. */}
+          {isMobile || serverMode ? (
             tokenRow
           ) : (
             <>

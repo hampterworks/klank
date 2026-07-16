@@ -28,6 +28,11 @@ vi.mock('@tauri-apps/plugin-dialog', () => ({
 import * as pluginFs from '@tauri-apps/plugin-fs'
 import { createFileService } from './fs.js'
 
+// createFileService branches on isTauri(); present a Tauri webview so these
+// tests exercise the Tauri FS implementation (the HTTP variant is covered in
+// http-services.spec.ts).
+vi.stubGlobal('window', { __TAURI_INTERNALS__: {} })
+
 const readTextFile = pluginFs.readTextFile as Mock
 const writeTextFile = pluginFs.writeTextFile as Mock
 const remove = pluginFs.remove as Mock

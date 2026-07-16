@@ -100,7 +100,7 @@ fn extract_js_store(html: &str) -> Option<String> {
 
 /// Navigates the `store.page.data` JSON to the tab content + metadata.
 /// Shared with the webview stage, which delivers the same `{ store: … }` shape.
-pub(crate) fn parse_store(json: &str, source: &'static str) -> Option<NormalizedTab> {
+pub fn parse_store(json: &str, source: &'static str) -> Option<NormalizedTab> {
     let v: serde_json::Value = serde_json::from_str(json).ok()?;
     let data = v.get("store")?.get("page")?.get("data")?;
     let content = data
@@ -137,7 +137,8 @@ mod tests {
 
     #[test]
     fn extracts_and_decodes_data_content() {
-        let html = r#"<div class="js-store" data-content="{&quot;store&quot;:{&quot;x&quot;:1}}"></div>"#;
+        let html =
+            r#"<div class="js-store" data-content="{&quot;store&quot;:{&quot;x&quot;:1}}"></div>"#;
         let got = extract_js_store(html).unwrap();
         assert_eq!(got, r#"{"store":{"x":1}}"#);
     }

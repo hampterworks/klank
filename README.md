@@ -69,25 +69,48 @@ pnpm tauri:dev
 >
 > Output artifacts land in `apps/klank/src-tauri/target/release/bundle/`.
 
-## Docker (web build)
+## Docker (server build)
 
-The Docker image serves the static web build (SPA) via nginx. The app runs in "server mode" — file access, git sync, and tab downloads require a future server service and are unavailable until it exists.
+The Docker image is a self-contained Klank **server**: a single `klank-server` binary
+(no Tauri/GUI) that serves the SPA plus the full HTTP/WebSocket API (`/api/*`) and jam host
+(`/jam`) on port `8080`. It mirrors the desktop backend — file access, settings, git sync,
+tab imports, and LAN jam all work against a mounted tab library. See
+[`docs/server-api.md`](docs/server-api.md) for the wire contract.
 
-**Local usage**
-
-```sh
-docker build -t klank-web .
-docker run --rm -p 8080:80 klank-web   # http://localhost:8080
-docker compose up --build
-```
-
-**`KLANK_API_UPSTREAM`**
-
-nginx reverse-proxies `/api/*` to this URL. It defaults to a closed port, so `/api/*` returns 502 until a server service is wired up. The full path including `/api` is forwarded.
+**Quick start**
 
 ```sh
-docker run --rm -p 8080:80 -e KLANK_API_UPSTREAM=http://server:3000 klank-web
+docker run -d -p 8080:8080 \
+  -v ./data:/data \
+  -v klank-config:/config \
+  hampterworks/klank
+# http://localhost:8080
 ```
+
+**Environment**
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `KLANK_TABS_DIR` | `/data` | Tab library root and git working tree (mounted volume). |
+| `KLANK_CONFIG_DIR` | `/config` | Secrets/state: git token, UG device id (separate volume). |
+| `KLANK_STATIC_DIR` | `/app/static` | SPA build output served at `/`. |
+| `KLANK_PORT` | `8080` | Listen port (binds `0.0.0.0`). |
+
+**Volumes**
+
+- `/data` — your tab library and its git repository. Bind-mount a host directory here.
+- `/config` — server secrets and state. The git personal access token (PAT) is stored here,
+  **never** in the tabs repo, so it can't be committed and pushed to your remote. Use a named
+  volume (or a directory you don't commit) for `/config`.
+
+**Compose**
+
+```sh
+docker compose up --build   # builds the image and starts the klank service
+```
+
+`docker-compose.yml` mounts `./data` for the tab library and a named `klank-config` volume for
+secrets, and restarts the container unless stopped.
 
 **CI publishing**
 

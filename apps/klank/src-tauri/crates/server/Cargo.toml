@@ -1,0 +1,24 @@
+[package]
+name = "klank-server"
+version = "2.0.0"
+description = "Headless HTTP/WebSocket server exposing klank-core: serves the SPA plus the file/settings, git, import, and jam API for the container image."
+edition = "2021"
+rust-version = "1.77.2"
+
+[[bin]]
+name = "klank-server"
+path = "src/main.rs"
+
+[dependencies]
+klank-core = { path = "../core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+reqwest = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal", "net", "sync"] }
+axum = { workspace = true, features = ["ws", "http1", "tokio", "json", "query"] }
+tower-http = { version = "0.5", features = ["fs"] }
+tokio-stream = "0.1"
+
+[dev-dependencies]
+tempfile = "3"
+tower = { version = "0.4", features = ["util"] }

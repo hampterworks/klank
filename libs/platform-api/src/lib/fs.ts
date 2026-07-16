@@ -1,4 +1,5 @@
 import { DirEntry } from '@tauri-apps/plugin-fs'
+import { isTauri } from './platform'
 
 /** A directory entry that may recursively contain children. */
 export type RecursiveDirEntry =
@@ -550,15 +551,177 @@ const createTauriFileService = async (): Promise<FileService> => {
   }
 }
 
-/**
- * Creates and returns a `FileService` backed by Tauri's FS and dialog plugins.
- * Must be called from within a Tauri webview context (`__TAURI_INTERNALS__` must exist).
- */
-export const createFileService = async (): Promise<FileService> => {
-  const serviceFactory = createTauriFileService
-  const service = await serviceFactory()
+// ── HTTP (server-mode) implementation ─────────────────────────────────────────
 
-  return {
-    ...service,
+/** `GET /api/version` payload; `root` is the tabs dir used as the base directory. */
+type VersionResponse = { version: string; mode: string; root: string }
+
+// The version response is immutable for a session, so fetch it once and reuse
+// it for every getBaseDirectoryPath call.
+let versionCache: Promise<VersionResponse> | undefined
+const fetchVersion = (): Promise<VersionResponse> => {
+  if (!versionCache) {
+    versionCache = fetch('/api/version').then((r) => r.json() as Promise<VersionResponse>)
   }
+  return versionCache
 }
+
+const JSON_HEADERS = { 'Content-Type': 'application/json' }
+
+/** Reads the `{error}` message from a failed response, falling back to the status. */
+const errorMessage = async (res: Response): Promise<string> => {
+  try {
+    const json = (await res.json()) as { error?: string }
+    if (json.error) return json.error
+  } catch {
+    // Body was not the documented `{error}` JSON — fall through to the status.
+  }
+  return `Request failed with ${res.status}`
+}
+
+/** Recursively re-applies the caller's `filter`, matching the Tauri scan's observable output. */
+const applyFilter = (
+  entries: RecursiveDirEntry[],
+  filter: (file: File) => boolean
+): FileTree =>
+  entries
+    .filter(filter)
+    .map((entry) =>
+      entry.isDirectory ? { ...entry, children: applyFilter(entry.children, filter) } : entry
+    )
+
+/**
+ * A `FileService` backed by the klank-server HTTP API (`/api/...`). All paths on
+ * the wire are absolute container paths, so no rel↔abs conversion happens here —
+ * the server owns it, matching the desktop absolute-path semantics.
+ */
+const createHttpFileService = async (): Promise<FileService> => ({
+  async readDirectoryRecursively(_dir, filter) {
+    const res = await fetch('/api/tree')
+    if (!res.ok) throw new Error(await errorMessage(res))
+    return applyFilter((await res.json()) as RecursiveDirEntry[], filter)
+  },
+
+  async readTabFile(path) {
+    const res = await fetch(`/api/file?path=${encodeURIComponent(path)}`)
+    if (!res.ok) throw new Error(await errorMessage(res))
+    return ((await res.json()) as { content: string }).content
+  },
+
+  async getBaseDirectoryPath() {
+    return (await fetchVersion()).root
+  },
+
+  async writeTabFile(filename, target, data) {
+    try {
+      const res = await fetch('/api/file', {
+        method: 'PUT',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ filename, target, content: data }),
+      })
+      if (!res.ok) return await errorMessage(res)
+      return ((await res.json()) as { path: string }).path
+    } catch (error) {
+      console.error('Failed to write tab file:', error)
+      return error instanceof Error ? error.message : 'Unknown error occurred'
+    }
+  },
+
+  // No native folder picker in a browser; callers fall back to the default dir.
+  async getDirectoryPath() {
+    return null
+  },
+
+  async pathExists(path) {
+    const res = await fetch(`/api/exists?path=${encodeURIComponent(path)}`)
+    return ((await res.json()) as { exists: boolean }).exists
+  },
+
+  async readTabSettings() {
+    // The server keys settings by absolute path already; baseDirectory is unused.
+    try {
+      const res = await fetch('/api/settings')
+      if (!res.ok) return {}
+      return (await res.json()) as Record<string, PerTabSettings>
+    } catch {
+      return {}
+    }
+  },
+
+  async writeTabSetting(tabPath, settings) {
+    try {
+      await fetch('/api/settings/tab', {
+        method: 'PUT',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ path: tabPath, settings }),
+      })
+    } catch (error) {
+      console.error('Failed to write tab setting:', error)
+    }
+  },
+
+  async deleteTabFile(path) {
+    const res = await fetch(`/api/file?path=${encodeURIComponent(path)}`, { method: 'DELETE' })
+    // A missing file is treated as success, matching the desktop caller contract.
+    if (!res.ok && res.status !== 404) throw new Error(await errorMessage(res))
+  },
+
+  async deleteTabSetting(tabPath) {
+    try {
+      await fetch(`/api/settings/tab?path=${encodeURIComponent(tabPath)}`, { method: 'DELETE' })
+    } catch (error) {
+      console.error('Failed to delete tab setting:', error)
+    }
+  },
+
+  async readPlaylists() {
+    try {
+      const res = await fetch('/api/playlists')
+      if (!res.ok) return []
+      return (await res.json()) as Playlist[]
+    } catch {
+      return []
+    }
+  },
+
+  async writePlaylists(playlists) {
+    try {
+      await fetch('/api/playlists', {
+        method: 'PUT',
+        headers: JSON_HEADERS,
+        body: JSON.stringify(playlists),
+      })
+    } catch (error) {
+      console.error('Failed to write playlists:', error)
+    }
+  },
+
+  async readPlayMetrics() {
+    try {
+      const res = await fetch('/api/play-metrics')
+      if (!res.ok) return {}
+      return (await res.json()) as Record<string, PlayMetric>
+    } catch {
+      return {}
+    }
+  },
+
+  async writePlayMetrics(playMetricByPath) {
+    try {
+      await fetch('/api/play-metrics', {
+        method: 'PUT',
+        headers: JSON_HEADERS,
+        body: JSON.stringify(playMetricByPath),
+      })
+    } catch (error) {
+      console.error('Failed to write play metrics:', error)
+    }
+  },
+})
+
+/**
+ * Creates a `FileService` for the current runtime: Tauri's FS + dialog plugins
+ * inside a webview, or the klank-server HTTP API in a plain browser.
+ */
+export const createFileService = async (): Promise<FileService> =>
+  isTauri() ? createTauriFileService() : createHttpFileService()

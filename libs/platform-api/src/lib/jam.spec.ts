@@ -7,6 +7,11 @@ vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }))
 import { invoke } from '@tauri-apps/api/core'
 import { connectJam, createJamHost, discoverJams, type JamSnapshot } from './jam.js'
 
+// createJamHost branches on isTauri(); present a Tauri webview so these tests
+// exercise the invoke-based host (the HTTP host is covered in
+// http-services.spec.ts).
+vi.stubGlobal('window', { __TAURI_INTERNALS__: {} })
+
 const invokeMock = invoke as Mock
 
 const snapshot = (overrides: Partial<JamSnapshot> = {}): JamSnapshot => ({

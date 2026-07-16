@@ -10,6 +10,7 @@
 
 use super::super::{ImportStage, NormalizedTab, StageError, StageOutcome};
 use super::is_ug_url;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 // --- Fragile, reverse-engineered constants (keep together; covered by tests) ---
@@ -23,14 +24,18 @@ const API_KEY_TIME_FMT: &str = "%Y-%m-%d:%H";
 const DEVICE_ID_FILE: &str = "ug_device_id";
 
 pub struct UgMobileApi {
-    app: tauri::AppHandle,
+    config_dir: PathBuf,
     url: String,
     http: reqwest::Client,
 }
 
 impl UgMobileApi {
-    pub fn new(app: tauri::AppHandle, url: String, http: reqwest::Client) -> Self {
-        Self { app, url, http }
+    pub fn new(config_dir: PathBuf, url: String, http: reqwest::Client) -> Self {
+        Self {
+            config_dir,
+            url,
+            http,
+        }
     }
 }
 
@@ -55,7 +60,7 @@ impl ImportStage for UgMobileApi {
             return StageOutcome::RetryNext(StageError::Parse("no tab id in URL".into()));
         };
 
-        let device_id = device_id(&self.app);
+        let device_id = device_id(&self.config_dir);
         let api_key = api_key(&device_id, &chrono::Utc::now());
         let req_url = format!("{API_BASE}/tab/info?tab_id={tab_id}&tab_access_type=private");
 
@@ -148,20 +153,13 @@ fn parse_tab_info(body: &str) -> Option<NormalizedTab> {
 
 /// Returns a stable 16-hex-char device id, generating and persisting one on
 /// first use. Best-effort persistence; falls back to an in-memory id.
-fn device_id(app: &tauri::AppHandle) -> String {
-    use tauri::Manager;
-    let path = app
-        .path()
-        .app_config_dir()
-        .ok()
-        .map(|d| d.join(DEVICE_ID_FILE));
+fn device_id(config_dir: &Path) -> String {
+    let path = config_dir.join(DEVICE_ID_FILE);
 
-    if let Some(p) = &path {
-        if let Ok(existing) = std::fs::read_to_string(p) {
-            let existing = existing.trim().to_string();
-            if existing.len() == 16 && existing.chars().all(|c| c.is_ascii_hexdigit()) {
-                return existing;
-            }
+    if let Ok(existing) = std::fs::read_to_string(&path) {
+        let existing = existing.trim().to_string();
+        if existing.len() == 16 && existing.chars().all(|c| c.is_ascii_hexdigit()) {
+            return existing;
         }
     }
 
@@ -169,12 +167,10 @@ fn device_id(app: &tauri::AppHandle) -> String {
         .map(|_| format!("{:x}", rand::random::<u8>() & 0xf))
         .collect();
 
-    if let Some(p) = &path {
-        if let Some(dir) = p.parent() {
-            let _ = std::fs::create_dir_all(dir);
-        }
-        let _ = std::fs::write(p, &id);
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
     }
+    let _ = std::fs::write(&path, &id);
     id
 }
 
@@ -189,7 +185,10 @@ mod tests {
         // constants above together.
         let now = chrono::Utc.with_ymd_and_hms(2026, 6, 13, 7, 0, 0).unwrap();
         let device = "0123456789abcdef";
-        let expected = format!("{:x}", md5::compute("0123456789abcdef2026-06-13:07createLog()"));
+        let expected = format!(
+            "{:x}",
+            md5::compute("0123456789abcdef2026-06-13:07createLog()")
+        );
         assert_eq!(api_key(device, &now), expected);
     }
 
@@ -203,7 +202,10 @@ mod tests {
             extract_tab_id("https://tabs.ultimate-guitar.com/tab/x-1?foo=bar#frag"),
             Some(1)
         );
-        assert_eq!(extract_tab_id("https://tabs.ultimate-guitar.com/tab/no-id"), None);
+        assert_eq!(
+            extract_tab_id("https://tabs.ultimate-guitar.com/tab/no-id"),
+            None
+        );
     }
 
     #[test]

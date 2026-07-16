@@ -53,7 +53,7 @@
   }
 }
 
-/* Shown when running in a plain browser (server mode) with no backend service. */
+/* Shown in server mode when the backend API is unreachable. */
 .serverNotice {
   position: fixed;
   top: 8px;

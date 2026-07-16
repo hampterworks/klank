@@ -35,6 +35,7 @@ export function App() {
   const setPlayMetrics = useKlankStore().setPlayMetrics
   const [tree, setTree] = useState<FileEntry[]>()
   const [needsUpdate, setNeedsUpdate] = useState(false)
+  const [backendUnreachable, setBackendUnreachable] = useState(false)
   const containerRef = useRef<HTMLElement>(null)
   const handleRef = useRef<HTMLDivElement>(null)
 
@@ -55,47 +56,57 @@ export function App() {
 
     const initializeApp = async () => {
       try {
-        const fileService = await createFileService()
+        const service = await createFileService()
         if (cancelled) return
-        setFileService(fileService)
+        // Tauri's service is always usable; in server mode only expose it once
+        // the backend has answered, so file-driven UI stays disabled when the
+        // API is unreachable (see backendUnreachable below).
+        if (!serverMode) setFileService(service)
 
-        // Get base directory if not set yet
-        let dir = baseDirectory
+        // Server mode may have a stale desktop baseDirectory persisted from
+        // another machine, so ignore it and always resolve the server root.
+        let dir = serverMode ? undefined : baseDirectory
         if (!dir) {
-          dir = await fileService.getBaseDirectoryPath()
+          dir = await service.getBaseDirectoryPath()
           if (cancelled) return
-          setBaseDirectory(dir)
-          return // re-triggers effect once baseDirectory is in state
+          if (dir !== baseDirectory) {
+            setBaseDirectory(dir)
+            return // re-triggers effect once baseDirectory is in state
+          }
         }
 
         // Load per-tab settings and playlists from the tab directory, then load the tree
-        const savedSettings = await fileService.readTabSettings(dir)
+        const savedSettings = await service.readTabSettings(dir)
         if (cancelled) return
         setTabSettings(savedSettings)
 
-        const savedPlaylists = await fileService.readPlaylists(dir)
+        const savedPlaylists = await service.readPlaylists(dir)
         if (cancelled) return
         setPlaylists(savedPlaylists)
 
-        const savedPlayMetrics = await fileService.readPlayMetrics(dir)
+        const savedPlayMetrics = await service.readPlayMetrics(dir)
         if (cancelled) return
         setPlayMetrics(savedPlayMetrics)
 
-        const data = await fileService.readDirectoryRecursively(
+        const data = await service.readDirectoryRecursively(
           dir,
           file => file.isDirectory || file.name.endsWith('.tab.txt')
         )
         if (cancelled) return
         setTree(mapTreeStructure(data ?? []))
-
+        if (serverMode) setFileService(service)
+        setBackendUnreachable(false)
       } catch (error) {
         console.error('Failed to initialize app:', error)
+        // In server mode a rejection means no backend is answering /api.
+        if (serverMode) setBackendUnreachable(true)
       }
     }
 
     // serverMode starts undefined; the effect above resolves it from isTauri.
-    // Only touch Tauri-backed services once we know we're NOT in server mode.
-    if (serverMode === false) initializeApp()
+    // Initialize in both modes once resolved — createFileService() returns the
+    // right (Tauri or HTTP) implementation for us.
+    if (serverMode !== undefined) initializeApp()
     return () => { cancelled = true }
   }, [baseDirectory, serverMode, setBaseDirectory, setFileService, setTabSettings, setPlaylists, setPlayMetrics])
 
@@ -202,9 +213,9 @@ export function App() {
       className={styles.container}
       style={{ gridTemplateColumns: `${currentWidth}px 1fr` }}
     >
-      {serverMode && (
+      {serverMode && backendUnreachable && (
         <div className={styles.serverNotice} role="status">
-          Server backend not connected — running in the browser without a backend service.
+          Server backend not reachable — file features are disabled.
         </div>
       )}
       <nav>

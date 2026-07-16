@@ -1,0 +1,22 @@
+[package]
+name = "klank-core"
+version = "2.0.0"
+description = "Platform-free core for klank: git sync, tab-import pipeline, jam transport, and the file/settings store. No Tauri dependency."
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "klank_core"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["sync", "time", "macros", "rt", "rt-multi-thread"] }
+axum = { workspace = true, features = ["ws", "http1", "tokio"] }
+git2 = { workspace = true }
+reqwest = { workspace = true }
+async-trait = { workspace = true }
+md5 = { workspace = true }
+chrono = { workspace = true }
+rand = { workspace = true }
+html-escape = { workspace = true }

@@ -1,3 +1,31 @@
+[workspace]
+resolver = "2"
+members = [
+    ".",
+    "crates/core",
+    "crates/server",
+    "tauri-plugin-ug-scraper",
+    "tauri-plugin-multicast-lock",
+]
+
+# Shared dependency versions/features, so the tauri crate, klank-core, and
+# klank-server never drift. Members add extra features on top as needed.
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1" }
+axum = { version = "0.7", default-features = false }
+# rustls avoids cross-compiling OpenSSL for Android.
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "gzip", "brotli"] }
+# Vendored so it cross-compiles to Android without a system libgit2/openssl;
+# https only (PAT auth), ssh dropped.
+git2 = { version = "0.19", default-features = false, features = ["https", "vendored-libgit2", "vendored-openssl"] }
+async-trait = "0.1"
+md5 = "0.7"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+rand = "0.8"
+html-escape = "0.2"
+
 [package]
 name = "Klank"
 version = "2.0.0"
@@ -18,12 +46,15 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.5.1", features = [] }
 
 [dependencies]
-serde_json = "1.0"
-serde = { version = "1.0", features = ["derive"] }
+# The whole backend engine (git, import pipeline, jam transport, fs/settings)
+# lives here, Tauri-free. This crate is a thin set of #[tauri::command] wrappers.
+klank-core = { path = "crates/core" }
+serde_json = { workspace = true }
+serde = { workspace = true }
 log = "0.4"
 tauri = { version = "2.11.2", features = [] }
-tokio = { version = "1", features = ["sync", "time", "net", "rt-multi-thread", "io-util"] }
-axum = { version = "0.7", default-features = false, features = ["ws", "http1", "tokio"] }
+tokio = { workspace = true, features = ["sync", "time", "net", "rt-multi-thread", "io-util"] }
+axum = { workspace = true, features = ["ws", "http1", "tokio"] }
 # LAN jam discovery — advertise/browse a _klank-jam._tcp service. Pure-Rust,
 # cross-compiles to Android (multicast lock still required there at runtime).
 mdns-sd = "0.20"
@@ -31,17 +62,10 @@ tauri-plugin-log = "2.0.0"
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2.0"
 tauri-plugin-http = "2.5.9"
-# Tab import pipeline (Workstream A).
-# rustls avoids cross-compiling OpenSSL for Android.
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "gzip", "brotli"] }
-async-trait = "0.1"
-md5 = "0.7"
-chrono = { version = "0.4", default-features = false, features = ["clock"] }
-rand = "0.8"
-html-escape = "0.2"
-# Git sync (Workstream B). Vendored so it cross-compiles to Android without a
-# system libgit2/openssl; https only (PAT auth), ssh dropped.
-git2 = { version = "0.19", default-features = false, features = ["https", "vendored-libgit2", "vendored-openssl"] }
+# The webview import stage builds a plain reqwest client; the trait it implements
+# is async.
+reqwest = { workspace = true }
+async-trait = { workspace = true }
 # Android-only scraper plugin (self-owned WebView). No-op shell on desktop.
 tauri-plugin-ug-scraper = { path = "tauri-plugin-ug-scraper" }
 # Android-only Wi-Fi MulticastLock for mDNS jam discovery. No-op shell on desktop.
