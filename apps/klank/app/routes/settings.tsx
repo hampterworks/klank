@@ -56,7 +56,7 @@ const toneClass: Record<SyncTone, string> = {
   neutral: '',
 }
 
-export function SettingsPanel() {
+export function SettingsPanel({ setNeedsUpdate }: { setNeedsUpdate: (value: boolean) => void }) {
   const baseDirectory = useKlankStore().baseDirectory
   const setBaseDirectory = useKlankStore().setBaseDirectory
   const serverMode = useKlankStore().serverMode
@@ -325,6 +325,7 @@ export function SettingsPanel() {
         setIsRepo(true)
         await refreshBranches(baseDirectory, gitRef.current)
         await rehydrate(baseDirectory)
+        setNeedsUpdate(true)
       }
     } finally {
       setBusy(false)
@@ -335,7 +336,7 @@ export function SettingsPanel() {
     if (!gitRef.current || !baseDirectory || busy) return
     setBusy(true)
     try {
-      await runGitSync(gitRef.current, baseDirectory, fileService)
+      await runGitSync(gitRef.current, baseDirectory, fileService, () => setNeedsUpdate(true))
       await refreshBranches(baseDirectory, gitRef.current)
     } finally {
       setBusy(false)
@@ -347,12 +348,15 @@ export function SettingsPanel() {
     setBusy(true)
     try {
       // Commit/push current branch first so switching never loses local edits.
-      await runGitSync(gitRef.current, baseDirectory, fileService)
+      await runGitSync(gitRef.current, baseDirectory, fileService, () => setNeedsUpdate(true))
       const result = await gitRef.current.checkoutBranch(baseDirectory, name)
       setStatus({ ok: result.success, message: result.output || result.error || '' })
       if (result.success) {
         await rehydrate(baseDirectory)
-        await runGitSync(gitRef.current, baseDirectory, fileService)
+        // Checkout replaces the working tree even when the surrounding syncs
+        // report no change, so always refresh the tree.
+        setNeedsUpdate(true)
+        await runGitSync(gitRef.current, baseDirectory, fileService, () => setNeedsUpdate(true))
         await refreshBranches(baseDirectory, gitRef.current)
       }
     } finally {
@@ -366,6 +370,7 @@ export function SettingsPanel() {
       <input
         className={styles.commitInput}
         type="password"
+        autoComplete="new-password"
         placeholder={hasToken ? '•••••••• (saved)' : 'HTTPS access token'}
         value={token}
         onChange={(e) => setTokenValue(e.target.value)}

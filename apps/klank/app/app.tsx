@@ -227,9 +227,9 @@ export function App() {
         style={{ left: currentWidth - 4 }}
         onPointerDown={handleResizeStart}
       />
-      {activeView === 'settings' ? <SettingsPanel /> :
+      {activeView === 'settings' ? <SettingsPanel setNeedsUpdate={setNeedsUpdate} /> :
        activeView === 'harmony' ? <HarmonyPanel /> :
-       <Player setNeedsUpdate={setNeedsUpdate} />}
+       <Player needsUpdate={needsUpdate} setNeedsUpdate={setNeedsUpdate} />}
     </main>
   );
 }
