@@ -3,6 +3,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { relaunch } from '@tauri-apps/plugin-process'
 import { check, type Update } from '@tauri-apps/plugin-updater'
 import { isMobileDevice } from './userAgent'
+import { isTauri } from './platform'
 
 const RELEASES_LATEST = 'https://api.github.com/repos/hampterworks/klank/releases/latest'
 
@@ -43,6 +44,9 @@ type GitHubRelease = {
  * Rejects when offline or outside a Tauri context; callers surface the error.
  */
 export const checkForUpdate = async (currentVersion: string): Promise<UpdateCheck> => {
+  // In server mode the browser can't self-update; the container image is the
+  // unit of upgrade, so always report up to date.
+  if (!isTauri()) return { kind: 'upToDate' }
   if (isMobileDevice()) {
     const response = await fetch(RELEASES_LATEST, {
       headers: { Accept: 'application/vnd.github+json' },
@@ -64,6 +68,7 @@ export const checkForUpdate = async (currentVersion: string): Promise<UpdateChec
  * exits and restarts the app itself, in which case `relaunch` never runs.
  */
 export const installUpdate = async (onProgress?: (percent: number) => void): Promise<void> => {
+  if (!isTauri()) return
   const update = pendingUpdate ?? (await check())
   if (!update) return
   let total = 0
@@ -83,4 +88,12 @@ export const installUpdate = async (onProgress?: (percent: number) => void): Pro
 }
 
 /** Opens an update download URL (Android APK) in the system browser. */
-export const openUpdateUrl = (url: string): Promise<void> => openUrl(url)
+export const openUpdateUrl = (url: string): Promise<void> => {
+  if (!isTauri()) {
+    ;(
+      globalThis as unknown as { window: { open: (u: string, t: string, f: string) => unknown } }
+    ).window.open(url, '_blank', 'noopener')
+    return Promise.resolve()
+  }
+  return openUrl(url)
+}

@@ -34,6 +34,7 @@ export const Searchbar: React.FC<SearchbarProps> = ({
     <li className={`${styles.container}${!isMenuExtended ? ' ' + styles.collapsed : ''}${inDrawer ? ' ' + styles.inDrawer : ''}`} {...props}>
       {isMenuExtended && (
         <Input
+          autoComplete="off"
           value={searchFilter}
           onInput={(event: React.FormEvent<HTMLInputElement>) =>
             setSearchFilter((event.target as HTMLInputElement).value)

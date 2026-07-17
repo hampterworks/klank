@@ -9,8 +9,14 @@ on:
     paths:
       - Dockerfile
       - .dockerignore
-      - docker/**
+      - docker-compose.yml
       - .github/workflows/docker.yml
+      - apps/klank/src-tauri/**
+      - apps/klank/app/**
+      - libs/**
+      - package.json
+      - pnpm-lock.yaml
+      - docs/server-api.md
   workflow_dispatch:
 
 permissions:

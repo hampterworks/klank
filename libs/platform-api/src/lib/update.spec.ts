@@ -44,6 +44,9 @@ describe('checkForUpdate', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.unstubAllGlobals()
+    // checkForUpdate short-circuits to upToDate outside Tauri; present a webview
+    // so these tests reach the desktop/mobile updater paths.
+    vi.stubGlobal('window', { __TAURI_INTERNALS__: {} })
   })
 
   it('uses the desktop updater plugin off mobile', async () => {

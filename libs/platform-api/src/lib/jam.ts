@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import { isTauri } from './platform'
 
 export type JamSnapshot = {
   v: 1
@@ -34,13 +35,54 @@ export type JamHost = {
   status: () => Promise<JamStatus>
 }
 
-export const createJamHost = async (): Promise<JamHost> => ({
+const createTauriJamHost = (): JamHost => ({
   start: (name: string) => invoke<JamInfo>('jam_start', { name }),
   stop: () => invoke<void>('jam_stop'),
   broadcast: (snapshot: JamSnapshot) =>
     invoke<void>('jam_broadcast', { snapshot: JSON.stringify(snapshot) }),
   status: () => invoke<JamStatus>('jam_status'),
 })
+
+// The klank-server itself is the host; `port`/`urls` are the address the browser
+// already reached it on, so they are derived from window.location, not the API.
+const browserLocation = (): { port: string; host: string } =>
+  (globalThis as unknown as { window: { location: { port: string; host: string } } }).window.location
+const selfPort = (): number => Number(browserLocation().port) || 80
+
+const createHttpJamHost = (): JamHost => ({
+  async start(name) {
+    await fetch('/api/jam/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+    return { name, port: selfPort(), urls: [browserLocation().host] }
+  },
+  async stop() {
+    await fetch('/api/jam/stop', { method: 'POST' })
+  },
+  async broadcast(snapshot) {
+    await fetch('/api/jam/broadcast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(snapshot),
+    })
+  },
+  async status() {
+    const res = await fetch('/api/jam/status')
+    const s = (await res.json()) as { hosting: boolean; name: string | null; clients: number }
+    return {
+      hosting: s.hosting,
+      name: s.name,
+      clients: s.clients,
+      port: s.hosting ? selfPort() : null,
+      urls: s.hosting ? [browserLocation().host] : [],
+    }
+  },
+})
+
+export const createJamHost = async (): Promise<JamHost> =>
+  isTauri() ? createTauriJamHost() : createHttpJamHost()
 
 /**
  * Browse the local network for open jams (mDNS). Resolves after a short scan

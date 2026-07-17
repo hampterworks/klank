@@ -11,8 +11,8 @@
 //!   (wired in a follow-up; `can_handle` is false off-desktop until then).
 
 #[cfg(any(desktop, target_os = "android"))]
-use super::is_ug_url;
-use super::super::{ImportStage, StageOutcome};
+use klank_core::import::stages::is_ug_url;
+use klank_core::import::{ImportStage, StageOutcome};
 use std::time::Duration;
 
 /// Extraction + challenge-detection script, injected at document start. Routes
@@ -157,9 +157,9 @@ impl ImportStage for UgWebview {
 /// on a blocking thread.
 #[cfg(target_os = "android")]
 mod android {
-    use super::super::super::{StageError, StageOutcome};
-    use super::super::ug_website::parse_store;
     use super::SHARED_SCRIPT;
+    use klank_core::import::stages::parse_store;
+    use klank_core::import::{StageError, StageOutcome};
     use tauri_plugin_ug_scraper::UgScraperExt;
 
     pub async fn scrape(app: &tauri::AppHandle, url: &str) -> StageOutcome {
@@ -174,7 +174,9 @@ mod android {
             Ok(Ok(resp)) => match resp.html {
                 Some(html) => match parse_store(&html, "ug-webview") {
                     Some(tab) => StageOutcome::Success(tab),
-                    None => StageOutcome::RetryNext(StageError::Parse("could not parse tab data".into())),
+                    None => StageOutcome::RetryNext(StageError::Parse(
+                        "could not parse tab data".into(),
+                    )),
                 },
                 // No html → timeout / unsolved challenge.
                 None => StageOutcome::RetryNext(StageError::Challenged),
@@ -190,9 +192,9 @@ mod android {
 /// the Tauri builder in `lib.rs` (desktop only).
 #[cfg(desktop)]
 pub mod desktop {
-    use super::super::super::{StageError, StageOutcome};
-    use super::super::ug_website::parse_store;
     use super::SHARED_SCRIPT;
+    use klank_core::import::stages::parse_store;
+    use klank_core::import::{StageError, StageOutcome};
     use std::sync::Mutex;
     use std::time::{Duration, SystemTime, UNIX_EPOCH};
     use tauri::{Manager, State, WebviewUrl, WebviewWindowBuilder};
@@ -260,20 +262,17 @@ pub mod desktop {
         let app_main = app.clone();
         let label_main = label.clone();
         let _ = app.run_on_main_thread(move || {
-            let res = WebviewWindowBuilder::new(
-                &app_main,
-                &label_main,
-                WebviewUrl::External(parsed),
-            )
-            .visible(false)
-            .focused(false)
-            .skip_taskbar(true)
-            .title("Loading tab…")
-            .inner_size(900.0, 700.0)
-            .initialization_script(SHARED_SCRIPT)
-            .build()
-            .map(|_| ())
-            .map_err(|e| e.to_string());
+            let res =
+                WebviewWindowBuilder::new(&app_main, &label_main, WebviewUrl::External(parsed))
+                    .visible(false)
+                    .focused(false)
+                    .skip_taskbar(true)
+                    .title("Loading tab…")
+                    .inner_size(900.0, 700.0)
+                    .initialization_script(SHARED_SCRIPT)
+                    .build()
+                    .map(|_| ())
+                    .map_err(|e| e.to_string());
             let _ = btx.send(res);
         });
 
@@ -295,7 +294,9 @@ pub mod desktop {
         match result {
             Ok(Ok(html)) => match parse_store(&html, "ug-webview") {
                 Some(tab) => StageOutcome::Success(tab),
-                None => StageOutcome::RetryNext(StageError::Parse("could not parse tab data".into())),
+                None => {
+                    StageOutcome::RetryNext(StageError::Parse("could not parse tab data".into()))
+                }
             },
             Ok(Err(_)) => {
                 StageOutcome::RetryNext(StageError::Network("scrape channel closed".into()))

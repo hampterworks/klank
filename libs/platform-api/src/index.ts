@@ -1,3 +1,4 @@
+export * from './lib/platform';
 export * from './lib/fs';
 export * from './lib/git';
 export * from './lib/sort'

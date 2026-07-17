@@ -74,8 +74,10 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         .setup(|_app, _api| {
             #[cfg(target_os = "android")]
             {
-                let handle = _api
-                    .register_android_plugin("io.github.hampterworks.klank.ugscraper", "UgScraperPlugin")?;
+                let handle = _api.register_android_plugin(
+                    "io.github.hampterworks.klank.ugscraper",
+                    "UgScraperPlugin",
+                )?;
                 _app.manage(UgScraper(handle));
             }
             Ok(())

@@ -1,33 +1,20 @@
-//! Jam mode: host shares tab content + scroll state over a local LAN WebSocket
-//! server; guests (app or browser) subscribe and receive live snapshots.
+//! Jam mode (Tauri glue): hosts a LAN WebSocket jam and advertises it over mDNS.
 //!
-//! The axum HTTP+WS server runs on a background tokio task. A `watch` channel
-//! holds the latest snapshot JSON so new subscribers receive it immediately.
-//! A second `watch` channel tracks the live connected-guest count, which is
-//! injected into every outgoing frame so all participants can see it.
-//!
-//! Hosts also advertise the jam over mDNS (`_klank-jam._tcp.local.`) so other
-//! klank apps on the same LAN can discover and join without typing an address.
-//! mDNS is best-effort: if the daemon can't start (e.g. multicast blocked, or
-//! a mobile OS without a held multicast lock) hosting still works via the
-//! manual `ip:port` join fallback.
+//! The transport itself — the snapshot/client `watch` channels, the axum router,
+//! and the per-socket loop — lives in [`klank_core::jam`], shared with
+//! `klank-server`. This module owns only the platform-specific parts: binding a
+//! LAN listener, mDNS advertise/browse (`_klank-jam._tcp.local.`), and the
+//! Android Wi-Fi multicast lock. mDNS is best-effort; hosting still works via the
+//! manual `ip:port` join fallback when it is unavailable.
 
-use axum::{
-    extract::{
-        ws::{Message, WebSocket, WebSocketUpgrade},
-        State,
-    },
-    response::{Html, IntoResponse},
-    routing::get,
-    Router,
-};
+use klank_core::jam::JamChannels;
 use mdns_sd::{ServiceDaemon, ServiceEvent, ServiceInfo};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Mutex;
 use std::time::Duration;
-use tokio::sync::{oneshot, watch};
+use tokio::sync::oneshot;
 
 /// mDNS service type advertised/browsed for klank jams.
 const SERVICE_TYPE: &str = "_klank-jam._tcp.local.";
@@ -36,10 +23,8 @@ const SERVICE_TYPE: &str = "_klank-jam._tcp.local.";
 
 /// Shared state managed by Tauri (.manage()).
 pub struct JamState {
-    /// The latest snapshot JSON broadcast by the host.
-    pub tx: watch::Sender<String>,
-    /// Number of guests currently connected to the host's WebSocket.
-    pub clients: watch::Sender<usize>,
+    /// The snapshot + client-count broadcast channels (shared core transport).
+    pub channels: JamChannels,
     inner: Mutex<Inner>,
 }
 
@@ -67,11 +52,8 @@ struct RunningServer {
 
 impl Default for JamState {
     fn default() -> Self {
-        let (tx, _) = watch::channel("{}".to_string());
-        let (clients, _) = watch::channel(0usize);
         Self {
-            tx,
-            clients,
+            channels: JamChannels::default(),
             inner: Mutex::new(Inner::default()),
         }
     }
@@ -133,7 +115,13 @@ fn ensure_mdns(inner: &mut Inner) -> Option<ServiceDaemon> {
 fn safe_host(name: &str) -> String {
     let cleaned: String = name
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '-' { c } else { '-' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' {
+                c
+            } else {
+                '-'
+            }
+        })
         .collect();
     let trimmed = cleaned.trim_matches('-');
     if trimmed.is_empty() {
@@ -144,7 +132,12 @@ fn safe_host(name: &str) -> String {
 }
 
 /// Best-effort advertise of this jam. Returns the registered fullname on success.
-fn advertise(daemon: &ServiceDaemon, name: &str, ip: std::net::IpAddr, port: u16) -> Option<String> {
+fn advertise(
+    daemon: &ServiceDaemon,
+    name: &str,
+    ip: std::net::IpAddr,
+    port: u16,
+) -> Option<String> {
     let host = safe_host(name);
     let props: [(&str, &str); 1] = [("name", name)];
     let info = match ServiceInfo::new(SERVICE_TYPE, name, &host, ip, port, &props[..]) {
@@ -212,88 +205,6 @@ impl Drop for MulticastGuard<'_> {
     }
 }
 
-// ── axum app ─────────────────────────────────────────────────────────────────
-
-#[derive(Clone)]
-struct AppState {
-    tx: watch::Sender<String>,
-    clients: watch::Sender<usize>,
-}
-
-async fn root_handler() -> impl IntoResponse {
-    Html(include_str!("jam-lite.html"))
-}
-
-async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_socket(socket, state.tx, state.clients))
-}
-
-/// Merge the live client count into a snapshot JSON object so guests and the
-/// browser client see `clients` without a second message type. Falls back to
-/// the raw snapshot if it isn't a JSON object.
-fn frame(snapshot: &str, clients: usize) -> String {
-    match serde_json::from_str::<serde_json::Value>(snapshot) {
-        Ok(serde_json::Value::Object(mut map)) => {
-            map.insert("clients".to_string(), serde_json::Value::from(clients));
-            serde_json::Value::Object(map).to_string()
-        }
-        _ => snapshot.to_string(),
-    }
-}
-
-async fn handle_socket(
-    mut socket: WebSocket,
-    snap_tx: watch::Sender<String>,
-    clients: watch::Sender<usize>,
-) {
-    // Count this guest in, then subscribe so we also see later changes.
-    clients.send_modify(|c| *c += 1);
-    let mut snap_rx = snap_tx.subscribe();
-    let mut cli_rx = clients.subscribe();
-
-    // Send the current snapshot + count immediately.
-    let initial = frame(&snap_rx.borrow(), *cli_rx.borrow());
-    if socket.send(Message::Text(initial.into())).await.is_err() {
-        clients.send_modify(|c| *c = c.saturating_sub(1));
-        return;
-    }
-
-    loop {
-        tokio::select! {
-            // New snapshot from host.
-            changed = snap_rx.changed() => {
-                if changed.is_err() { break; }
-                let f = frame(&snap_rx.borrow(), *cli_rx.borrow());
-                if socket.send(Message::Text(f.into())).await.is_err() { break; }
-            }
-            // Connected-guest count changed (someone joined/left).
-            changed = cli_rx.changed() => {
-                if changed.is_err() { break; }
-                let f = frame(&snap_rx.borrow(), *cli_rx.borrow());
-                if socket.send(Message::Text(f.into())).await.is_err() { break; }
-            }
-            // Drain inbound messages; detect close.
-            msg = socket.recv() => {
-                match msg {
-                    Some(Ok(_)) => {} // ignore
-                    _ => break,
-                }
-            }
-        }
-    }
-
-    // Count this guest out.
-    clients.send_modify(|c| *c = c.saturating_sub(1));
-}
-
-fn build_router(tx: watch::Sender<String>, clients: watch::Sender<usize>) -> Router {
-    let state = AppState { tx, clients };
-    Router::new()
-        .route("/", get(root_handler))
-        .route("/jam", get(ws_handler))
-        .with_state(state)
-}
-
 // ── Tauri commands ────────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -306,7 +217,7 @@ pub async fn jam_start(
     jam_stop_inner(&state, &app);
 
     // Reset the connected count for the fresh session.
-    state.clients.send_modify(|c| *c = 0);
+    state.channels.clients.send_modify(|c| *c = 0);
 
     // Bind listener — prefer 7070, fall back to OS-assigned.
     let listener = match tokio::net::TcpListener::bind("0.0.0.0:7070").await {
@@ -327,7 +238,8 @@ pub async fn jam_start(
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
 
-    let router = build_router(state.tx.clone(), state.clients.clone());
+    let router =
+        klank_core::jam::build_router(state.channels.tx.clone(), state.channels.clients.clone());
 
     tauri::async_runtime::spawn(async move {
         let _ = axum::serve(listener, router)
@@ -381,7 +293,7 @@ fn jam_stop_inner(state: &tauri::State<'_, JamState>, app: &tauri::AppHandle) {
         }
     }
     // No guests remain once the server is down.
-    state.clients.send_modify(|c| *c = 0);
+    state.channels.clients.send_modify(|c| *c = 0);
 }
 
 #[tauri::command]
@@ -399,13 +311,13 @@ pub async fn jam_broadcast(
     snapshot: String,
 ) -> Result<(), String> {
     // Ignore send errors (no active receivers is fine).
-    let _ = state.tx.send(snapshot);
+    let _ = state.channels.tx.send(snapshot);
     Ok(())
 }
 
 #[tauri::command]
 pub fn jam_status(state: tauri::State<'_, JamState>) -> JamStatus {
-    let clients = *state.clients.borrow();
+    let clients = *state.channels.clients.borrow();
     match state.inner.lock() {
         Ok(guard) => match guard.server.as_ref() {
             Some(s) => JamStatus {
@@ -443,7 +355,10 @@ pub async fn jam_discover(
     // Hold the multicast lock (Android) for the duration of the scan so we can
     // receive announcements. The guard releases it on every exit path. Composes
     // with a host hold via the reference-counted lock.
-    let _multicast = MulticastGuard { app: &app, held: hold_multicast(&app) };
+    let _multicast = MulticastGuard {
+        app: &app,
+        held: hold_multicast(&app),
+    };
 
     // Pull the daemon out of the lock so we never hold the std Mutex across an
     // await, and note our own fullname to skip it in the results.
@@ -453,10 +368,7 @@ pub async fn jam_discover(
             Some(d) => d,
             None => return Ok(vec![]),
         };
-        let own = guard
-            .server
-            .as_ref()
-            .and_then(|s| s.mdns_fullname.clone());
+        let own = guard.server.as_ref().and_then(|s| s.mdns_fullname.clone());
         (daemon, own)
     };
 

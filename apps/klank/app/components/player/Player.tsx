@@ -11,10 +11,11 @@ import {
 } from '@klank/platform-api'
 
 type PlayerProps = {
+  needsUpdate?: boolean
   setNeedsUpdate: React.Dispatch<React.SetStateAction<boolean>>
 } & React.ComponentPropsWithRef<'section'>
 
-export const Player: React.FC<PlayerProps> = ({ setNeedsUpdate, ...props }) => {
+export const Player: React.FC<PlayerProps> = ({ needsUpdate, setNeedsUpdate, ...props }) => {
   const setTabFontSize = useKlankStore().setTabFontSize
   const fontSize = useKlankStore().tab.fontSize
   const transpose = useKlankStore().tab.transpose
@@ -81,12 +82,22 @@ export const Player: React.FC<PlayerProps> = ({ setNeedsUpdate, ...props }) => {
   }, [])
 
   useEffect(() => {
-    if (!fileService?.readTabFile) return
+    if (!tabPath || !fileService?.readTabFile) return
     fileService.readTabFile(tabPath).then((data) => {
       setTabData(data)
       setEditedContent(data)
     })
   }, [tabPath, fileService])
+
+  // Re-read the open tab when a sync changed the working tree; skipped in edit
+  // mode so a background sync can't clobber unsaved edits.
+  useEffect(() => {
+    if (!needsUpdate || !tabPath || !fileService?.readTabFile || mode === 'Edit') return
+    fileService.readTabFile(tabPath).then((data) => {
+      setTabData(data)
+      setEditedContent(data)
+    })
+  }, [needsUpdate, tabPath, fileService, mode])
 
   // Acquire (or reuse) the JamHost instance when entering host mode.
   useEffect(() => {

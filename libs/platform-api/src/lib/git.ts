@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import { isTauri } from './platform'
 
 export type GitChangedFile = { status: string; path: string }
 export type GitResult = { success: boolean; output: string; error?: string }
@@ -84,6 +85,29 @@ type RawSyncResult = {
 
 type RawBranchInfo = { name: string; is_head: boolean; is_remote: boolean; upstream?: string }
 
+/** Rust `SyncResult` (snake_case) → TS `SyncResult` (camelCase). Shared by both backends. */
+const toSyncResult = (r: RawSyncResult): SyncResult => ({
+  success: r.success,
+  committed: r.committed,
+  pulled: r.pulled,
+  pushed: r.pushed,
+  conflictsResolved: r.conflicts_resolved,
+  branch: r.branch,
+  upToDate: r.up_to_date,
+  changed: r.changed,
+  message: r.message,
+  error: r.error,
+  errorKind: r.error_kind,
+})
+
+/** Rust `BranchInfo` (snake_case) → TS `BranchInfo` (camelCase). Shared by both backends. */
+const toBranchInfo = (b: RawBranchInfo): BranchInfo => ({
+  name: b.name,
+  isHead: b.is_head,
+  isRemote: b.is_remote,
+  upstream: b.upstream,
+})
+
 /**
  * Git operations backed by the in-app libgit2 engine (Rust commands), so sync
  * works identically on desktop and Android. Read-only queries degrade
@@ -115,30 +139,11 @@ const createTauriGitService = async (): Promise<GitService> => ({
     }
   },
   async sync(dir) {
-    const r = await invoke<RawSyncResult>('git_sync', { dir })
-    return {
-      success: r.success,
-      committed: r.committed,
-      pulled: r.pulled,
-      pushed: r.pushed,
-      conflictsResolved: r.conflicts_resolved,
-      branch: r.branch,
-      upToDate: r.up_to_date,
-      changed: r.changed,
-      message: r.message,
-      error: r.error,
-      errorKind: r.error_kind,
-    }
+    return toSyncResult(await invoke<RawSyncResult>('git_sync', { dir }))
   },
   async listBranches(dir) {
     try {
-      const raw = await invoke<RawBranchInfo[]>('git_list_branches', { dir })
-      return raw.map((b) => ({
-        name: b.name,
-        isHead: b.is_head,
-        isRemote: b.is_remote,
-        upstream: b.upstream,
-      }))
+      return (await invoke<RawBranchInfo[]>('git_list_branches', { dir })).map(toBranchInfo)
     } catch {
       return []
     }
@@ -165,4 +170,91 @@ const createTauriGitService = async (): Promise<GitService> => ({
   disableSystemCredentials: () => invoke<void>('git_disable_system_credentials'),
 })
 
-export const createGitService = async (): Promise<GitService> => createTauriGitService()
+const JSON_HEADERS = { 'Content-Type': 'application/json' }
+
+// Git mutation endpoints never signal git failures via HTTP status — the outcome
+// is carried inside the returned GitResult, exactly like the desktop commands.
+const gitResult = async (path: string, body?: unknown): Promise<GitResult> => {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: body ? JSON_HEADERS : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  })
+  return (await res.json()) as GitResult
+}
+
+/** Reads a `{value}` boolean flag endpoint, degrading to `fallback` on any error. */
+const readFlag = async (path: string, fallback: boolean): Promise<boolean> => {
+  try {
+    const res = await fetch(path)
+    if (!res.ok) return fallback
+    return ((await res.json()) as { value: boolean }).value
+  } catch {
+    return fallback
+  }
+}
+
+/**
+ * Git operations backed by the klank-server HTTP API. The repo is always the
+ * server's tabs dir, so `dir` arguments are accepted for interface parity and
+ * ignored. Read-only queries degrade gracefully; mutations carry success/error
+ * inside their `GitResult`/`SyncResult`.
+ */
+const createHttpGitService = (): GitService => ({
+  async isGitRepo() {
+    return readFlag('/api/git/is-repo', false)
+  },
+  async getChangedFiles() {
+    try {
+      const res = await fetch('/api/git/status')
+      if (!res.ok) return []
+      return (await res.json()) as GitChangedFile[]
+    } catch {
+      return []
+    }
+  },
+  pull: () => gitResult('/api/git/pull'),
+  commit: (_dir, message) => gitResult('/api/git/commit', { message }),
+  push: () => gitResult('/api/git/push'),
+  async getUnpushedCommits() {
+    try {
+      const res = await fetch('/api/git/unpushed')
+      if (!res.ok) return []
+      return (await res.json()) as string[]
+    } catch {
+      return []
+    }
+  },
+  async sync() {
+    const res = await fetch('/api/git/sync', { method: 'POST' })
+    return toSyncResult((await res.json()) as RawSyncResult)
+  },
+  async listBranches() {
+    try {
+      const res = await fetch('/api/git/branches')
+      if (!res.ok) return []
+      return ((await res.json()) as RawBranchInfo[]).map(toBranchInfo)
+    } catch {
+      return []
+    }
+  },
+  checkoutBranch: (_dir, branch) => gitResult('/api/git/checkout', { branch }),
+  cloneRepo: (url) => gitResult('/api/git/clone', { url }),
+  async setToken(token) {
+    await fetch('/api/git/token', {
+      method: 'PUT',
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ token }),
+    })
+  },
+  hasToken: () => readFlag('/api/git/has-token', false),
+  isAuthenticated: () => readFlag('/api/git/is-authenticated', false),
+  systemCredentialsEnabled: () => readFlag('/api/git/system-credentials-enabled', false),
+  useSystemCredentials: () => gitResult('/api/git/use-system-credentials'),
+  async disableSystemCredentials() {
+    await fetch('/api/git/disable-system-credentials', { method: 'POST' })
+  },
+})
+
+export const createGitService = async (): Promise<GitService> =>
+  isTauri() ? createTauriGitService() : createHttpGitService()

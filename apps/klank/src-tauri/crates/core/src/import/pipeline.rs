@@ -144,7 +144,11 @@ mod tests {
             if !self.delay.is_zero() {
                 tokio::time::sleep(self.delay).await;
             }
-            self.outcome.lock().unwrap().take().unwrap_or(StageOutcome::Skip)
+            self.outcome
+                .lock()
+                .unwrap()
+                .take()
+                .unwrap_or(StageOutcome::Skip)
         }
     }
 
@@ -157,7 +161,10 @@ mod tests {
         }
     }
 
-    fn collector() -> (impl Fn(ImportProgress), std::sync::Arc<Mutex<Vec<ImportProgress>>>) {
+    fn collector() -> (
+        impl Fn(ImportProgress),
+        std::sync::Arc<Mutex<Vec<ImportProgress>>>,
+    ) {
         let log = std::sync::Arc::new(Mutex::new(Vec::new()));
         let l2 = log.clone();
         (move |p| l2.lock().unwrap().push(p), log)
