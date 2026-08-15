@@ -1,16 +1,4 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-
-// Stub localStorage before store import — persist middleware reads it on init.
-const localStorageData: Record<string, string> = {}
-vi.stubGlobal('localStorage', {
-  getItem: vi.fn((key: string) => localStorageData[key] ?? null),
-  setItem: vi.fn((key: string, value: string) => { localStorageData[key] = value }),
-  removeItem: vi.fn((key: string) => { delete localStorageData[key] }),
-  clear: vi.fn(() => { Object.keys(localStorageData).forEach((k) => delete localStorageData[k]) }),
-  length: 0,
-  key: vi.fn(() => null),
-})
-
 import type { FileService, PlayMetric, Playlist } from '@klank/platform-api'
 import { useKlankStore } from './store.js'
 
@@ -22,7 +10,6 @@ const makePlaylist = (overrides: Partial<Playlist> = {}): Playlist => ({
   ...overrides,
 })
 
-// ── Helper: fully reset relevant store slices before each deleteTab test ───────
 const resetForDelete = (overrides: Partial<Parameters<typeof useKlankStore.setState>[0]> = {}) => {
   useKlankStore.setState({
     playlists: [],

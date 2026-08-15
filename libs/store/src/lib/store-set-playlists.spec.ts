@@ -1,30 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-
-// Stub localStorage before store import — persist middleware reads it on init.
-const localStorageData: Record<string, string> = {}
-vi.stubGlobal('localStorage', {
-  getItem: vi.fn((key: string) => localStorageData[key] ?? null),
-  setItem: vi.fn((key: string, value: string) => { localStorageData[key] = value }),
-  removeItem: vi.fn((key: string) => { delete localStorageData[key] }),
-  clear: vi.fn(() => { Object.keys(localStorageData).forEach((k) => delete localStorageData[k]) }),
-  length: 0,
-  key: vi.fn(() => null),
-})
-
-import type { Playlist } from '@klank/platform-api'
 import { useKlankStore } from './store.js'
-
-const makePlaylist = (overrides: Partial<Playlist> = {}): Playlist => ({
-  id: crypto.randomUUID(),
-  name: 'Test',
-  paths: [],
-  createdAt: Date.now(),
-  ...overrides,
-})
-
-const resetPlaylists = (playlists: Playlist[] = []) => {
-  useKlankStore.setState({ playlists, activePlaylistId: null, activePlaylistIndex: null })
-}
+import { makePlaylist, resetPlaylists } from './store-test-helpers.js'
 
 describe('setPlaylists hydration', () => {
   beforeEach(() => resetPlaylists())

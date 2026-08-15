@@ -1,36 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import fc from 'fast-check'
-
-// Stub localStorage before store import — persist middleware reads it on init.
-const localStorageData: Record<string, string> = {}
-vi.stubGlobal('localStorage', {
-  getItem: vi.fn((key: string) => localStorageData[key] ?? null),
-  setItem: vi.fn((key: string, value: string) => { localStorageData[key] = value }),
-  removeItem: vi.fn((key: string) => { delete localStorageData[key] }),
-  clear: vi.fn(() => { Object.keys(localStorageData).forEach((k) => delete localStorageData[k]) }),
-  length: 0,
-  key: vi.fn(() => null),
-})
-
 import { useKlankStore } from './store.js'
-
-const makePlaylist = (overrides: Partial<import('./store.js').Playlist> = {}): import('./store.js').Playlist => ({
-  id: crypto.randomUUID(),
-  name: 'Test',
-  paths: [],
-  createdAt: Date.now(),
-  ...overrides,
-})
-
-const resetPlaylists = (playlists: import('./store.js').Playlist[] = []) => {
-  useKlankStore.setState({ playlists, activePlaylistId: null, activePlaylistIndex: null })
-}
-
-const playlistNameArb = fc.string({ minLength: 1, maxLength: 80 })
-const pathArb = fc.string({ minLength: 1, maxLength: 200 })
-const pathsArb = fc.array(pathArb, { minLength: 0, maxLength: 20 })
-
-// ── createPlaylist ──────────────────────────────────────────────────────────────
+import { playlistNameArb, makePlaylist, resetPlaylists, pathArb, pathsArb } from './store-test-helpers.js'
 
 describe('createPlaylist — property-based', () => {
   beforeEach(() => resetPlaylists())
@@ -66,8 +37,6 @@ describe('createPlaylist — property-based', () => {
   })
 })
 
-// ── deletePlaylist ──────────────────────────────────────────────────────────────
-
 describe('deletePlaylist — property-based', () => {
   it('count decreases by 1 and target is gone', () => {
     fc.assert(fc.property(fc.integer({ min: 1, max: 5 }), fc.integer({ min: 0, max: 4 }), (count, rawIdx) => {
@@ -97,8 +66,6 @@ describe('deletePlaylist — property-based', () => {
   })
 })
 
-// ── renamePlaylist ──────────────────────────────────────────────────────────────
-
 describe('renamePlaylist — property-based', () => {
   it('only the target playlist name changes', () => {
     fc.assert(fc.property(playlistNameArb, fc.integer({ min: 1, max: 5 }), fc.integer({ min: 0, max: 4 }), (newName, count, rawIdx) => {
@@ -116,8 +83,6 @@ describe('renamePlaylist — property-based', () => {
     }))
   })
 })
-
-// ── reorderPlaylist ─────────────────────────────────────────────────────────────
 
 describe('reorderPlaylist — property-based', () => {
   it('stores exactly the provided paths for the target playlist', () => {

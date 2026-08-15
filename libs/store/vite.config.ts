@@ -52,6 +52,7 @@ export default defineConfig(() => ({
   test: {
     name: '@klank/store',
     watch: false,
+    setupFiles: ['./src/lib/test-setup'],
     globals: true,
     environment: 'node',
     passWithNoTests: true,

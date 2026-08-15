@@ -1,38 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import fc from 'fast-check'
-
-// Stub localStorage before store import — persist middleware reads it on init.
-const localStorageData: Record<string, string> = {}
-vi.stubGlobal('localStorage', {
-  getItem: vi.fn((key: string) => localStorageData[key] ?? null),
-  setItem: vi.fn((key: string, value: string) => { localStorageData[key] = value }),
-  removeItem: vi.fn((key: string) => { delete localStorageData[key] }),
-  clear: vi.fn(() => { Object.keys(localStorageData).forEach((k) => delete localStorageData[k]) }),
-  length: 0,
-  key: vi.fn(() => null),
-})
-
-import type { CustomTuning } from '@klank/audio'
 import { useKlankStore } from './store.js'
-
-const makeCustomTuning = (overrides: Partial<CustomTuning> = {}): CustomTuning => ({
-  id: crypto.randomUUID(),
-  name: 'My Tuning',
-  instrument: 'guitar',
-  strings: [
-    { pitchClass: 2, octave: 2 },
-    { pitchClass: 9, octave: 2 },
-    { pitchClass: 2, octave: 3 },
-    { pitchClass: 7, octave: 3 },
-    { pitchClass: 11, octave: 3 },
-    { pitchClass: 4, octave: 4 },
-  ],
-  ...overrides,
-})
-
-const resetCustomTunings = (customTunings: CustomTuning[] = []) => {
-  useKlankStore.setState({ customTunings })
-}
+import { makeCustomTuning, resetCustomTunings } from './store-test-helpers.js'
 
 describe('addCustomTuning', () => {
   beforeEach(() => resetCustomTunings())
