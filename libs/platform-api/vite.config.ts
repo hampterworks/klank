@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
-import * as path from 'path';
+import { join } from 'node:path';
 
 export default defineConfig(() => ({
   root: __dirname,
@@ -8,11 +8,7 @@ export default defineConfig(() => ({
   plugins: [
     dts({
       entryRoot: 'src',
-      tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
-    }),
-    dts({
-      entryRoot: 'src',
-      tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
+      tsconfigPath: join(__dirname, 'tsconfig.lib.json'),
     }),
   ],
   // Uncomment this if you are using workers.

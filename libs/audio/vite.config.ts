@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
-import * as path from 'path';
+import { klankAliases } from '../../vite-aliases.mjs';
+import { join } from 'node:path';
 
 export default defineConfig(() => ({
   root: __dirname,
@@ -8,13 +9,16 @@ export default defineConfig(() => ({
   plugins: [
     dts({
       entryRoot: 'src',
-      tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
+      tsconfigPath: join(__dirname, 'tsconfig.lib.json'),
     }),
   ],
   resolve: {
     // Allow the test runner to resolve workspace packages via their source
     // (the "@klank/source" export condition defined in each package.json).
     conditions: ['@klank/source'],
+    alias: {
+      '@klank/platform-api': klankAliases['@klank/platform-api'],
+    },
   },
   build: {
     emptyOutDir: true,

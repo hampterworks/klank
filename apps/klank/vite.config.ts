@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import { reactRouter } from '@react-router/dev/vite';
-import { resolve } from 'path';
+import { klankAliases } from '../../vite-aliases.mjs';
 
 const mobileHost = process.env.TAURI_DEV_HOST;
 
@@ -26,12 +26,7 @@ export default defineConfig(() => ({
     host: 'localhost',
   },
   resolve: {
-    alias: {
-      '@klank/ui': resolve(__dirname, '../../libs/ui/src/index.ts'),
-      '@klank/store': resolve(__dirname, '../../libs/store/src/index.ts'),
-      '@klank/platform-api': resolve(__dirname, '../../libs/platform-api/src/index.ts'),
-      '@klank/audio': resolve(__dirname, '../../libs/audio/src/index.ts'),
-    },
+    alias: klankAliases,
   },
   plugins: [!process.env.VITEST && reactRouter()],
   optimizeDeps: {

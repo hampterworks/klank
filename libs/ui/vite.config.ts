@@ -2,7 +2,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import dts from 'vite-plugin-dts';
-import * as path from 'path';
+import { klankAliases } from '../../vite-aliases.mjs';
+import { join } from 'node:path';
 
 export default defineConfig(({ mode }) => ({
   root: __dirname,
@@ -10,9 +11,9 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     conditions: ['@klank/source'],
     alias: {
-      '@klank/platform-api': path.resolve(__dirname, '../../libs/platform-api/src/index.ts'),
-      '@klank/store': path.resolve(__dirname, '../../libs/store/src/index.ts'),
-      '@klank/audio': path.resolve(__dirname, '../../libs/audio/src/index.ts'),
+      '@klank/platform-api': klankAliases['@klank/platform-api'],
+      '@klank/store': klankAliases['@klank/store'],
+      '@klank/audio': klankAliases['@klank/audio'],
     },
   },
   plugins: [
@@ -20,7 +21,7 @@ export default defineConfig(({ mode }) => ({
     mode === 'production' && react(),
     dts({
       entryRoot: 'src',
-      tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
+      tsconfigPath: join(__dirname, 'tsconfig.lib.json'),
     }),
   ].filter(Boolean),
   build: {
