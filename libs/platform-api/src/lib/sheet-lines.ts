@@ -64,6 +64,40 @@ const mergeDashChords = (tokens: string[]): string[] => {
 }
 
 /**
+ * Re-joins parenthesized embellishments that the delimiter split tore apart:
+ * `(` and `)` are delimiters, so `D5(9)` tokenizes as `D5`,`(`,`9`,`)` and
+ * `D4(9)/A` leaves an orphaned `/A` behind. The four tokens are merged back
+ * when they parse as one chord — together with a following `/bass` token when
+ * that parses instead — and left untouched otherwise, so parenthesized lyrics
+ * (`(Sol) Vem`) never merge. Runs after the dash merge so `C-7(9)` works.
+ * Callers must skip this pass on tablature lines.
+ */
+const mergeParenChords = (tokens: string[]): string[] => {
+  const merged: string[] = []
+  let i = 0
+  while (i < tokens.length) {
+    const token = tokens[i]
+    if (tokens[i + 1] === '(' && tokens[i + 3] === ')') {
+      const base = token + '(' + tokens[i + 2] + ')'
+      const bass = tokens[i + 4]
+      if (bass !== undefined && bass.startsWith('/') && testChords(base + bass)) {
+        merged.push(base + bass)
+        i += 5
+        continue
+      }
+      if (testChords(base)) {
+        merged.push(base)
+        i += 4
+        continue
+      }
+    }
+    merged.push(token)
+    i++
+  }
+  return merged
+}
+
+/**
  * Classifies one line of tab text.
  *
  * - Blank lines are `blank`.
@@ -80,7 +114,9 @@ export const classifySheetLine = (line: string, transpose: number): SheetLine =>
   if (!line.trim()) return { kind: 'blank' }
 
   const splitTokens = line.split(delimiterMatcher).filter((token) => token !== '')
-  const tokens = isTablatureLine(line) ? splitTokens : mergeDashChords(splitTokens)
+  const tokens = isTablatureLine(line)
+    ? splitTokens
+    : mergeParenChords(mergeDashChords(splitTokens))
   const sanitizedTokens = tokens.filter((token) => !testSpaces(token))
 
   const hasValidChords = tokens.some((token) => testChords(token) || token === 'e')
