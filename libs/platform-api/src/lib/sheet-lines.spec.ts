@@ -56,7 +56,7 @@ const legacyLineMatcher = (line: string): LegacyDecision => {
 
 const chordArb = fc.constantFrom(
   'Am', 'C', 'G', 'Em', 'Dm7/G', 'Bb', 'C#maj7', 'Asus4', 'Caug', 'Am7b5', 'e',
-  'C-', 'C-7', 'A-7/G', 'C+', 'C°7', 'Cø', 'C6/9',
+  'C-', 'C-7', 'A-7/G', 'C+', 'C°7', 'Cø', 'C6/9', 'D4(9)/A', 'C7M',
 )
 const wordArb = fc.constantFrom('the', 'quick', 'hello', 'la', 'darling', 'oo', 'Hm', 'A-flat', 're-do')
 const fragmentArb = fc.oneof(
@@ -106,7 +106,7 @@ describe('classifySheetLine', () => {
     )
   })
 
-  it('matches the legacy lineMatcher decision on every line without a dash-merged chord', () => {
+  it('matches the legacy lineMatcher decision on every line without a merged chord', () => {
     // A dash merge can occur where a token is followed by a single `-` and the
     // pieces join into a chord — the one approved tokenization change.
     const dashMergePossible = (line: string): boolean => {
@@ -121,9 +121,29 @@ describe('classifySheetLine', () => {
       )
     }
 
+    // A paren merge can occur where a token carries a parenthesized
+    // embellishment (`D5(9)`), optionally followed by a `/bass` token
+    // (`D4(9)/A`), and the join parses as a chord. Dash-merge lines are already
+    // excluded above, so the raw split tokens carry the indices the paren pass
+    // sees. Paren-merged lines legitimately diverge from the legacy matcher.
+    const parenMergePossible = (line: string): boolean => {
+      if (isTablatureLine(line)) return false
+      const tokens = line.split(delimiterMatcher).filter((token) => token !== '')
+      return tokens.some((token, i) => {
+        if (tokens[i + 1] !== '(' || tokens[i + 3] !== ')') return false
+        const base = `${token}(${tokens[i + 2]})`
+        const bass = tokens[i + 4]
+        return (
+          testChords(base) ||
+          (bass !== undefined && bass.startsWith('/') && testChords(base + bass))
+        )
+      })
+    }
+
     fc.assert(
       fc.property(anyLineArb, transposeArb, (line, transpose) => {
         fc.pre(!dashMergePossible(line))
+        fc.pre(!parenMergePossible(line))
         // Skip lines carrying chord-voicing tokens (A1, G1, F#1…). Their presence
         // makes classifySheetLine treat every chord-like-shaped token as a voicing
         // label (so F#2, which also parses as a sus2 chord, is not boxed). The
@@ -267,6 +287,53 @@ describe('classifySheetLine examples', () => {
     expect(classifySheetLine('the A-flat major scale', 0)).toEqual({
       kind: 'plain',
       text: 'the A-flat major scale',
+    })
+  })
+
+  it('re-joins parenthesized embellishments that the delimiter split apart', () => {
+    // Real lines from "Vitor Kley - O Sol": `(` and `)` are delimiters, so
+    // `D4(9)/A` arrives as `D4`,`(`,`9`,`)`,`/A` and used to leave an orphaned
+    // `/A` that tipped the line into plain text.
+    expect(classifySheetLine('D4(9)/A', 0)).toEqual({
+      kind: 'chord-line',
+      tokens: [{ kind: 'chord', raw: 'D4(9)/A', display: 'D4(9)/A' }],
+    })
+    expect(classifySheetLine(`E4(9)/A${' '.repeat(16)}D5(9)`, 0)).toEqual({
+      kind: 'chord-line',
+      tokens: [
+        { kind: 'chord', raw: 'E4(9)/A', display: 'E4(9)/A' },
+        { kind: 'text', raw: ' '.repeat(16) },
+        { kind: 'chord', raw: 'D5(9)', display: 'D5(9)' },
+      ],
+    })
+    expect(classifySheetLine(`D4(9)/A${' '.repeat(16)}C7M`, 0)).toEqual({
+      kind: 'chord-line',
+      tokens: [
+        { kind: 'chord', raw: 'D4(9)/A', display: 'D4(9)/A' },
+        { kind: 'text', raw: ' '.repeat(16) },
+        { kind: 'chord', raw: 'C7M', display: 'C7M' },
+      ],
+    })
+  })
+
+  it('reconstructs a paren-merged line losslessly', () => {
+    const line = `E4(9)/A${' '.repeat(16)}D5(9)`
+    expect(chordLineTokens(classifySheetLine(line, 5)).map((t) => t.raw).join('')).toBe(line)
+  })
+
+  it('transposes a paren-merged chord including its bass note', () => {
+    expect(classifySheetLine('D4(9)/A', 2)).toEqual({
+      kind: 'chord-line',
+      tokens: [{ kind: 'chord', raw: 'D4(9)/A', display: 'E4(9)/B' }],
+    })
+  })
+
+  it('never merges parenthesized lyrics', () => {
+    // `(Sol)` is not a chord candidate, so the merge leaves the tokens alone
+    // and the line stays a lyric line.
+    expect(classifySheetLine('(Sol) Vem, aquece a minha alma', 0)).toEqual({
+      kind: 'plain',
+      text: '(Sol) Vem, aquece a minha alma',
     })
   })
 

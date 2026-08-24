@@ -54,21 +54,29 @@ export const parseNotePrefix = (string: string): { pitch: number; rest: string }
   return { pitch, rest: string.slice(match[0].length) }
 }
 
-// Quality suffix grammar: quality? extension? (quality extension)? alteration{0,2}
+// Quality suffix grammar:
+//   quality? extension? (quality extension)? alteration{0,2} embellishment?
 //
 // Accepts the conventional chord vocabulary — m, maj7, sus4, dim, aug, 5,
 // add9, 7sus4, m7add9, 6/9, altered tones like m7b5 or 7#9, and the
 // jazz/lead-sheet symbols - (minor), + (augmented), ° (diminished) and
 // ø (half-diminished) — while rejecting non-chords such as Cmaj23 or C97.
-// Extensions are limited to the numbers that name real chord tones.
+// Extensions are limited to the numbers that name real chord tones, plus the
+// Brazilian major-seventh spelling 7M (C7M, Cm7M). A single parenthesized
+// embellishment naming one chord tone may close the suffix — the Brazilian
+// songbook notation common in UG tabs (D4(9), C7(b5), C(9)); comma lists like
+// C7(9,13) are out of scope.
 const QUALITY = '(?:maj|min|m|M|dim|aug|sus|add|-|\\+|°|ø)'
 // Bare m/M and the single-symbol qualities cannot stack onto an extension
 // (C7m7 is not a chord); spelled-out qualities can (Cmmaj7, C7sus4, m7add9).
 const TAIL_QUALITY = '(?:maj|min|sus|dim|add)'
 const NUMBER = '(?:13|11|9|7|6|5|4|2)'
-const EXTENSION = '(?:13|11|9|7|69|6(?:\\/9)?|5|4|2)'
+const EXTENSION = '(?:13|11|9|7M|7|69|6(?:\\/9)?|5|4|2)'
 const ALTERATION = `(?:[#b♭]${NUMBER})`
-const SUFFIX_MATCHER = new RegExp(`^${QUALITY}?${EXTENSION}?(?:${TAIL_QUALITY}${NUMBER})?${ALTERATION}{0,2}$`)
+const EMBELLISHMENT = `(?:\\((?:${NUMBER}|${ALTERATION})\\))`
+const SUFFIX_MATCHER = new RegExp(
+  `^${QUALITY}?${EXTENSION}?(?:${TAIL_QUALITY}${NUMBER})?${ALTERATION}{0,2}${EMBELLISHMENT}?$`,
+)
 
 /**
  * Parses a whole token as a chord symbol.
@@ -148,12 +156,14 @@ export const isChordSymbol = (token: string): boolean => parseChordSymbol(token)
 /**
  * Rewrites equivalent quality spellings to the canonical form used by
  * `CHORD_INTERVALS` and the chord-diagram JSON keys: `-` → `m`, `+` → `aug`,
- * `°` → `dim`, `ø`/`ø7` → `m7b5`, `min` → `m`, `M`/`maj` → `maj`/`''`, and
- * `6/9` → `69`. Spellings that are already canonical — or that name no
- * canonical quality — pass through verbatim. Idempotent.
+ * `°` → `dim`, `ø`/`ø7` → `m7b5`, `min` → `m`, `M`/`maj` → `maj`/`''`,
+ * `6/9` → `69`, `7M` → `maj7` (so `m7M`/`min7M` → `mmaj7`) and `(9)` → `add9`.
+ * Spellings that are already canonical — or that name no canonical quality,
+ * including compound ones like `4(9)` — pass through verbatim. Idempotent.
  */
 export const canonicalSuffix = (suffix: string): string => {
   if (suffix === 'ø' || suffix === 'ø7') return 'm7b5'
+  if (suffix === '(9)') return 'add9'
   let result = suffix
   if (result.startsWith('-')) result = 'm' + result.slice(1)
   else if (result.startsWith('+')) result = 'aug' + result.slice(1)
@@ -161,6 +171,9 @@ export const canonicalSuffix = (suffix: string): string => {
   else if (result.startsWith('min')) result = 'm' + result.slice(3)
   else if (result.startsWith('M') && !result.startsWith('Maj')) result = 'maj' + result.slice(1)
   result = result.replace('6/9', '69')
+  // After the prefix rewrites, so min7M and -7M land on mmaj7 too. replaceAll,
+  // not replace, keeps the rewrite idempotent on any leftover 7M.
+  result = result.replaceAll('7M', 'maj7')
   return result === 'maj' ? '' : result
 }
 

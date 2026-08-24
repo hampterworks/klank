@@ -93,6 +93,17 @@ describe('testChords', () => {
     expect(testChords('Am7add9')).toBe(true)
   })
 
+  it('returns true for a Brazilian major seventh chord', () => {
+    // Given the 7M spelling used in Brazilian songbooks and many UG tabs
+    // When testChords is called
+    // Then it returns true
+    expect(testChords('C7M')).toBe(true)
+  })
+
+  it('returns true for a slash chord with a parenthesized embellishment', () => {
+    expect(testChords('D4(9)/A')).toBe(true)
+  })
+
   it('returns false for a common English word', () => {
     // Given a plain English word that is not a chord symbol
     // When testChords is called
@@ -190,6 +201,21 @@ describe('transposeChord', () => {
 
   it('transposes A down by 1 semitone to G#', () => {
     expect(transposeChord('A', -1)).toBe('G#')
+  })
+
+  it('transposes a Brazilian major seventh — C7M up by 2 gives D7M', () => {
+    // Given the 7M suffix, which is stored verbatim
+    // When transposeChord is called
+    // Then only the root moves and the spelling survives
+    expect(transposeChord('C7M', 2)).toBe('D7M')
+  })
+
+  it('transposes root and bass of a chord with a parenthesized embellishment', () => {
+    expect(transposeChord('D4(9)/A', 2)).toBe('E4(9)/B')
+  })
+
+  it('transposes down through a parenthesized embellishment', () => {
+    expect(transposeChord('D5(9)', -2)).toBe('C5(9)')
   })
 
   it('returns non-chord input unchanged for any transpose amount', () => {

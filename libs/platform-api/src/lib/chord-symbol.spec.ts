@@ -47,8 +47,9 @@ const ALLOWED_NUMBERS = new Set(['2', '4', '5', '6', '7', '9', '11', '13'])
 const stripRoot = (s: string) => s.replace(/^[A-G](?:##|bb|♭♭|#|b|♭)?/, '')
 
 /** New-only accepts must be one of the added forms: aug, 6/9 (or 69),
- *  altered tones, or the jazz symbols - + ° ø. */
-const isApprovedAddition = (s: string) => /aug|6\/9|69|[#b♭]\d|[-+°ø]/.test(s)
+ *  altered tones, the jazz symbols - + ° ø, the Brazilian 7M major-seventh
+ *  spelling, or a parenthesized embellishment. */
+const isApprovedAddition = (s: string) => /aug|6\/9|69|[#b♭]\d|[-+°ø]|7M|\(/.test(s)
 
 /** Legacy-only accepts must be one of the dropped non-chord forms. */
 const isApprovedRemoval = (s: string) => {
@@ -64,7 +65,7 @@ const letterArb = fc.constantFrom('A', 'B', 'C', 'D', 'E', 'F', 'G')
 const accidentalArb = fc.constantFrom('', '#', '##', 'b', 'bb', '♭', '♭♭')
 const qualityArb = fc.constantFrom('', 'maj', 'min', 'm', 'M', 'dim', 'aug', 'sus', 'add', '-', '+', '°', 'ø')
 const numberArb = fc.constantFrom('2', '4', '5', '6', '7', '9', '11', '13')
-const extensionArb = fc.constantFrom('', '2', '4', '5', '6', '69', '6/9', '7', '9', '11', '13')
+const extensionArb = fc.constantFrom('', '2', '4', '5', '6', '69', '6/9', '7', '7M', '9', '11', '13')
 const tailArb = fc.oneof(
   fc.constant(''),
   fc
@@ -75,11 +76,18 @@ const alterationArb = fc.array(
   fc.tuple(fc.constantFrom('#', 'b', '♭'), numberArb).map(([a, n]) => a + n),
   { maxLength: 2 },
 )
+const embellishmentArb = fc.oneof(
+  fc.constant(''),
+  numberArb.map((n) => `(${n})`),
+  fc.tuple(fc.constantFrom('#', 'b', '♭'), numberArb).map(([a, n]) => `(${a}${n})`),
+)
 
 /** Suffixes drawn from the new grammar. */
 const suffixArb = fc
-  .tuple(qualityArb, extensionArb, tailArb, alterationArb)
-  .map(([quality, extension, tail, alterations]) => quality + extension + tail + alterations.join(''))
+  .tuple(qualityArb, extensionArb, tailArb, alterationArb, embellishmentArb)
+  .map(([quality, extension, tail, alterations, embellishment]) =>
+    quality + extension + tail + alterations.join('') + embellishment,
+  )
 
 /** Well-formed chord strings (grammar-valid by construction). */
 const chordStringArb = fc
@@ -107,7 +115,7 @@ const parsedArb: fc.Arbitrary<ParsedChordSymbol> = fc
 /** Adversarial near-chord strings over a chord-flavoured alphabet. */
 const chordishStringArb = fc
   .array(
-    fc.constantFrom(...'ABCDEFGmajsudin#b♭/0123456789Mhe-+°ø '.split('')),
+    fc.constantFrom(...'ABCDEFGmajsudin#b♭/0123456789Mhe-+°ø() '.split('')),
     { maxLength: 10 },
   )
   .map((chars) => chars.join(''))
@@ -158,6 +166,10 @@ describe('parseChordSymbol grammar', () => {
     'Caug', 'Am7b5', 'C6/9', 'C69', 'E7#9', 'Fadd11', 'G7b9#5',
     // jazz/lead-sheet symbol spellings
     'C-', 'C-7', 'A-7/G', 'C+', 'C+5', 'C°', 'C°7', 'Cø', 'Cø7', 'C-7b5', 'C-maj7',
+    // Brazilian major-seventh spelling
+    'C7M', 'Cm7M', 'C7M/B',
+    // parenthesized embellishments
+    'D4(9)', 'D4(9)/A', 'D5(9)', 'C7(b5)', 'C(9)',
   ])('accepts %s', (chord) => {
     expect(parseChordSymbol(chord)).not.toBeNull()
   })
@@ -168,6 +180,8 @@ describe('parseChordSymbol grammar', () => {
     'Cmaj23', 'C8', 'C97', 'Cmin1', 'C7m7',
     // malformed symbol spellings
     'C--', 'C-+', 'C7-7', '+C', '-', 'ø',
+    // malformed embellishments: empty, non-chord-tone, and unbalanced
+    'C()', 'C(8)', 'C(97)', 'C(9', 'C9)',
   ])('rejects %s', (chord) => {
     expect(parseChordSymbol(chord)).toBeNull()
   })
@@ -370,5 +384,11 @@ describe('canonicalSuffix', () => {
     expect(canonicalSuffix('M7')).toBe('maj7')
     expect(canonicalSuffix('6/9')).toBe('69')
     expect(canonicalSuffix('-7b5')).toBe('m7b5')
+    expect(canonicalSuffix('7M')).toBe('maj7')
+    expect(canonicalSuffix('m7M')).toBe('mmaj7')
+    // the 7M rewrite runs after the prefix rewrites, so these converge too
+    expect(canonicalSuffix('min7M')).toBe('mmaj7')
+    expect(canonicalSuffix('-7M')).toBe('mmaj7')
+    expect(canonicalSuffix('(9)')).toBe('add9')
   })
 })
