@@ -241,6 +241,56 @@ describe('FileTreeView — issue #5: no empty artist group rendered', () => {
   })
 })
 
+describe('FileTreeView — collapse/expand does not scroll to the active song', () => {
+  const scrollIntoView = vi.fn()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    window.HTMLElement.prototype.scrollIntoView = scrollIntoView
+  })
+
+  const tree: FileEntry[] = [
+    makeEntry('Radiohead', 'Creep'),
+    makeEntry('Nirvana', 'Lithium'),
+  ]
+
+  it('toggling an artist group does not re-scroll to the active song', () => {
+    // Given: Creep is the active song (one scroll happens on mount)
+    render(
+      <FileTreeView tree={tree} {...DEFAULT_PROPS} currentTabPath={tree[0].path} />
+    )
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+    scrollIntoView.mockClear()
+
+    // When: the user collapses and re-expands an artist group
+    fireEvent.click(screen.getByRole('button', { name: /nirvana/i }))
+    fireEvent.click(screen.getByRole('button', { name: /nirvana/i }))
+    fireEvent.click(screen.getByRole('button', { name: /radiohead/i }))
+    fireEvent.click(screen.getByRole('button', { name: /radiohead/i }))
+
+    // Then: the menu does not scroll back to the active song
+    expect(scrollIntoView).not.toHaveBeenCalled()
+  })
+
+  it('still scrolls when the active song changes, including into a collapsed group', () => {
+    // Given: Creep active, and the Nirvana group collapsed by the user
+    const { rerender } = render(
+      <FileTreeView tree={tree} {...DEFAULT_PROPS} currentTabPath={tree[0].path} />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /nirvana/i }))
+    scrollIntoView.mockClear()
+
+    // When: the active song changes to Lithium (inside the collapsed group)
+    rerender(
+      <FileTreeView tree={tree} {...DEFAULT_PROPS} currentTabPath={tree[1].path} />
+    )
+
+    // Then: the group auto-expands and the menu scrolls to the new active song
+    expect(getSongButton('Lithium')).toBeTruthy()
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('FileTreeView — recency sort mode', () => {
   beforeEach(() => vi.clearAllMocks())
 
