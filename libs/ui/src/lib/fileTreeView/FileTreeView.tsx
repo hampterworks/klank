@@ -188,12 +188,23 @@ export const FileTreeView: React.FC<FileTreeViewProps> = ({
   useEffect(() => {
     const activeItem = tree.find((item) => item.path === currentTabPath)
     if (activeItem) {
-      setCollapsedArtists((prev) => prev.filter((a) => a !== activeItem.artist))
+      // Collapse state is keyed the way sortByArtist groups: lowercased
+      // artist, or 'unknown' for entries without a parsed song name.
+      const groupKey = activeItem.song !== undefined ? activeItem.artist.toLowerCase() : 'unknown'
+      setCollapsedArtists((prev) => prev.filter((a) => a !== groupKey))
     }
   }, [currentTabPath, tree])
 
+  // Scroll to the active song only when it changes — collapsedArtists stays a
+  // dependency so the scroll still fires once its group auto-expands, but
+  // toggling a group must not re-scroll to an already-visible active song.
+  const lastScrolledPath = useRef<string | null>(null)
   useEffect(() => {
-    songButtonRefs.current.get(currentTabPath)?.scrollIntoView({
+    if (lastScrolledPath.current === currentTabPath) return
+    const button = songButtonRefs.current.get(currentTabPath)
+    if (!button) return
+    lastScrolledPath.current = currentTabPath
+    button.scrollIntoView({
       behavior: 'smooth',
       block: 'center'
     })
