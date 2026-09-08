@@ -70,7 +70,8 @@
   border: 1px solid var(--klank-color-border);
   border-radius: 4px;
   padding: 6px 8px;
-  outline: none;
+  /* No `outline: none`: the global :focus-visible ring in @klank/ui is the
+     focus indicator (RULES.md 8). */
 }
 
 .renameError {
@@ -89,7 +90,8 @@
   background: var(--klank-color-background);
   color: var(--klank-color-text);
   border: none;
-  outline: none;
+  /* No `outline: none`: the global :focus-visible ring in @klank/ui is the
+     focus indicator (RULES.md 8). */
   padding: 8px;
   box-sizing: border-box;
 }

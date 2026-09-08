@@ -120,10 +120,11 @@
   color: var(--klank-color-text);
   border: 1px solid var(--klank-color-border);
   border-radius: 4px;
-  outline: none;
   transition: border-color 0.15s;
 }
 
+/* Border tint on focus; the ring itself is the global :focus-visible rule in
+   @klank/ui (RULES.md 8 - `outline: none` is never left without one). */
 .modalInput:focus {
   border-color: var(--klank-color-text);
 }

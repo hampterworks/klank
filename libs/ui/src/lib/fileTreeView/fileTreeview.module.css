@@ -129,10 +129,18 @@
     font-family: inherit;
     background: transparent;
     border: none;
-    outline: none;
+    /* No `outline: none` here: the global :focus-visible ring in
+       lib/theme/base.css is the focus indicator (RULES.md 8). */
 
-    &:hover,
-    &:focus {
+    /* Hover tint. Split from focus so the hover declaration is not doing
+       double duty as the focus indicator. */
+    &:hover {
+      background: var(--klank-color-highlight);
+    }
+
+    /* Keyboard focus keeps the tint AND gets the ring; a pointer focus
+       (the click that opened the menu) gets neither. */
+    &:focus-visible {
       background: var(--klank-color-highlight);
     }
   }
@@ -142,7 +150,7 @@
   }
 
   .dangerAction:hover,
-  .dangerAction:focus {
+  .dangerAction:focus-visible {
     background: var(--klank-color-fail);
     color: #fff;
   }
