@@ -74,9 +74,11 @@
     opacity: 0.9;
   }
 
+  /* Inset ring: the buttons sit flush inside a bordered group, so the offset
+     is the token negated rather than the token itself. */
   &:focus-visible {
-    outline: 2px solid var(--klank-color-highlight);
-    outline-offset: -2px;
+    outline: var(--klank-focus-ring-width) solid var(--klank-color-text);
+    outline-offset: calc(-1 * var(--klank-focus-ring-offset));
     z-index: 1;
   }
 }
@@ -99,11 +101,7 @@
   font-size: 0.875rem;
   cursor: pointer;
   min-width: 0;
-
-  &:focus {
-    outline: 2px solid var(--klank-color-highlight);
-    outline-offset: 1px;
-  }
+  /* Focus ring comes from the global :focus-visible rule in @klank/ui. */
 }
 
 /* ── Tab bar ──────────────────────────────────────────────────────────────── */
@@ -133,9 +131,10 @@
     opacity: 0.85;
   }
 
+  /* Inset ring: the tab overlaps the tab bar's border. */
   &:focus-visible {
-    outline: 2px solid var(--klank-color-highlight);
-    outline-offset: -2px;
+    outline: var(--klank-focus-ring-width) solid var(--klank-color-text);
+    outline-offset: calc(-1 * var(--klank-focus-ring-offset));
     border-radius: 4px 4px 0 0;
   }
 }
@@ -352,9 +351,10 @@
     background: var(--klank-color-highlight);
   }
 
+  /* Inset ring: the summary is a full-width row flush with its container. */
   &:focus-visible {
-    outline: 2px solid var(--klank-color-highlight);
-    outline-offset: -2px;
+    outline: var(--klank-focus-ring-width) solid var(--klank-color-text);
+    outline-offset: calc(-1 * var(--klank-focus-ring-offset));
   }
 }
 

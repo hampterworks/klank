@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { getThemeVariables, Theme } from './theme';
+import './base.css';
 
 type ThemeProviderProps = {
   theme: Theme;

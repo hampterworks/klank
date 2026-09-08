@@ -1,0 +1,29 @@
+/* Base styles shipped with @klank/ui, loaded once by ThemeProvider.
+ *
+ * Focus ring - design system RULES.md rule 8: on :focus-visible an interactive
+ * element draws an outline of focus.ring.width, offset by focus.ring.offset, in
+ * the theme's color.primary. klank is achromatic and has no primary, so the ring
+ * colour is the mode's color.text (--klank-color-text): 20.40:1 on the light
+ * ground, 16.17:1 on its surface, well past WCAG 1.4.11's 3:1.
+ *
+ * The generated klank theme export (./theme.ts, a byte copy of
+ * design/dist/klank/theme.ts) carries the nine colours and nothing else - no
+ * ring width, no ring offset - so the two foundation numbers are defined here,
+ * once, and every klank ring reads them from here.
+ */
+:root {
+  --klank-focus-ring-width: 2px;
+  --klank-focus-ring-offset: 2px;
+}
+
+/* One ring for the whole product. Keyboard only - :focus-visible, never :focus -
+ * so a keyboard user sees something a pointer user does not (rule 8). */
+:focus-visible {
+  outline: var(--klank-focus-ring-width) solid var(--klank-color-text, currentColor);
+  outline-offset: var(--klank-focus-ring-offset);
+}
+
+/* Where :focus-visible is supported, a pointer focus draws no ring. */
+:focus:not(:focus-visible) {
+  outline: none;
+}

@@ -119,10 +119,7 @@
   padding: 8px 10px;
   font-size: 0.875rem;
   min-width: 0;
-
-  &:focus {
-    outline: 1px solid var(--klank-color-highlight);
-  }
+  /* Focus ring comes from the global :focus-visible rule in @klank/ui. */
 }
 
 .statusLine {
