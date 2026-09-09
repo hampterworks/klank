@@ -80,11 +80,24 @@
   opacity: 0;
   transition: opacity 100ms;
 
-  .songList li:hover & {
+  /* The row reveals its action on pointer hover AND as soon as focus enters the
+     row: without :focus-within a keyboard user tabs onto a button at opacity 0
+     and cannot see what is focused (klank #68, design RULES.md rule 8). */
+  .songList li:hover &,
+  .songList li:focus-within & {
     opacity: 0.5;
   }
 
   &:hover {
+    opacity: 1 !important;
+    color: var(--klank-color-success);
+  }
+
+  /* Split from :hover so the hover declaration is not doing double duty as the
+     focus indicator (rule 8). The ring is the global :focus-visible rule in
+     lib/theme/base.css (#67); this rule only makes the button opaque enough to
+     wear it. */
+  &:focus-visible {
     opacity: 1 !important;
     color: var(--klank-color-success);
   }
