@@ -45,10 +45,10 @@ When this fact changes → update these files:
 | `update-dependencies` | No | pnpm workspace + Cargo.toml dependency upgrades |
 | `update-docs` | Yes - after any structural change | Keep README and human-readable docs current |
 
-The `develop-*`, `qa-*`, `cicd-*`, and `design-*` procedure skills (originally from agentkit) also live in
-`.claude/skills/` and are auto-discovered; see `CATALOG.md` for the full index. Two former klank skills were
-retired in favour of those: `cleanup-recent-changes` -> `develop-clean`, `ci-pipeline-optimize` ->
-`cicd-harden`. These are hand-maintained native files - there is no generator or CLI.
+The generic `develop-*`, `qa-*`, `design-*` and `cicd-*` skills are not vendored here: they come from the
+`dev` and `estate` Claude Code plugins (`dev:develop-cleanup`, `estate:cicd-hardening`, ...). Keep only
+klank-specific skills in `.claude/skills/`; a repo skill that covers the same job as a plugin skill says in its
+description that it wins in this repo. These are hand-maintained native files - there is no generator or CLI.
 
 ## Hook Catalogue
 

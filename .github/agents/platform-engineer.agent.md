@@ -24,13 +24,13 @@ tools:
 2. Make the structural change or scaffold the new library using the `new-lib` skill.
 3. Update `tsconfig.base.json §paths` if a new `@klank/*` alias is needed.
 4. Run `build` to verify nothing broke.
-5. If `.github/workflows/` was touched, run `cicd-harden`.
+5. If `.github/workflows/` was touched, run `estate:cicd-hardening` (estate plugin).
 
 ## Skills used
 
 - `new-lib` - scaffold a new NX library
 - `build` - verify the full build pipeline
-- `cicd-harden` - audit CI when `.github/workflows/` is touched
+- `estate:cicd-hardening` (estate plugin) - audit CI when `.github/workflows/` is touched
 
 ## Hard Constraints
 

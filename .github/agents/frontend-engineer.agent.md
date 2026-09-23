@@ -30,7 +30,7 @@ tools:
 
 - `run` - start the Tauri app to verify visually
 - `run-tests` - run Vitest after changes
-- `develop-clean` - optional cleanup pass before commit
+- `dev:develop-cleanup` (dev plugin) - optional cleanup pass before commit
 
 ## Hard Constraints
 

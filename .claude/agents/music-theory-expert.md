@@ -37,7 +37,7 @@ model: claude-sonnet-4-6
 ## Skills used
 
 - `run-tests` - verify transposition and parse logic
-- `develop-clean` - optional cleanup pass
+- `dev:develop-cleanup` (dev plugin) - optional cleanup pass
 
 ## Hard Constraints
 

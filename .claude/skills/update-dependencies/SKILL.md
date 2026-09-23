@@ -1,6 +1,6 @@
 ---
 name: update-dependencies
-description: Upgrades pnpm workspace and Cargo.toml dependencies safely - detects breaking changes and runs tests. Use when dependencies need updating or a security advisory requires action.
+description: klank's pnpm-workspace and Cargo bump procedure - breaking-change scan, then tests. Use for any dependency update in this repo, over dev:develop-dependencies (generic vetting rules).
 ---
 
 # update-dependencies

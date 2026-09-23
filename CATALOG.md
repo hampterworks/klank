@@ -22,62 +22,10 @@
   `.claude/skills/run/`
 - **run-tests** - Runs Vitest tests across the workspace or for a specific lib. Use after any code change before committing.  
   `.claude/skills/run-tests/`
-- **update-dependencies** - Upgrades pnpm workspace and Cargo.toml dependencies safely - detects breaking changes and runs tests. Use when dependencies need updating or a security advisory requires action.  
+- **update-dependencies** - klank's pnpm-workspace and Cargo bump procedure - breaking-change scan, then tests. Use for any dependency update in this repo, over dev:develop-dependencies (generic vetting rules).  
   `.claude/skills/update-dependencies/`
 - **update-docs** - Updates README and human-readable docs to reflect recent code or config changes. Use after any structural change - new lib, Tauri command, path alias, or route - to keep docs current.  
   `.claude/skills/update-docs/`
-
-### develop
-
-- **develop-clean** - Cleans up code at a chosen intensity/latitude over a scope (diff/area/repo) - simplify, de-cruft. Loads a stack reference. Use when tidying, not reviewing or strictness upgrades (develop-maintain).  
-  `.claude/skills/develop-clean/`
-- **develop-configure** - Configures a project's type checker and build for strictness, correct module resolution, and fast builds. Loads a stack reference (e.g. typescript). Use when creating or tuning toolchain config.  
-  `.claude/skills/develop-configure/`
-- **develop-maintain** - Upgrades toolchain versions and migrates code to stricter types, removing escape hatches. Loads a stack reference (e.g. typescript). Use when bumping versions or migrating to stricter checks.  
-  `.claude/skills/develop-maintain/`
-- **develop-publish** - Ships a library so types and entry points resolve for every consumer, validated before release. Loads a stack reference (e.g. typescript). Use when packaging for publish or debugging resolution.  
-  `.claude/skills/develop-publish/`
-- **develop-review** - Reviews source code or a diff - correctness, least-code, type-safety, security, test adequacy - as severity-rated findings with fixes. Loads a stack reference (e.g. typescript). Use for code review.  
-  `.claude/skills/develop-review/`
-- **develop-write** - Writes idiomatic, type-safe code - precise modeling, narrowing, boundary validation. Loads a stack reference (e.g. typescript). Use when writing or modifying source, not tidying (develop-clean).  
-  `.claude/skills/develop-write/`
-
-### qa
-
-- **qa-capture** - Captures web page or running-app screenshots with Playwright - full-page, element, viewport variants - for visual QA, verification, and bug evidence. Use when a UI state needs capturing.  
-  `.claude/skills/qa-capture/`
-- **qa-explore** - Exploratory and manual testing to find what automation misses - session charters, bug-hunting heuristics, every state and edge case. Use when probing a build by hand for defects before sign-off.  
-  `.claude/skills/qa-explore/`
-- **qa-review** - Verifies a change meets its acceptance criteria and is safe to ship - regression, bug triage, ship/no-ship call. Use for QA sign-off on behavior, not source-code review (develop-review).  
-  `.claude/skills/qa-review/`
-- **qa-test** - Writes an effective automated test suite - testing pyramid, behavior over implementation, deterministic tests. Loads a stack reference (e.g. typescript). Use when adding or improving tests.  
-  `.claude/skills/qa-test/`
-- **qa-vet** - Evaluates and maintains third-party dependencies across their lifecycle - adoption vetting, health and security audits, updates, pruning. Use when adding or auditing a dependency.  
-  `.claude/skills/qa-vet/`
-
-### cicd
-
-- **cicd-debug** - Diagnoses a failing CI/CD run via failed-step logs, debug logging, re-runs, flaky triage, and local repro. Loads a platform reference (e.g. github-actions). Use when a pipeline run is failing.  
-  `.claude/skills/cicd-debug/`
-- **cicd-harden** - Audits and hardens an existing CI/CD pipeline against supply-chain and injection attacks. Loads a platform reference (e.g. github-actions) with a full checklist. Use when securing pipelines.  
-  `.claude/skills/cicd-harden/`
-- **cicd-maintain** - Keeps CI/CD pipelines healthy via dependency and runner-image updates, pruning, and reusable-pipeline versioning. Loads a platform reference (e.g. github-actions). Use for routine upkeep.  
-  `.claude/skills/cicd-maintain/`
-- **cicd-scaffold** - Scaffolds a secure-by-default CI/CD pipeline - least-privilege, pinned deps, caching, matrices, reusable parts. Loads a platform reference (e.g. github-actions). Use when creating a pipeline.  
-  `.claude/skills/cicd-scaffold/`
-
-### design
-
-- **design-accessibility** - Makes a product design inclusive at the design stage - WCAG 2.2 POUR, inclusive design across impairments, an a11y checklist. Use when designing for or auditing accessibility.  
-  `.claude/skills/design-accessibility/`
-- **design-draft** - Creates a product design as a structured design spec - user flows, information architecture, low-fidelity first, every state covered. Use when designing a new feature, flow, or screen.  
-  `.claude/skills/design-draft/`
-- **design-interrogate** - Elicits requirements by questioning the user in exhaustive, batched rounds, then outputs a structured spec. Use when turning a vague feature idea or improvement item into a buildable spec.  
-  `.claude/skills/design-interrogate/`
-- **design-review** - Critiques an existing design or UI with a heuristic evaluation - Nielsen heuristics, cognitive load, hierarchy, consistency, plus a11y. Use when reviewing or auditing a design for rated fixes.  
-  `.claude/skills/design-review/`
-- **design-write** - Writes product copy and microcopy - buttons, errors, empty states, labels - using a clarity-concision-consistency and voice-and-tone framework. Use when writing or fixing in-product wording.  
-  `.claude/skills/design-write/`
 
 ## Subagents
 
