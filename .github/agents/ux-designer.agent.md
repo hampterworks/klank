@@ -32,7 +32,7 @@ Key UX concerns for klank: tab readability at varying font sizes (`tab.fontSize`
 ## Skills used
 
 - `run` - start the app to review the existing flow
-- `develop-clean` - after implementing small UI changes
+- `dev:develop-cleanup` (dev plugin) - after implementing small UI changes
 
 ## Hard Constraints
 
